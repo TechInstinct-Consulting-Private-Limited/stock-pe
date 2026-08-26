@@ -11,6 +11,7 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { signIn, signUp } from "../services/api";
 
 export default function AuthForm({
     activeTab,
@@ -45,6 +46,7 @@ export default function AuthForm({
     const [confirmPasswordError, setConfirmPasswordError] =
         useState("");
     const [termsError, setTermsError] = useState("");
+    const [apiError, setApiError] = useState("");
 
 
     // ============================================
@@ -140,7 +142,7 @@ export default function AuthForm({
     // SIGN IN
     // ============================================
 
-    const handleSignIn = () => {
+    const handleSignIn = async () => {
 
         const mobileValid = validateMobile();
         const passwordValid = validatePassword();
@@ -150,15 +152,10 @@ export default function AuthForm({
         }
 
         setIsLoading(true);
+        setApiError("");
 
-        console.log("Sign In validation successful");
-
-        // Temporary loading simulation
-        setTimeout(() => {
-            setIsLoading(false);
-
-            console.log("Sign In loading completed");
-
+        try {
+            await signIn(mobile, password);
             router.push({
                 pathname: "/otp",
                 params: {
@@ -166,8 +163,11 @@ export default function AuthForm({
                     mode: "signin",
                 },
             });
-
-        }, 2000);
+        } catch (error) {
+            setApiError(error.message);
+        } finally {
+            setIsLoading(false);
+        }
 
     };
 
@@ -175,7 +175,7 @@ export default function AuthForm({
     // SIGN UP
     // ============================================
 
-    const handleSignUp = () => {
+    const handleSignUp = async () => {
 
         const mobileValid = validateMobile();
         const passwordValid = validatePassword();
@@ -195,15 +195,10 @@ export default function AuthForm({
         }
 
         setIsLoading(true);
+        setApiError("");
 
-        console.log("Sign Up validation successful");
-
-        // Temporary loading simulation
-        setTimeout(() => {
-            setIsLoading(false);
-
-            console.log("Sign Up loading completed");
-
+        try {
+            await signUp(mobile, password);
             router.push({
                 pathname: "/otp",
                 params: {
@@ -211,8 +206,11 @@ export default function AuthForm({
                     mode: "signup",
                 },
             });
-
-        }, 2000);
+        } catch (error) {
+            setApiError(error.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     // ============================================
@@ -227,6 +225,7 @@ export default function AuthForm({
         );
 
         setMobile(onlyNumbers);
+        setApiError("");
 
         // Remove error while user corrects input
         if (mobileError) {
@@ -242,6 +241,7 @@ export default function AuthForm({
     const handlePasswordChange = (text) => {
 
         setPassword(text);
+        setApiError("");
 
         if (passwordError) {
             setPasswordError("");
@@ -256,6 +256,7 @@ export default function AuthForm({
     const handleConfirmPasswordChange = (text) => {
 
         setConfirmPassword(text);
+        setApiError("");
 
         if (confirmPasswordError) {
             setConfirmPasswordError("");
@@ -288,6 +289,9 @@ export default function AuthForm({
 
             {activeTab === "signin" && (
                 <>
+                    {apiError ? (
+                        <Text style={styles.apiErrorText}>{apiError}</Text>
+                    ) : null}
                     {/* MOBILE NUMBER */}
 
                     <Text style={styles.label}>
@@ -439,6 +443,9 @@ export default function AuthForm({
 
             {activeTab === "signup" && (
                 <>
+                    {apiError ? (
+                        <Text style={styles.apiErrorText}>{apiError}</Text>
+                    ) : null}
                     {/* MOBILE NUMBER */}
 
                     <Text style={styles.label}>
@@ -728,6 +735,16 @@ const styles = StyleSheet.create({
         marginTop: -18,
         marginBottom: 18,
         paddingHorizontal: 4,
+    },
+
+    apiErrorText: {
+        color: "#C73D3D",
+        backgroundColor: "#FFF0F0",
+        borderRadius: 12,
+        fontSize: 13,
+        lineHeight: 19,
+        marginBottom: 18,
+        padding: 12,
     },
 
     countryCode: {

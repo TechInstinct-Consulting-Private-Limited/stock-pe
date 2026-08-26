@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as SecureStore from "expo-secure-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -15,11 +16,12 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { resendOtp, verifyOtp } from "./services/api";
 
 
 export default function OTP() {
 
-    const { mobile } = useLocalSearchParams();
+    const { mobile, mode } = useLocalSearchParams();
 
     const [otp, setOtp] = useState([
         "",
@@ -36,6 +38,7 @@ export default function OTP() {
 
     const [isVerifying, setIsVerifying] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
+    const [apiError, setApiError] = useState("");
 
 
     /* =========================================
@@ -130,7 +133,7 @@ export default function OTP() {
        VERIFY OTP
     ========================================= */
 
-    const handleVerifyOtp = () => {
+    const handleVerifyOtp = async () => {
 
         const enteredOtp = otp.join("");
 
@@ -142,17 +145,22 @@ export default function OTP() {
         Keyboard.dismiss();
 
         setIsVerifying(true);
+        setApiError("");
 
-        console.log("OTP:", enteredOtp);
+        try {
+            const result = await verifyOtp(
+                String(mobile),
+                enteredOtp,
+                mode === "signin" ? "signin" : "signup"
+            );
 
-        setTimeout(() => {
-
-            console.log("OTP verified successfully");
-
+            await SecureStore.setItemAsync("stockpe_auth_token", result.token);
             setIsVerifying(false);
             setIsVerified(true);
-
-        }, 1500);
+        } catch (error) {
+            setApiError(error.message);
+            setIsVerifying(false);
+        }
     };
 
 
@@ -160,30 +168,26 @@ export default function OTP() {
        RESEND OTP
     ========================================= */
 
-    const handleResend = () => {
+    const handleResend = async () => {
 
         if (seconds > 0) {
             return;
         }
 
 
-        console.log("OTP resent");
+        try {
+            setApiError("");
+            await resendOtp(
+                String(mobile),
+                mode === "signin" ? "signin" : "signup"
+            );
 
-
-        setOtp([
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-        ]);
-
-
-        setSeconds(23);
-
-
-        inputRefs.current[0]?.focus();
+            setOtp(["", "", "", "", "", ""]);
+            setSeconds(60);
+            inputRefs.current[0]?.focus();
+        } catch (error) {
+            setApiError(error.message);
+        }
 
     };
 
@@ -420,10 +424,16 @@ export default function OTP() {
                             />
 
                             <Text style={styles.demoText}>
-                                Demo mode: enter any 6 digits to continue
+                                Enter the OTP sent to your mobile number
                             </Text>
 
                         </View>
+
+                        {apiError ? (
+                            <Text style={styles.apiErrorText}>
+                                {apiError}
+                            </Text>
+                        ) : null}
 
 
                         {/* =================================
@@ -741,6 +751,19 @@ const styles = StyleSheet.create({
         color: "#737D91",
 
         marginLeft: 13,
+    },
+
+    apiErrorText: {
+        width: "100%",
+        color: "#C73D3D",
+        backgroundColor: "#FFF0F0",
+        borderRadius: 14,
+        fontSize: 15,
+        lineHeight: 21,
+        marginTop: -30,
+        marginBottom: 30,
+        padding: 14,
+        textAlign: "center",
     },
 
 
