@@ -133,6 +133,20 @@ export default function OTP() {
        VERIFY OTP
     ========================================= */
 
+    const saveAuthToken = async (token) => {
+        if (Platform.OS === "web") {
+            try {
+                if (typeof window !== "undefined" && window.localStorage) {
+                    window.localStorage.setItem("stockpe_auth_token", token);
+                }
+            } catch (e) {
+                console.warn("Unable to save auth token to localStorage", e);
+            }
+        } else {
+            await SecureStore.setItemAsync("stockpe_auth_token", token);
+        }
+    };
+
     const handleVerifyOtp = async () => {
 
         const enteredOtp = otp.join("");
@@ -154,9 +168,12 @@ export default function OTP() {
                 mode === "signin" ? "signin" : "signup"
             );
 
-            await SecureStore.setItemAsync("stockpe_auth_token", result.token);
+            await saveAuthToken(result.token);
             setIsVerifying(false);
             setIsVerified(true);
+            setTimeout(() => {
+                router.replace("/(tabs)/events");
+            }, 600);
         } catch (error) {
             setApiError(error.message);
             setIsVerifying(false);
