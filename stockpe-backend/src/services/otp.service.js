@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const pool = require("../config/database");
+const { createOtpDeliveryProvider } = require("./otp-delivery");
 
 const OTP_EXPIRY_MINUTES = 10;
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
@@ -32,15 +33,28 @@ async function createOtpVerification(mobile, purpose) {
     const otp = createOtp();
     const otpHash = await bcrypt.hash(otp, 12);
 
-    await pool.query(
+    const insertResult = await pool.query(
         `INSERT INTO otp_verifications (mobile, purpose, otp_hash, expires_at)
-         VALUES ($1, $2, $3, NOW() + ($4 * INTERVAL '1 minute'))`,
+         VALUES ($1, $2, $3, NOW() + ($4 * INTERVAL '1 minute'))
+         RETURNING id`,
         [mobile, purpose, otpHash, OTP_EXPIRY_MINUTES]
     );
 
-    // Replace this development-only delivery with an approved SMS provider before launch.
-    if (process.env.NODE_ENV !== "production") {
-        console.log(`[DEV OTP] ${purpose} OTP for ${mobile}: ${otp}`);
+    try {
+        const deliveryProvider = createOtpDeliveryProvider();
+        await deliveryProvider.sendOtp({
+            mobile,
+            otp,
+            purpose,
+            expiresInMinutes: OTP_EXPIRY_MINUTES,
+        });
+    } catch (error) {
+        // A failed delivery must not trigger the resend cooldown.
+        await pool.query(
+            "DELETE FROM otp_verifications WHERE id = $1",
+            [insertResult.rows[0].id]
+        );
+        throw error;
     }
 
     return {
