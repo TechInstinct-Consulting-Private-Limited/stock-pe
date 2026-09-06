@@ -34,6 +34,10 @@ function formatAadhaar(value) {
     return value.replace(/\D/g, "").slice(0, 12);
 }
 
+function groupAadhaar(digits) {
+    return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+}
+
 function formatDate(value) {
     const digits = value.replace(/\D/g, "").slice(0, 8);
 
@@ -336,7 +340,7 @@ export default function AadhaarVerification() {
                             <Text style={styles.label}>AADHAAR NUMBER</Text>
                             <TextInput
                                 style={styles.input}
-                                value={aadhaarLastFour ? `XXXX XXXX ${aadhaarLastFour}` : aadhaarNumber}
+                                value={aadhaarLastFour ? `XXXX XXXX ${aadhaarLastFour}` : groupAadhaar(aadhaarNumber)}
                                 onChangeText={(value) => {
                                     setAadhaarNumber(formatAadhaar(value));
                                     setFormError("");
@@ -344,7 +348,7 @@ export default function AadhaarVerification() {
                                 placeholder="XXXX   XXXX   XXXX"
                                 placeholderTextColor="#C2C8D6"
                                 keyboardType="number-pad"
-                                maxLength={12}
+                                maxLength={14}
                                 editable={!aadhaarLastFour}
                                 autoFocus={!aadhaarLastFour}
                             />
