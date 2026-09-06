@@ -383,7 +383,6 @@ export default function OTP() {
                                     }
                                     keyboardType="number-pad"
                                     selectTextOnFocus
-                                    textAlign="center"
                                     style={[
                                         styles.otpInput,
                                         value &&
@@ -699,6 +698,8 @@ const styles = StyleSheet.create({
 
         fontSize: 28,
         fontWeight: "700",
+        textAlign: "center",
+        paddingHorizontal: 0,
 
         color: "#071329",
 
