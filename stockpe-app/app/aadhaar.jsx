@@ -346,6 +346,7 @@ export default function AadhaarVerification() {
                                 keyboardType="number-pad"
                                 maxLength={12}
                                 editable={!aadhaarLastFour}
+                                autoFocus={!aadhaarLastFour}
                             />
 
                             <Text style={styles.label}>FULL NAME (AS ON AADHAAR)</Text>
