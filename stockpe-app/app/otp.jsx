@@ -15,7 +15,11 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { resendOtp, verifyOtp } from "./services/api";
+import {
+    getUserFacingError,
+    resendOtp,
+    verifyOtp,
+} from "./services/api";
 import { setAuthToken } from "./services/authStorage";
 
 
@@ -167,7 +171,7 @@ export default function OTP() {
             setIsVerifying(false);
             setIsVerified(true);
         } catch (error) {
-            setApiError(error.message);
+            setApiError(getUserFacingError(error));
             setIsVerifying(false);
         }
     };
@@ -195,7 +199,7 @@ export default function OTP() {
             setSeconds(60);
             inputRefs.current[0]?.focus();
         } catch (error) {
-            setApiError(error.message);
+            setApiError(getUserFacingError(error));
         }
 
     };

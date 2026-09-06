@@ -22,6 +22,15 @@ function resolveApiBaseUrl() {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+class ApiError extends Error {}
+
+export function getUserFacingError(
+    error,
+    fallback = "Something went wrong. Please try again."
+) {
+    return error instanceof ApiError ? error.message : fallback;
+}
+
 async function request(path, options = {}) {
     let response;
 
@@ -34,15 +43,17 @@ async function request(path, options = {}) {
             ...options,
         });
     } catch (_error) {
-        throw new Error(
-            `Could not reach the server. Start the backend and check API URL: ${API_BASE_URL}`
+        throw new ApiError(
+            "Unable to connect. Check your internet connection and try again."
         );
     }
 
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        throw new Error(data.message || "Request failed. Please try again.");
+        throw new ApiError(
+            data.message || "Request failed. Please try again."
+        );
     }
 
     return data;

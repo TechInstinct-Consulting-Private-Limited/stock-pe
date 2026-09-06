@@ -11,7 +11,11 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { signIn, signUp } from "../services/api";
+import {
+    getUserFacingError,
+    signIn,
+    signUp,
+} from "../services/api";
 
 export default function AuthForm({
     activeTab,
@@ -164,7 +168,7 @@ export default function AuthForm({
                 },
             });
         } catch (error) {
-            setApiError(error.message);
+            setApiError(getUserFacingError(error));
         } finally {
             setIsLoading(false);
         }
@@ -207,7 +211,7 @@ export default function AuthForm({
                 },
             });
         } catch (error) {
-            setApiError(error.message);
+            setApiError(getUserFacingError(error));
         } finally {
             setIsLoading(false);
         }
