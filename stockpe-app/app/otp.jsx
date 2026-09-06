@@ -209,7 +209,12 @@ export default function OTP() {
 
         Keyboard.dismiss();
 
-        router.back();
+        if (router.canGoBack()) {
+            router.back();
+            return;
+        }
+
+        router.replace("/login");
 
     };
 
