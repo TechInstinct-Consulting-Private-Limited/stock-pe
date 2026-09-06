@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -17,6 +16,7 @@ import {
     View,
 } from "react-native";
 import { resendOtp, verifyOtp } from "./services/api";
+import { setAuthToken } from "./services/authStorage";
 
 
 export default function OTP() {
@@ -163,7 +163,7 @@ export default function OTP() {
                 mode === "signin" ? "signin" : "signup"
             );
 
-            await SecureStore.setItemAsync("stockpe_auth_token", result.token);
+            await setAuthToken(result.token);
             setIsVerifying(false);
             setIsVerified(true);
         } catch (error) {
