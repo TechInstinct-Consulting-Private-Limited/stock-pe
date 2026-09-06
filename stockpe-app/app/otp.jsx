@@ -173,7 +173,7 @@ export default function OTP() {
             await setAuthToken(result.token);
             setIsVerifying(false);
             setIsVerified(true);
-            router.push({
+            router.replace({
                 pathname: "/aadhaar",
                 params: {
                     mobile: String(mobile),
