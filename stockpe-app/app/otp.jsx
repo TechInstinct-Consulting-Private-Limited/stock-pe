@@ -13,6 +13,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from "react-native";
 import {
@@ -26,6 +27,8 @@ import { setAuthToken } from "./services/authStorage";
 export default function OTP() {
 
     const { mobile, mode } = useLocalSearchParams();
+    const { width, height } = useWindowDimensions();
+    const isCompact = width < 600 || height < 800;
 
     const [otp, setOtp] = useState([
         "",
@@ -322,12 +325,22 @@ export default function OTP() {
                         MAIN CONTENT
                     ===================================== */}
 
-                    <View style={styles.content}>
+                    <View
+                        style={[
+                            styles.content,
+                            isCompact && styles.contentCompact,
+                        ]}
+                    >
 
 
                         {/* PHONE ICON */}
 
-                        <View style={styles.phoneIconContainer}>
+                        <View
+                            style={[
+                                styles.phoneIconContainer,
+                                isCompact && styles.phoneIconCompact,
+                            ]}
+                        >
 
                             <Ionicons
                                 name="call-outline"
@@ -340,14 +353,24 @@ export default function OTP() {
 
                         {/* TITLE */}
 
-                        <Text style={styles.title}>
+                        <Text
+                            style={[
+                                styles.title,
+                                isCompact && styles.titleCompact,
+                            ]}
+                        >
                             Enter OTP
                         </Text>
 
 
                         {/* MOBILE */}
 
-                        <Text style={styles.sentText}>
+                        <Text
+                            style={[
+                                styles.sentText,
+                                isCompact && styles.sentTextCompact,
+                            ]}
+                        >
 
                             Sent to{" "}
 
@@ -362,7 +385,12 @@ export default function OTP() {
                             OTP INPUTS
                         ================================= */}
 
-                        <View style={styles.otpContainer}>
+                        <View
+                            style={[
+                                styles.otpContainer,
+                                isCompact && styles.otpContainerCompact,
+                            ]}
+                        >
 
                             {otp.map((value, index) => (
 
@@ -389,6 +417,8 @@ export default function OTP() {
                                     selectTextOnFocus
                                     style={[
                                         styles.otpInput,
+                                        isCompact &&
+                                            styles.otpInputCompact,
                                         value &&
                                             styles.otpInputActive,
                                     ]}
@@ -416,6 +446,8 @@ export default function OTP() {
                             <Text
                                 style={[
                                     styles.resendText,
+                                    isCompact &&
+                                        styles.resendTextCompact,
                                     seconds === 0 &&
                                         styles.resendActive,
                                 ]}
@@ -440,7 +472,12 @@ export default function OTP() {
                             DEMO MODE
                         ================================= */}
 
-                        <View style={styles.demoBox}>
+                        <View
+                            style={[
+                                styles.demoBox,
+                                isCompact && styles.demoBoxCompact,
+                            ]}
+                        >
 
                             <Ionicons
                                 name="information-circle-outline"
@@ -468,6 +505,8 @@ export default function OTP() {
                         <TouchableOpacity
                             style={[
                                 styles.verifyButton,
+                                isCompact &&
+                                    styles.verifyButtonCompact,
                                 (!isOtpComplete || isVerifying || isVerified) &&
                                     styles.verifyButtonDisabled,
                                 isVerified && styles.verifyButtonSuccess,
@@ -624,13 +663,16 @@ const styles = StyleSheet.create({
     /* ================= CONTENT ================= */
 
     content: {
-        flex: 1,
-
         alignItems: "center",
 
         paddingHorizontal: 40,
 
         paddingTop: 125,
+    },
+
+    contentCompact: {
+        paddingHorizontal: 20,
+        paddingTop: 28,
     },
 
 
@@ -653,6 +695,13 @@ const styles = StyleSheet.create({
         marginBottom: 22,
     },
 
+    phoneIconCompact: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        marginBottom: 14,
+    },
+
 
     /* ================= TITLE ================= */
 
@@ -665,12 +714,22 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
 
+    titleCompact: {
+        fontSize: 30,
+        marginBottom: 4,
+    },
+
     sentText: {
         fontSize: 20,
 
         color: "#737D91",
 
         marginBottom: 43,
+    },
+
+    sentTextCompact: {
+        fontSize: 16,
+        marginBottom: 24,
     },
 
     mobileNumber: {
@@ -682,15 +741,24 @@ const styles = StyleSheet.create({
     /* ================= OTP ================= */
 
     otpContainer: {
+        width: "100%",
+        maxWidth: 372,
         flexDirection: "row",
         alignSelf: "center",
-        gap: 12,
+        justifyContent: "center",
+        gap: 8,
 
         marginBottom: 48,
     },
 
+    otpContainerCompact: {
+        marginBottom: 28,
+    },
+
     otpInput: {
-        width: 52,
+        flex: 1,
+        maxWidth: 52,
+        minWidth: 0,
         height: 56,
 
         borderRadius: 20,
@@ -718,6 +786,12 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
 
+    otpInputCompact: {
+        height: 48,
+        borderRadius: 14,
+        fontSize: 24,
+    },
+
     otpInputActive: {
         borderColor: "#00C987",
     },
@@ -730,6 +804,11 @@ const styles = StyleSheet.create({
         color: "#737D91",
 
         marginBottom: 48,
+    },
+
+    resendTextCompact: {
+        fontSize: 16,
+        marginBottom: 28,
     },
 
     resendTime: {
@@ -765,6 +844,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
 
         marginBottom: 54,
+    },
+
+    demoBoxCompact: {
+        minHeight: 58,
+        paddingHorizontal: 14,
+        marginBottom: 24,
     },
 
     demoText: {
@@ -822,6 +907,11 @@ const styles = StyleSheet.create({
         shadowRadius: 14,
 
         elevation: 7,
+    },
+
+    verifyButtonCompact: {
+        height: 60,
+        borderRadius: 18,
     },
 
 
