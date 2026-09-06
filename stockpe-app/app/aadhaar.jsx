@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Keyboard,
@@ -71,10 +71,29 @@ export default function AadhaarVerification() {
     const [scanError, setScanError] = useState("");
     const [aadhaarLastFour, setAadhaarLastFour] = useState("");
     const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+    const scrollRef = useRef(null);
+    const consentY = useRef(0);
+    const [consentHighlight, setConsentHighlight] = useState(false);
+
+    useEffect(() => {
+        if (!consentHighlight) return undefined;
+        const timer = setTimeout(() => setConsentHighlight(false), 2600);
+        return () => clearTimeout(timer);
+    }, [consentHighlight]);
+
+    const promptForConsent = () => {
+        Keyboard.dismiss();
+        setFormError("Tick the consent checkbox below to scan your Aadhaar Secure QR.");
+        setConsentHighlight(true);
+        scrollRef.current?.scrollTo({
+            y: Math.max(consentY.current - 90, 0),
+            animated: true,
+        });
+    };
 
     const openScanner = async () => {
         if (!consent) {
-            setFormError("Select the consent checkbox before scanning your Aadhaar Secure QR.");
+            promptForConsent();
             return;
         }
         setFormError("");
@@ -310,6 +329,7 @@ export default function AadhaarVerification() {
                 </View>
 
                 <ScrollView
+                    ref={scrollRef}
                     style={styles.scrollView}
                     contentContainerStyle={[
                         styles.scrollContent,
@@ -446,9 +466,16 @@ export default function AadhaarVerification() {
                             )}
 
                             <TouchableOpacity
-                                style={styles.consentRow}
+                                style={[
+                                    styles.consentRow,
+                                    consentHighlight && styles.consentRowHighlight,
+                                ]}
+                                onLayout={(event) => {
+                                    consentY.current = event.nativeEvent.layout.y;
+                                }}
                                 onPress={() => {
                                     setConsent((current) => !current);
+                                    setConsentHighlight(false);
                                     setFormError("");
                                 }}
                                 accessibilityRole="checkbox"
@@ -794,6 +821,14 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "flex-start",
         marginBottom: 20,
+    },
+    consentRowHighlight: {
+        borderWidth: 1.5,
+        borderColor: "#594BFF",
+        backgroundColor: "#EEF0FF",
+        borderRadius: 14,
+        padding: 12,
+        marginHorizontal: -12,
     },
     checkbox: {
         width: 22,
