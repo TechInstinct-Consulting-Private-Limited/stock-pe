@@ -667,11 +667,9 @@ const styles = StyleSheet.create({
     /* ================= OTP ================= */
 
     otpContainer: {
-        width: "100%",
-
         flexDirection: "row",
-
-        justifyContent: "space-between",
+        alignSelf: "center",
+        gap: 12,
 
         marginBottom: 48,
     },
