@@ -590,11 +590,13 @@ const styles = StyleSheet.create({
     scrollContent: {
         flexGrow: 1,
         paddingTop: 40,
+        paddingBottom: 16,
     },
 
     footer: {
         backgroundColor: "#F5F7FF",
         paddingHorizontal: 40,
+        paddingTop: 16,
         paddingBottom: 35,
     },
 
