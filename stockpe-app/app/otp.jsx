@@ -84,25 +84,34 @@ export default function OTP() {
        OTP CHANGE
     ========================================= */
 
-    const handleOtpChange = (value, index) => {
-
-        // Only numbers
-        const number = value.replace(/[^0-9]/g, "");
-
+    const fillOtpDigits = (value, startIndex) => {
+        const digits = value.replace(/[^0-9]/g, "");
         const updatedOtp = [...otp];
 
-        updatedOtp[index] = number;
-
-        setOtp(updatedOtp);
-
-
-        // Move to next box
-        if (number && index < 5) {
-
-            inputRefs.current[index + 1]?.focus();
-
+        if (!digits) {
+            updatedOtp[startIndex] = "";
+            setOtp(updatedOtp);
+            return;
         }
 
+        digits
+            .slice(0, otp.length - startIndex)
+            .split("")
+            .forEach((digit, offset) => {
+                updatedOtp[startIndex + offset] = digit;
+            });
+        setOtp(updatedOtp);
+
+        const nextIndex = Math.min(
+            startIndex + digits.length,
+            otp.length - 1
+        );
+        inputRefs.current[nextIndex]?.focus();
+    };
+
+    const handleOtpChange = (value, index) => {
+        const digits = value.replace(/[^0-9]/g, "");
+        fillOtpDigits(value, digits.length > 1 ? 0 : index);
     };
 
 
@@ -368,7 +377,8 @@ export default function OTP() {
                                         )
                                     }
                                     keyboardType="number-pad"
-                                    maxLength={1}
+                                    maxLength={6}
+                                    selectTextOnFocus
                                     textAlign="center"
                                     style={[
                                         styles.otpInput,
