@@ -1,11 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
     Keyboard,
     KeyboardAvoidingView,
+    Linking,
+    Modal,
     Platform,
     SafeAreaView,
     ScrollView,
@@ -20,7 +23,12 @@ import {
     getUserFacingError,
     requestAadhaarOtp,
     verifyAadhaarOtp,
+    verifyAadhaarSecureQr,
 } from "./services/api";
+import {
+    AadhaarQrError,
+    verifyAndParseAadhaarSecureQr,
+} from "./services/aadhaarSecureQr";
 
 function formatAadhaar(value) {
     return value.replace(/\D/g, "").slice(0, 12);
@@ -53,6 +61,48 @@ export default function AadhaarVerification() {
     const [isLoading, setIsLoading] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
     const [formError, setFormError] = useState("");
+    const [scannerOpen, setScannerOpen] = useState(false);
+    const [scanLocked, setScanLocked] = useState(false);
+    const [scanError, setScanError] = useState("");
+    const [aadhaarLastFour, setAadhaarLastFour] = useState("");
+    const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+
+    const openScanner = async () => {
+        if (!consent) {
+            setFormError("Select the consent checkbox before scanning your Aadhaar Secure QR.");
+            return;
+        }
+        setFormError("");
+        setScanError("");
+        setScanLocked(false);
+        setScannerOpen(true);
+        if (!cameraPermission?.granted && cameraPermission?.canAskAgain !== false) {
+            await requestCameraPermission();
+        }
+    };
+
+    const handleBarcodeScanned = async ({ data, type }) => {
+        if (scanLocked || type !== "qr") return;
+        setScanLocked(true);
+        setScanError("");
+
+        try {
+            const localData = await verifyAndParseAadhaarSecureQr(data);
+            const result = await verifyAadhaarSecureQr(data.trim(), true);
+            const verifiedData = result.kycData || localData;
+            setAadhaarLastFour(verifiedData.aadhaarLastFour);
+            setFullName(verifiedData.name);
+            setDateOfBirth(verifiedData.dateOfBirth);
+            setIsVerified(true);
+            setScannerOpen(false);
+        } catch (error) {
+            setScanError(
+                error instanceof AadhaarQrError
+                    ? error.message
+                    : getUserFacingError(error, "We could not verify this Aadhaar QR. Please try again.")
+            );
+        }
+    };
 
     const handleBack = () => {
         Keyboard.dismiss();
@@ -122,6 +172,70 @@ export default function AadhaarVerification() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
+            <Modal
+                visible={scannerOpen}
+                animationType="slide"
+                presentationStyle="fullScreen"
+                onRequestClose={() => setScannerOpen(false)}
+            >
+                <SafeAreaView style={styles.scannerScreen}>
+                    <View style={styles.scannerHeader}>
+                        <TouchableOpacity
+                            onPress={() => setScannerOpen(false)}
+                            style={styles.scannerClose}
+                            accessibilityRole="button"
+                            accessibilityLabel="Cancel Aadhaar QR scan"
+                        >
+                            <Ionicons name="close" size={28} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <Text style={styles.scannerTitle}>Scan Aadhaar Secure QR</Text>
+                        <View style={styles.scannerClose} />
+                    </View>
+
+                    {cameraPermission?.granted ? (
+                        <View style={styles.cameraContainer}>
+                            <CameraView
+                                style={StyleSheet.absoluteFill}
+                                facing="back"
+                                barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+                                onBarcodeScanned={scanLocked ? undefined : handleBarcodeScanned}
+                                onMountError={() => setScanError("The camera could not start. Close the scanner and try again.")}
+                            />
+                            <View style={styles.scanFrame} />
+                            <View style={styles.scanInstructions}>
+                                <Text style={styles.scanInstructionsTitle}>Place the Secure QR inside the frame</Text>
+                                <Text style={styles.scanInstructionsText}>Use the large QR on your downloaded or printed Aadhaar.</Text>
+                            </View>
+                        </View>
+                    ) : (
+                        <View style={styles.permissionPanel}>
+                            <Ionicons name="camera-outline" size={54} color="#8C86FF" />
+                            <Text style={styles.permissionTitle}>Camera access is needed</Text>
+                            <Text style={styles.permissionText}>StockPe uses the camera only to read the Secure QR on your Aadhaar.</Text>
+                            <TouchableOpacity
+                                style={styles.permissionButton}
+                                onPress={cameraPermission?.canAskAgain === false ? Linking.openSettings : requestCameraPermission}
+                            >
+                                <Text style={styles.permissionButtonText}>
+                                    {cameraPermission?.canAskAgain === false ? "OPEN SETTINGS" : "ALLOW CAMERA"}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {scanError ? (
+                        <View style={styles.scanErrorPanel}>
+                            <Text style={styles.scanErrorText}>{scanError}</Text>
+                            <TouchableOpacity onPress={() => { setScanError(""); setScanLocked(false); }}>
+                                <Text style={styles.scanRetryText}>TRY AGAIN</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
+                    {scanLocked && !scanError ? (
+                        <View style={styles.scanBusy}><ActivityIndicator color="#FFFFFF" /><Text style={styles.scanBusyText}>Verifying UIDAI signature…</Text></View>
+                    ) : null}
+                </SafeAreaView>
+            </Modal>
             <KeyboardAvoidingView
                 style={styles.container}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -192,11 +306,7 @@ export default function AadhaarVerification() {
                                     <Text style={styles.label}>AADHAAR CARD</Text>
                                     <TouchableOpacity
                                         style={styles.scanButton}
-                                        onPress={() =>
-                                            setFormError(
-                                                "QR scanning is unavailable. Enter Aadhaar details manually."
-                                            )
-                                        }
+                                        onPress={openScanner}
                                     >
                                         <Ionicons
                                             name="scan-outline"
@@ -209,7 +319,9 @@ export default function AadhaarVerification() {
 
                                 <View style={styles.scanArea}>
                                     <Text style={styles.scanText}>
-                                        Scan QR code on Aadhaar card
+                                        {aadhaarLastFour
+                                            ? `UIDAI-verified Aadhaar •••• ${aadhaarLastFour}`
+                                            : "Scan QR code on Aadhaar card"}
                                     </Text>
                                 </View>
                             </View>
@@ -217,7 +329,7 @@ export default function AadhaarVerification() {
                             <Text style={styles.label}>AADHAAR NUMBER</Text>
                             <TextInput
                                 style={styles.input}
-                                value={aadhaarNumber}
+                                value={aadhaarLastFour ? `XXXX XXXX ${aadhaarLastFour}` : aadhaarNumber}
                                 onChangeText={(value) => {
                                     setAadhaarNumber(formatAadhaar(value));
                                     setFormError("");
@@ -226,6 +338,7 @@ export default function AadhaarVerification() {
                                 placeholderTextColor="#C2C8D6"
                                 keyboardType="number-pad"
                                 maxLength={12}
+                                editable={!aadhaarLastFour}
                             />
 
                             <Text style={styles.label}>FULL NAME (AS ON AADHAAR)</Text>
@@ -239,6 +352,7 @@ export default function AadhaarVerification() {
                                 placeholder="ARJUN KUMAR"
                                 placeholderTextColor="#C2C8D6"
                                 autoCapitalize="characters"
+                                editable={!aadhaarLastFour}
                             />
 
                             <Text style={styles.label}>DATE OF BIRTH</Text>
@@ -253,6 +367,7 @@ export default function AadhaarVerification() {
                                 placeholderTextColor="#172033"
                                 keyboardType="number-pad"
                                 maxLength={10}
+                                editable={!aadhaarLastFour}
                             />
 
                             <TouchableOpacity
@@ -511,6 +626,25 @@ const styles = StyleSheet.create({
         color: "#657189",
         fontSize: 13,
     },
+    scannerScreen: { flex: 1, backgroundColor: "#071329" },
+    scannerHeader: { height: 68, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    scannerClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+    scannerTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800" },
+    cameraContainer: { flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center" },
+    scanFrame: { width: "78%", aspectRatio: 1, borderWidth: 3, borderColor: "#FFFFFF", borderRadius: 24 },
+    scanInstructions: { position: "absolute", bottom: 42, left: 24, right: 24, padding: 18, borderRadius: 16, backgroundColor: "rgba(7,19,41,0.82)" },
+    scanInstructionsTitle: { color: "#FFFFFF", textAlign: "center", fontSize: 16, fontWeight: "800" },
+    scanInstructionsText: { color: "#DCE2F2", textAlign: "center", marginTop: 6, lineHeight: 19 },
+    permissionPanel: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
+    permissionTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", marginTop: 18 },
+    permissionText: { color: "#BFC8DA", textAlign: "center", lineHeight: 21, marginTop: 10, maxWidth: 340 },
+    permissionButton: { marginTop: 24, borderRadius: 24, backgroundColor: "#665CFF", paddingHorizontal: 24, paddingVertical: 14 },
+    permissionButtonText: { color: "#FFFFFF", fontWeight: "800" },
+    scanErrorPanel: { position: "absolute", bottom: 28, left: 20, right: 20, borderRadius: 16, backgroundColor: "#FFF0F0", padding: 18 },
+    scanErrorText: { color: "#8E2929", textAlign: "center", lineHeight: 20 },
+    scanRetryText: { color: "#594BFF", textAlign: "center", fontWeight: "900", marginTop: 12 },
+    scanBusy: { position: "absolute", bottom: 32, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "rgba(7,19,41,0.9)", paddingHorizontal: 18, paddingVertical: 14, borderRadius: 24 },
+    scanBusyText: { color: "#FFFFFF", fontWeight: "700" },
     label: {
         color: "#657189",
         fontSize: 11,

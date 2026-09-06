@@ -135,3 +135,10 @@ export function verifyAadhaarOtp(verificationId, otp) {
         body: JSON.stringify({ verificationId, otp }),
     });
 }
+
+export function verifyAadhaarSecureQr(payload, consent) {
+    return authenticatedRequest("/kyc/aadhaar/verify-secure-qr", {
+        method: "POST",
+        body: JSON.stringify({ payload, consent }),
+    });
+}
