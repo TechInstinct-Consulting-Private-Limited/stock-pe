@@ -60,6 +60,29 @@ export default function AadhaarKyc() {
         requestAnimationFrame(() => otpRefs.current[0]?.focus());
     }, [verificationId, isVerified]);
 
+    // Arriving here already verified (Secure QR scan or a previous session)
+    // means step 3 has nothing to collect, so continue to the wallet step.
+    useEffect(() => {
+        if (verified !== "1") return;
+        router.replace({
+            pathname: "/usdt-wallet",
+            params: {
+                mobile: String(mobile || ""),
+                mode: mode === "signin" ? "signin" : "signup",
+            },
+        });
+    }, [verified, mobile, mode]);
+
+    const goToWallet = () => {
+        router.replace({
+            pathname: "/usdt-wallet",
+            params: {
+                mobile: String(mobile || ""),
+                mode: mode === "signin" ? "signin" : "signup",
+            },
+        });
+    };
+
     const handleResend = async () => {
         if (secondsLeft > 0 || isLoading || !aadhaarLastFour) return;
 
@@ -171,6 +194,7 @@ export default function AadhaarKyc() {
             setAadhaarNumber("");
             setOtp(EMPTY_OTP);
             setIsVerified(true);
+            goToWallet();
         } catch (verificationError) {
             setError(getUserFacingError(verificationError));
         } finally {

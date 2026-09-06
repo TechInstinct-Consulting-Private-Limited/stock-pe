@@ -146,3 +146,14 @@ export function verifyAadhaarSecureQr(payload, consent) {
 export function getAadhaarKycStatus() {
     return authenticatedRequest("/kyc/aadhaar/status");
 }
+
+export function getUsdtWallet() {
+    return authenticatedRequest("/wallet/usdt");
+}
+
+export function linkUsdtWallet(network, address) {
+    return authenticatedRequest("/wallet/usdt", {
+        method: "POST",
+        body: JSON.stringify({ network, address }),
+    });
+}
