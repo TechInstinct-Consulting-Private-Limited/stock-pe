@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, scanFromURLAsync, useCameraPermissions } from "expo-camera";
 import { router, useLocalSearchParams } from "expo-router";
 import { createElement, useEffect, useRef, useState } from "react";
 import {
@@ -79,6 +79,8 @@ export default function AadhaarVerification() {
     const [scanStalled, setScanStalled] = useState(false);
     const [detectionCount, setDetectionCount] = useState(0);
     const scanLockRef = useRef(false);
+    const cameraRef = useRef(null);
+    const [isCapturing, setIsCapturing] = useState(false);
 
     useEffect(() => {
         if (!scannerOpen || scanLocked) {
@@ -181,6 +183,35 @@ export default function AadhaarVerification() {
             await handleBarcodeScanned({ data: payload });
         } catch (_error) {
             setScanError("That image could not be read. Try a different photo.");
+        }
+    };
+
+    const handleCaptureAndScan = async () => {
+        if (!cameraRef.current || isCapturing) return;
+
+        setIsCapturing(true);
+        setScanError("");
+
+        try {
+            const photo = await cameraRef.current.takePictureAsync({
+                quality: 1,
+                skipProcessing: true,
+            });
+            const results = await scanFromURLAsync(photo.uri, ["qr"]);
+            const payload = results?.[0]?.data;
+
+            if (!payload) {
+                setScanError(
+                    "No QR was found in that photo. Fill the frame with the QR, keep it flat and well lit, then capture again."
+                );
+                return;
+            }
+
+            await handleBarcodeScanned({ data: payload });
+        } catch (_error) {
+            setScanError("The photo could not be read. Please try again.");
+        } finally {
+            setIsCapturing(false);
         }
     };
 
@@ -295,6 +326,7 @@ export default function AadhaarVerification() {
                                 />
                             ) : (
                                 <CameraView
+                                    ref={cameraRef}
                                     style={StyleSheet.absoluteFill}
                                     facing="back"
                                     active={scannerOpen}
@@ -354,6 +386,21 @@ export default function AadhaarVerification() {
                                             Browser camera scanning is limited. On a phone the QR is read automatically.
                                         </Text>
                                     </>
+                                ) : null}
+                                {!isWeb ? (
+                                    <TouchableOpacity
+                                        style={styles.pasteButton}
+                                        disabled={isCapturing || scanLocked}
+                                        onPress={handleCaptureAndScan}
+                                    >
+                                        {isCapturing ? (
+                                            <ActivityIndicator color="#FFFFFF" />
+                                        ) : (
+                                            <Text style={styles.pasteButtonText}>
+                                                CAPTURE PHOTO AND READ QR
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
                                 ) : null}
                                 <TouchableOpacity onPress={() => setScannerOpen(false)}>
                                     <Text style={styles.manualEntryText}>
