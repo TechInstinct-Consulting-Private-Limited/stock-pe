@@ -91,6 +91,7 @@ export default function Login() {
                     <AuthHeader />
 
                     <View style={styles.formSheet}>
+                        <View style={styles.sheetHandle} />
 
                         {/* =================================
                             AUTH CONTENT
@@ -205,8 +206,18 @@ const styles = StyleSheet.create({
 
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
+        marginTop: -30,
+        paddingTop: 15,
 
         overflow: "hidden",
+    },
+
+    sheetHandle: {
+        width: 38,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: "#F0F1F3",
+        alignSelf: "center",
     },
 
 
