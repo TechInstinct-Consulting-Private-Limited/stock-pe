@@ -240,6 +240,7 @@ export default function OTP() {
             >
 
                 <ScrollView
+                    style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -396,6 +397,7 @@ export default function OTP() {
 
                                 <TextInput
                                     key={index}
+                                    autoFocus={index === 0}
                                     ref={(ref) => {
                                         inputRefs.current[index] =
                                             ref;
@@ -467,10 +469,20 @@ export default function OTP() {
 
                         </TouchableOpacity>
 
+                    </View>
 
-                        {/* =================================
-                            DEMO MODE
-                        ================================= */}
+                </ScrollView>
+
+                <View
+                    style={[
+                        styles.footer,
+                        isCompact && styles.footerCompact,
+                    ]}
+                >
+
+                    {/* =================================
+                        OTP INFORMATION
+                    ================================= */}
 
                         <View
                             style={[
@@ -547,9 +559,7 @@ export default function OTP() {
                         </TouchableOpacity>
 
 
-                    </View>
-
-                </ScrollView>
+                </View>
 
             </KeyboardAvoidingView>
 
@@ -573,9 +583,23 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
+    scrollView: {
+        flex: 1,
+    },
+
     scrollContent: {
         flexGrow: 1,
+    },
+
+    footer: {
+        backgroundColor: "#F5F7FF",
+        paddingHorizontal: 40,
         paddingBottom: 35,
+    },
+
+    footerCompact: {
+        paddingHorizontal: 20,
+        paddingBottom: 16,
     },
 
 
@@ -869,8 +893,7 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         fontSize: 15,
         lineHeight: 21,
-        marginTop: -30,
-        marginBottom: 30,
+        marginBottom: 16,
         padding: 14,
         textAlign: "center",
     },
