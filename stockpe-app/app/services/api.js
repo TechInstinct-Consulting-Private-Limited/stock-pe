@@ -2,12 +2,27 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 function resolveApiBaseUrl() {
-    if (process.env.EXPO_PUBLIC_API_URL) {
-        return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, "");
-    }
-
     const hostUri = Constants.expoConfig?.hostUri;
     const host = hostUri?.split(":")[0];
+    const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.replace(
+        /\/$/,
+        ""
+    );
+
+    if (configuredUrl) {
+        const usesLoopbackHost = /^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(
+            configuredUrl
+        );
+
+        if (Platform.OS !== "web" && usesLoopbackHost && host) {
+            return configuredUrl.replace(
+                /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
+                `$1${host}`
+            );
+        }
+
+        return configuredUrl;
+    }
 
     if (host) {
         return `http://${host}:5000/api`;
