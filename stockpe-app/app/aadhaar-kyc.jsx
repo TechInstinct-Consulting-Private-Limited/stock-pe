@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -25,12 +25,13 @@ import {
 const EMPTY_OTP = ["", "", "", "", "", ""];
 
 export default function AadhaarKyc() {
+    const { verified } = useLocalSearchParams();
     const [aadhaarNumber, setAadhaarNumber] = useState("");
     const [consent, setConsent] = useState(false);
     const [verificationId, setVerificationId] = useState("");
     const [otp, setOtp] = useState(EMPTY_OTP);
     const [isLoading, setIsLoading] = useState(false);
-    const [isVerified, setIsVerified] = useState(false);
+    const [isVerified, setIsVerified] = useState(verified === "1");
     const [error, setError] = useState("");
     const otpRefs = useRef([]);
 

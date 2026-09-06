@@ -109,6 +109,27 @@ export default function AadhaarVerification() {
         }
     };
 
+    const resetScan = () => {
+        setAadhaarLastFour("");
+        setFullName("");
+        setDateOfBirth("");
+        setIsVerified(false);
+        setScanError("");
+        setFormError("");
+    };
+
+    const handleContinue = () => {
+        Keyboard.dismiss();
+        router.replace({
+            pathname: "/aadhaar-kyc",
+            params: {
+                mobile: String(mobile || ""),
+                mode: mode === "signin" ? "signin" : "signup",
+                verified: "1",
+            },
+        });
+    };
+
     const handleBack = () => {
         Keyboard.dismiss();
 
@@ -316,31 +337,68 @@ export default function AadhaarVerification() {
                                 <View style={styles.scanHeader}>
                                     <Text style={styles.label}>AADHAAR CARD</Text>
                                     <TouchableOpacity
-                                        style={styles.scanButton}
-                                        onPress={openScanner}
+                                        style={[
+                                            styles.scanButton,
+                                            aadhaarLastFour && styles.scanButtonDone,
+                                        ]}
+                                        onPress={aadhaarLastFour ? resetScan : openScanner}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={
+                                            aadhaarLastFour
+                                                ? "Scan a different Aadhaar"
+                                                : "Scan Aadhaar Secure QR"
+                                        }
                                     >
                                         <Ionicons
-                                            name="scan-outline"
+                                            name={aadhaarLastFour ? "refresh" : "scan-outline"}
                                             size={18}
-                                            color="#594BFF"
+                                            color={aadhaarLastFour ? "#00A66E" : "#594BFF"}
                                         />
-                                        <Text style={styles.scanButtonText}>Tap to Scan</Text>
+                                        <Text
+                                            style={[
+                                                styles.scanButtonText,
+                                                aadhaarLastFour && styles.scanButtonTextDone,
+                                            ]}
+                                        >
+                                            {aadhaarLastFour ? "Rescan" : "Tap to Scan"}
+                                        </Text>
                                     </TouchableOpacity>
                                 </View>
 
-                                <View style={styles.scanArea}>
-                                    <Text style={styles.scanText}>
-                                        {aadhaarLastFour
-                                            ? `UIDAI-verified Aadhaar •••• ${aadhaarLastFour}`
-                                            : "Scan QR code on Aadhaar card"}
-                                    </Text>
-                                </View>
+                                {aadhaarLastFour ? (
+                                    <View style={styles.scannedPanel}>
+                                        <Text style={styles.scannedName}>{fullName}</Text>
+                                        <Text style={styles.scannedMeta}>DOB: {dateOfBirth}</Text>
+                                        <Text style={styles.scannedAadhaar}>
+                                            XXXX XXXX {aadhaarLastFour}
+                                        </Text>
+                                        <View style={styles.scannedBadge}>
+                                            <Ionicons name="shield-checkmark" size={15} color="#00A66E" />
+                                            <Text style={styles.scannedBadgeText}>
+                                                UIDAI signature verified
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.scanArea}
+                                        onPress={openScanner}
+                                        accessibilityRole="button"
+                                    >
+                                        <Ionicons name="qr-code-outline" size={26} color="#8C86FF" />
+                                        <Text style={styles.scanText}>
+                                            Scan the Secure QR on your Aadhaar card
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
 
+                            {aadhaarLastFour ? null : (
+                                <>
                             <Text style={styles.label}>AADHAAR NUMBER</Text>
                             <TextInput
                                 style={styles.input}
-                                value={aadhaarLastFour ? `XXXX XXXX ${aadhaarLastFour}` : groupAadhaar(aadhaarNumber)}
+                                value={groupAadhaar(aadhaarNumber)}
                                 onChangeText={(value) => {
                                     setAadhaarNumber(formatAadhaar(value));
                                     setFormError("");
@@ -349,8 +407,7 @@ export default function AadhaarVerification() {
                                 placeholderTextColor="#C2C8D6"
                                 keyboardType="number-pad"
                                 maxLength={14}
-                                editable={!aadhaarLastFour}
-                                autoFocus={!aadhaarLastFour}
+                                autoFocus
                             />
 
                             <Text style={styles.label}>FULL NAME (AS ON AADHAAR)</Text>
@@ -370,7 +427,6 @@ export default function AadhaarVerification() {
                                 textContentType="none"
                                 importantForAutofill="no"
                                 keyboardType={Platform.OS === "android" ? "visible-password" : "default"}
-                                editable={!aadhaarLastFour}
                             />
 
                             <Text style={styles.label}>DATE OF BIRTH</Text>
@@ -385,8 +441,9 @@ export default function AadhaarVerification() {
                                 placeholderTextColor="#172033"
                                 keyboardType="number-pad"
                                 maxLength={10}
-                                editable={!aadhaarLastFour}
                             />
+                                </>
+                            )}
 
                             <TouchableOpacity
                                 style={styles.consentRow}
@@ -486,7 +543,16 @@ export default function AadhaarVerification() {
                                 </>
                             )}
                         </TouchableOpacity>
-                    ) : null}
+                    ) : (
+                        <TouchableOpacity
+                            style={styles.primaryButton}
+                            onPress={handleContinue}
+                            accessibilityRole="button"
+                        >
+                            <Text style={styles.primaryButtonText}>CONTINUE</Text>
+                            <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                    )}
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -629,6 +695,48 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: "700",
     },
+    scanButtonDone: {
+        borderColor: "#7ED9B4",
+        backgroundColor: "#EDFBF5",
+    },
+    scanButtonTextDone: {
+        color: "#00A66E",
+    },
+    scannedPanel: {
+        borderRadius: 12,
+        backgroundColor: "#F5FFFA",
+        borderWidth: 1,
+        borderColor: "#BFEFD9",
+        padding: 16,
+    },
+    scannedName: {
+        color: "#071329",
+        fontSize: 19,
+        fontWeight: "800",
+    },
+    scannedMeta: {
+        color: "#657189",
+        fontSize: 14,
+        marginTop: 4,
+    },
+    scannedAadhaar: {
+        color: "#00A66E",
+        fontSize: 17,
+        fontWeight: "800",
+        letterSpacing: 1.5,
+        marginTop: 6,
+    },
+    scannedBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        marginTop: 12,
+    },
+    scannedBadgeText: {
+        color: "#00A66E",
+        fontSize: 12,
+        fontWeight: "700",
+    },
     scanArea: {
         minHeight: 74,
         borderRadius: 12,
@@ -639,6 +747,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         padding: 12,
+        gap: 8,
     },
     scanText: {
         color: "#657189",
