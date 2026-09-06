@@ -223,6 +223,7 @@ export default function AadhaarVerification() {
                 mobile: String(mobile || ""),
                 mode: mode === "signin" ? "signin" : "signup",
                 verified: "1",
+                aadhaarLastFour,
             },
         });
     };
@@ -272,6 +273,15 @@ export default function AadhaarVerification() {
         try {
             const result = await requestAadhaarOtp(aadhaarNumber, consent);
             setVerificationId(result.verificationId);
+            router.replace({
+                pathname: "/aadhaar-kyc",
+                params: {
+                    mobile: String(mobile || ""),
+                    mode: mode === "signin" ? "signin" : "signup",
+                    verificationId: result.verificationId,
+                    aadhaarLastFour: aadhaarNumber.slice(-4),
+                },
+            });
         } catch (error) {
             setFormError(getUserFacingError(error));
         } finally {

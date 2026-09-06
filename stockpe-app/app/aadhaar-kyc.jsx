@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Keyboard,
@@ -24,20 +24,70 @@ import {
 
 const EMPTY_OTP = ["", "", "", "", "", ""];
 
+const RESEND_SECONDS = 30;
+
 export default function AadhaarKyc() {
-    const { verified } = useLocalSearchParams();
+    const {
+        verified,
+        mobile,
+        mode,
+        verificationId: incomingVerificationId,
+        aadhaarLastFour: incomingLastFour,
+    } = useLocalSearchParams();
     const [aadhaarNumber, setAadhaarNumber] = useState("");
     const [consent, setConsent] = useState(false);
-    const [verificationId, setVerificationId] = useState("");
+    const [verificationId, setVerificationId] = useState(
+        String(incomingVerificationId || "")
+    );
     const [otp, setOtp] = useState(EMPTY_OTP);
     const [isLoading, setIsLoading] = useState(false);
     const [isVerified, setIsVerified] = useState(verified === "1");
     const [error, setError] = useState("");
+    const [secondsLeft, setSecondsLeft] = useState(
+        incomingVerificationId ? RESEND_SECONDS : 0
+    );
     const otpRefs = useRef([]);
+    const aadhaarLastFour = String(incomingLastFour || aadhaarNumber.slice(-4));
+
+    useEffect(() => {
+        if (secondsLeft <= 0) return undefined;
+        const timer = setTimeout(() => setSecondsLeft((value) => value - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [secondsLeft]);
+
+    useEffect(() => {
+        if (!verificationId || isVerified) return;
+        requestAnimationFrame(() => otpRefs.current[0]?.focus());
+    }, [verificationId, isVerified]);
+
+    const handleResend = async () => {
+        if (secondsLeft > 0 || isLoading || !aadhaarLastFour) return;
+
+        setIsLoading(true);
+        setError("");
+
+        try {
+            const result = await requestAadhaarOtp(aadhaarNumber || String(incomingLastFour || ""), true);
+            setVerificationId(result.verificationId);
+            setOtp(EMPTY_OTP);
+            setSecondsLeft(RESEND_SECONDS);
+            requestAnimationFrame(() => otpRefs.current[0]?.focus());
+        } catch (resendError) {
+            setError(getUserFacingError(resendError));
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleBack = () => {
         Keyboard.dismiss();
-        router.replace("/aadhaar");
+        router.replace({
+            pathname: "/aadhaar",
+            params: {
+                mobile: String(mobile || ""),
+                mode: mode === "signin" ? "signin" : "signup",
+            },
+        });
     };
 
     const handleAadhaarChange = (value) => {
@@ -64,6 +114,7 @@ export default function AadhaarKyc() {
             const result = await requestAadhaarOtp(aadhaarNumber, true);
             setVerificationId(result.verificationId);
             setOtp(EMPTY_OTP);
+            setSecondsLeft(RESEND_SECONDS);
             requestAnimationFrame(() => otpRefs.current[0]?.focus());
         } catch (requestError) {
             setError(getUserFacingError(requestError));
@@ -140,8 +191,10 @@ export default function AadhaarKyc() {
                             <Ionicons name="chevron-back" size={26} color="#657189" />
                         </TouchableOpacity>
                         <View style={styles.headerCopy}>
-                            <Text style={styles.headerTitle}>Verify Aadhaar</Text>
-                            <Text style={styles.headerSubtitle}>Step 3 of 4</Text>
+                            <Text style={styles.headerTitle}>Aadhaar OTP</Text>
+                            <Text style={styles.headerSubtitle}>
+                                UIDAI verification · Step 3 of 4
+                            </Text>
                         </View>
                         <View style={styles.stepBadge}>
                             <Text style={styles.stepBadgeText}>3/4</Text>
@@ -162,20 +215,29 @@ export default function AadhaarKyc() {
                             <Ionicons
                                 name={isVerified ? "shield-checkmark" : "finger-print"}
                                 size={38}
-                                color="#00B978"
+                                color={isVerified ? "#00B978" : "#594BFF"}
                             />
                         </View>
 
                         <Text style={styles.title}>
-                            {isVerified ? "Aadhaar verified" : "Complete your KYC"}
+                            {isVerified ? "Aadhaar verified" : "Aadhaar OTP"}
                         </Text>
-                        <Text style={styles.description}>
-                            {isVerified
-                                ? "Your identity verification was completed successfully."
-                                : verificationId
-                                    ? `Enter the OTP sent to the mobile linked with Aadhaar ending ${aadhaarNumber.slice(-4)}.`
-                                    : "Verify your Aadhaar using the OTP sent to its linked mobile number."}
-                        </Text>
+                        {isVerified ? (
+                            <Text style={styles.description}>
+                                Your identity verification was completed successfully.
+                            </Text>
+                        ) : verificationId ? (
+                            <>
+                                <Text style={styles.description}>Aadhaar-linked mobile</Text>
+                                <Text style={styles.maskedAadhaar}>
+                                    XXXX XXXX {aadhaarLastFour}
+                                </Text>
+                            </>
+                        ) : (
+                            <Text style={styles.description}>
+                                Verify your Aadhaar using the OTP sent to its linked mobile number.
+                            </Text>
+                        )}
 
                         {!verificationId && !isVerified ? (
                             <>
@@ -241,6 +303,30 @@ export default function AadhaarKyc() {
                             </View>
                         ) : null}
 
+                        {verificationId && !isVerified ? (
+                            <TouchableOpacity
+                                onPress={handleResend}
+                                disabled={secondsLeft > 0 || isLoading}
+                                style={styles.resendRow}
+                            >
+                                <Text style={styles.resendText}>
+                                    {secondsLeft > 0 ? "Resend in " : "Didn't get it? "}
+                                    <Text style={styles.resendAccent}>
+                                        {secondsLeft > 0 ? `${secondsLeft}s` : "RESEND OTP"}
+                                    </Text>
+                                </Text>
+                            </TouchableOpacity>
+                        ) : null}
+
+                        {verificationId && !isVerified ? (
+                            <View style={styles.infoBanner}>
+                                <Ionicons name="information-circle-outline" size={20} color="#5865D9" />
+                                <Text style={styles.infoBannerText}>
+                                    UIDAI OTP sent to your Aadhaar-registered mobile number.
+                                </Text>
+                            </View>
+                        ) : null}
+
                         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                         {!isVerified ? (
@@ -254,7 +340,7 @@ export default function AadhaarKyc() {
                                 ) : (
                                     <>
                                         <Text style={styles.buttonText}>
-                                            {verificationId ? "VERIFY OTP" : "SEND AADHAAR OTP"}
+                                            {verificationId ? "VERIFY AADHAAR" : "SEND AADHAAR OTP"}
                                         </Text>
                                         <Ionicons name="arrow-forward" size={25} color="#FFFFFF" />
                                     </>
@@ -302,14 +388,37 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     stepBadgeText: { color: "#5865D9", fontSize: 13, fontWeight: "800" },
+    maskedAadhaar: {
+        color: "#594BFF",
+        fontSize: 20,
+        fontWeight: "800",
+        letterSpacing: 2,
+        marginTop: 6,
+        textAlign: "center",
+    },
+    resendRow: { marginTop: 26, alignSelf: "center" },
+    resendText: { color: "#737D91", fontSize: 15 },
+    resendAccent: { color: "#F5A524", fontWeight: "800" },
+    infoBanner: {
+        alignItems: "center",
+        borderColor: "#D7DCF5",
+        borderRadius: 14,
+        borderWidth: 1,
+        flexDirection: "row",
+        gap: 10,
+        marginTop: 28,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+    },
+    infoBannerText: { color: "#4A5468", flex: 1, fontSize: 13, lineHeight: 18 },
     progressTrack: { backgroundColor: "#DFE4F2", height: 4 },
     progress: { borderRadius: 2, height: 4, width: "75%" },
     content: { flex: 1, paddingHorizontal: 24, paddingTop: 42 },
     iconCircle: {
         alignItems: "center",
         alignSelf: "center",
-        backgroundColor: "#E5F9F2",
-        borderRadius: 34,
+        backgroundColor: "#E4E7FF",
+        borderRadius: 22,
         height: 68,
         justifyContent: "center",
         width: 68,
