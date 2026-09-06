@@ -172,14 +172,8 @@ export default function OTP() {
 
             await setAuthToken(result.token);
             setIsVerifying(false);
-
-            if (mode === "signup") {
-                router.replace("/aadhaar-kyc");
-                return;
-            }
-
             setIsVerified(true);
-            router.replace("/aadhaar");
+            router.replace("/aadhaar-kyc");
         } catch (error) {
             setApiError(getUserFacingError(error));
             setIsVerifying(false);
