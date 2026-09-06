@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const pool = require("../config/database");
 const { createAadhaarKycProvider } = require("./aadhaar-kyc");
-const { createUidaiSecureQrProvider } = require("./aadhaar-kyc/providers/uidai-secure-qr.provider");
+const { createAadhaarSecureQrProvider } = require("./aadhaar-secure-qr");
 
 const MAX_OTP_ATTEMPTS = 5;
 
@@ -137,7 +137,7 @@ async function verifyAadhaarSecureQr({ userId, payload }) {
 
     let kycData;
     try {
-        kycData = createUidaiSecureQrProvider().verify({ payload });
+        kycData = createAadhaarSecureQrProvider().verify({ payload });
     } catch (_error) {
         throw publicError(400, "This Aadhaar Secure QR code could not be verified");
     }
