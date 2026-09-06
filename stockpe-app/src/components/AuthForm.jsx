@@ -47,6 +47,13 @@ export default function AuthForm({
 
     const [mobileError, setMobileError] = useState("");
     const [passwordError, setPasswordError] = useState("");
+    // A field is "touched" once the user has typed in it or left it, so
+    // validation messages appear on blur instead of only on submit.
+    const [touched, setTouched] = useState({
+        mobile: false,
+        password: false,
+        confirmPassword: false,
+    });
     const [confirmPasswordError, setConfirmPasswordError] =
         useState("");
     const [termsError, setTermsError] = useState("");
@@ -230,11 +237,16 @@ export default function AuthForm({
 
         setMobile(onlyNumbers);
         setApiError("");
+        setTouched((current) => ({ ...current, mobile: true }));
 
         // Remove error while user corrects input
         if (mobileError) {
             setMobileError("");
         }
+    };
+
+    const handleMobileBlur = () => {
+        if (touched.mobile) validateMobile();
     };
 
 
@@ -246,9 +258,20 @@ export default function AuthForm({
 
         setPassword(text);
         setApiError("");
+        setTouched((current) => ({ ...current, password: true }));
 
         if (passwordError) {
             setPasswordError("");
+        }
+    };
+
+    const handlePasswordBlur = () => {
+        if (!touched.password) return;
+        validatePassword();
+
+        // Re-check the confirmation too, since it compares against this value.
+        if (touched.confirmPassword && confirmPassword) {
+            validateConfirmPassword();
         }
     };
 
@@ -261,10 +284,15 @@ export default function AuthForm({
 
         setConfirmPassword(text);
         setApiError("");
+        setTouched((current) => ({ ...current, confirmPassword: true }));
 
         if (confirmPasswordError) {
             setConfirmPasswordError("");
         }
+    };
+
+    const handleConfirmPasswordBlur = () => {
+        if (touched.confirmPassword) validateConfirmPassword();
     };
 
 
@@ -326,6 +354,7 @@ export default function AuthForm({
                             onChangeText={
                                 handleMobileChange
                             }
+                            onBlur={handleMobileBlur}
                         />
 
                         <Ionicons
@@ -372,6 +401,7 @@ export default function AuthForm({
                             onChangeText={
                                 handlePasswordChange
                             }
+                            onBlur={handlePasswordBlur}
                         />
 
                         <TouchableOpacity
@@ -480,6 +510,7 @@ export default function AuthForm({
                             onChangeText={
                                 handleMobileChange
                             }
+                            onBlur={handleMobileBlur}
                         />
 
                         <Ionicons
@@ -526,6 +557,7 @@ export default function AuthForm({
                             onChangeText={
                                 handlePasswordChange
                             }
+                            onBlur={handlePasswordBlur}
                         />
 
                         <TouchableOpacity
@@ -586,6 +618,7 @@ export default function AuthForm({
                             onChangeText={
                                 handleConfirmPasswordChange
                             }
+                            onBlur={handleConfirmPasswordBlur}
                         />
 
                         <TouchableOpacity
