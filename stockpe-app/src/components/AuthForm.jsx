@@ -87,9 +87,9 @@ export default function AuthForm({
             return false;
         }
 
-        if (password.length < 6) {
+        if (password.length < 8) {
             setPasswordError(
-                "Password must be at least 6 characters."
+                "Password must be at least 8 characters."
             );
             return false;
         }
@@ -365,7 +365,7 @@ export default function AuthForm({
 
                         <TextInput
                             style={styles.input}
-                            placeholder="Min. 6 characters"
+                            placeholder="Min. 8 characters"
                             placeholderTextColor="#AEB5C7"
                             secureTextEntry={!showPassword}
                             value={password}

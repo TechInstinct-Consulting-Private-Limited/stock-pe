@@ -266,7 +266,7 @@ export default function Login() {
 
                         <TextInput
                         style={styles.input}
-                        placeholder="Min. 6 characters"
+                        placeholder="Min. 8 characters"
                         placeholderTextColor="#AEB5C7"
                         secureTextEntry={!showPassword}
                         value={password}
