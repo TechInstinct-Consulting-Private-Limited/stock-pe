@@ -398,6 +398,19 @@ export default function OTP() {
                                 <TextInput
                                     key={index}
                                     autoFocus={index === 0}
+                                    autoComplete={
+                                        index === 0
+                                            ? "one-time-code"
+                                            : "off"
+                                    }
+                                    textContentType={
+                                        index === 0
+                                            ? "oneTimeCode"
+                                            : "none"
+                                    }
+                                    importantForAutofill={
+                                        index === 0 ? "yes" : "no"
+                                    }
                                     ref={(ref) => {
                                         inputRefs.current[index] =
                                             ref;
