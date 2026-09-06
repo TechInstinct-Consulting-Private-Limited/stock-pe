@@ -355,15 +355,16 @@ export default function AadhaarVerification() {
 
                             <Text style={styles.label}>FULL NAME (AS ON AADHAAR)</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, styles.uppercaseInput]}
                                 value={fullName}
                                 onChangeText={(value) => {
-                                    setFullName(value.toUpperCase());
+                                    setFullName(value);
                                     setFormError("");
                                 }}
                                 placeholder="ARJUN KUMAR"
                                 placeholderTextColor="#C2C8D6"
                                 autoCapitalize="characters"
+                                autoCorrect={false}
                                 editable={!aadhaarLastFour}
                             />
 
@@ -674,6 +675,9 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         borderWidth: 1,
         borderColor: "#ECEEF5",
+    },
+    uppercaseInput: {
+        textTransform: "uppercase",
     },
     consentRow: {
         flexDirection: "row",
