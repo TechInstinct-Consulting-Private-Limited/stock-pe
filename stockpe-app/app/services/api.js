@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import { getAuthToken } from "./authStorage";
 
 function resolveApiBaseUrl() {
     const hostUri = Constants.expoConfig?.hostUri;
@@ -51,11 +52,11 @@ async function request(path, options = {}) {
 
     try {
         response = await fetch(`${API_BASE_URL}${path}`, {
+            ...options,
             headers: {
                 "Content-Type": "application/json",
                 ...options.headers,
             },
-            ...options,
         });
     } catch (_error) {
         throw new ApiError(
@@ -99,5 +100,38 @@ export function resendOtp(mobile, purpose) {
     return request("/auth/resend-otp", {
         method: "POST",
         body: JSON.stringify({ mobile, purpose }),
+    });
+}
+
+async function authenticatedRequest(path, options = {}) {
+    const token = await getAuthToken();
+
+    if (!token) {
+        throw new ApiError("Your session has expired. Please sign in again.");
+    }
+
+    return request(path, {
+        ...options,
+        headers: {
+            ...options.headers,
+            Authorization: `Bearer ${token}`,
+        },
+    });
+}
+
+export function requestAadhaarOtp(aadhaarNumber, consent) {
+    return authenticatedRequest("/kyc/aadhaar/request-otp", {
+        method: "POST",
+        body: JSON.stringify({
+            aadhaarNumber,
+            consent,
+        }),
+    });
+}
+
+export function verifyAadhaarOtp(verificationId, otp) {
+    return authenticatedRequest("/kyc/aadhaar/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ verificationId, otp }),
     });
 }

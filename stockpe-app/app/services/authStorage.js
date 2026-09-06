@@ -11,3 +11,11 @@ export async function setAuthToken(token) {
 
     await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
 }
+
+export async function getAuthToken() {
+    if (Platform.OS === "web") {
+        return globalThis.localStorage?.getItem(AUTH_TOKEN_KEY) ?? null;
+    }
+
+    return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+}
