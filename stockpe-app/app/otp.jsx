@@ -382,7 +382,6 @@ export default function OTP() {
                                         )
                                     }
                                     keyboardType="number-pad"
-                                    maxLength={6}
                                     selectTextOnFocus
                                     textAlign="center"
                                     style={[
