@@ -68,56 +68,29 @@ export default function Login() {
 
     return (
         <SafeAreaView style={styles.container}>
-
-            {/* ========================================
-                FIXED BRAND / HEADER
-                ======================================== */}
-
-            <AuthHeader />
-
-
-            {/* ========================================
-                ONLY FORM AREA HANDLES KEYBOARD
-                ======================================== */}
-
             <KeyboardAvoidingView
-                style={styles.formContainer}
+                style={styles.keyboardContainer}
                 behavior={
                     Platform.OS === "ios"
                         ? "padding"
                         : "height"
                 }
             >
+                <ScrollView
+                    ref={scrollRef}
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode={
+                        Platform.OS === "ios"
+                            ? "interactive"
+                            : "on-drag"
+                    }
+                >
+                    <AuthHeader />
 
-                {/* ====================================
-                    WHITE SCROLLABLE AREA
-                    ==================================== */}
-
-                <View style={styles.formSheet}>
-
-                    <ScrollView
-                        ref={scrollRef}
-
-                        style={styles.scrollView}
-
-                        contentContainerStyle={
-                            styles.scrollContent
-                        }
-
-                        showsVerticalScrollIndicator={false}
-
-                        keyboardShouldPersistTaps="handled"
-
-                        keyboardDismissMode={
-                            Platform.OS === "ios"
-                                ? "interactive"
-                                : "on-drag"
-                        }
-
-                        automaticallyAdjustKeyboardInsets={
-                            Platform.OS === "ios"
-                        }
-                    >
+                    <View style={styles.formSheet}>
 
                         {/* =================================
                             AUTH CONTENT
@@ -190,9 +163,8 @@ export default function Login() {
 
                         </View>
 
-                    </ScrollView>
-
-                </View>
+                    </View>
+                </ScrollView>
 
             </KeyboardAvoidingView>
 
@@ -214,10 +186,10 @@ const styles = StyleSheet.create({
 
 
     // ============================================
-    // FORM AREA BELOW FIXED HEADER
+    // KEYBOARD-AWARE SCREEN
     // ============================================
 
-    formContainer: {
+    keyboardContainer: {
         flex: 1,
     },
 
