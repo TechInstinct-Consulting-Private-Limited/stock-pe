@@ -589,6 +589,7 @@ const styles = StyleSheet.create({
 
     scrollContent: {
         flexGrow: 1,
+        paddingTop: 40,
     },
 
     footer: {
@@ -599,7 +600,7 @@ const styles = StyleSheet.create({
 
     footerCompact: {
         paddingHorizontal: 20,
-        paddingBottom: 16,
+        paddingBottom: 24,
     },
 
 
