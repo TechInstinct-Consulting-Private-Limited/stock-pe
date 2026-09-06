@@ -5,15 +5,15 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     StyleSheet,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import AlternativeAuth from "./components/AlternativeAuth";
-import AuthForm from "./components/AuthForm";
-import AuthHeader from "./components/AuthHeader.jsx";
-import AuthTabs from "./components/AuthTabs";
+import AlternativeAuth from "../src/components/AlternativeAuth";
+import AuthForm from "../src/components/AuthForm";
+import AuthHeader from "../src/components/AuthHeader.jsx";
+import AuthTabs from "../src/components/AuthTabs";
 
 export default function Login() {
 

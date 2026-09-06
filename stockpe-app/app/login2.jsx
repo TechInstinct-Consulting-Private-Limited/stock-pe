@@ -4,7 +4,6 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -12,13 +11,14 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
 
 
-import BrandLogo from "./components/BrandLogo";
+import BrandLogo from "../src/components/BrandLogo";
 
 export default function Login() {
   const [activeTab, setActiveTab] = useState("signin");

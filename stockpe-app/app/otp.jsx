@@ -7,7 +7,6 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -16,12 +15,13 @@ import {
     useWindowDimensions,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
     getUserFacingError,
     resendOtp,
     verifyOtp,
-} from "./services/api";
-import { setAuthToken } from "./services/authStorage";
+} from "../src/services/api";
+import { setAuthToken } from "../src/services/authStorage";
 
 
 export default function OTP() {

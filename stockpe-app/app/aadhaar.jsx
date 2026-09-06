@@ -9,7 +9,6 @@ import {
     KeyboardAvoidingView,
     Linking,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -18,17 +17,18 @@ import {
     useWindowDimensions,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
     getUserFacingError,
     requestAadhaarOtp,
     verifyAadhaarOtp,
     verifyAadhaarSecureQr,
-} from "./services/api";
+} from "../src/services/api";
 import {
     AadhaarQrError,
     verifyAndParseAadhaarSecureQr,
-} from "./services/aadhaarSecureQr";
-import WebQrScanner, { decodeQrFromImageFile } from "./components/WebQrScanner";
+} from "../src/services/aadhaarSecureQr";
+import WebQrScanner, { decodeQrFromImageFile } from "../src/components/WebQrScanner";
 
 function formatAadhaar(value) {
     return value.replace(/\D/g, "").slice(0, 12);
