@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
+    getAadhaarKycStatus,
     getUserFacingError,
     requestAadhaarOtp,
     verifyAadhaarOtp,
@@ -81,6 +82,41 @@ export default function AadhaarVerification() {
     const scanLockRef = useRef(false);
     const cameraRef = useRef(null);
     const [isCapturing, setIsCapturing] = useState(false);
+    const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
+    // Aadhaar KYC is one-time. If it is already verified for this account there
+    // is nothing to collect here, so skip straight past this step.
+    useEffect(() => {
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const status = await getAadhaarKycStatus();
+                if (cancelled) return;
+
+                if (status?.status === "verified") {
+                    router.replace({
+                        pathname: "/aadhaar-kyc",
+                        params: {
+                            mobile: String(mobile || ""),
+                            mode: mode === "signin" ? "signin" : "signup",
+                            verified: "1",
+                            aadhaarLastFour: String(status.aadhaarLastFour || ""),
+                        },
+                    });
+                    return;
+                }
+            } catch (_error) {
+                // Status is advisory only; fall back to showing the form.
+            }
+
+            if (!cancelled) setIsCheckingStatus(false);
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [mobile, mode]);
 
     useEffect(() => {
         if (!scannerOpen || scanLocked) {
@@ -308,6 +344,15 @@ export default function AadhaarVerification() {
             setIsLoading(false);
         }
     };
+
+    if (isCheckingStatus) {
+        return (
+            <SafeAreaView style={[styles.safeArea, styles.statusCheck]}>
+                <ActivityIndicator color="#594BFF" size="large" />
+                <Text style={styles.statusCheckText}>Checking your KYC status…</Text>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -751,6 +796,16 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: "#F4F6FF",
+    },
+    statusCheck: {
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 14,
+    },
+    statusCheckText: {
+        color: "#657189",
+        fontSize: 15,
+        fontWeight: "600",
     },
     container: {
         flex: 1,

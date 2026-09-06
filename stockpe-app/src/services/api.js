@@ -142,3 +142,7 @@ export function verifyAadhaarSecureQr(payload, consent) {
         body: JSON.stringify({ payload, consent }),
     });
 }
+
+export function getAadhaarKycStatus() {
+    return authenticatedRequest("/kyc/aadhaar/status");
+}

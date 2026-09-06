@@ -81,6 +81,11 @@ export default function AadhaarKyc() {
 
     const handleBack = () => {
         Keyboard.dismiss();
+
+        // Aadhaar KYC is one-time, so once verified there is nothing to go
+        // back and change on step 2.
+        if (isVerified) return;
+
         router.replace({
             pathname: "/aadhaar",
             params: {
@@ -186,7 +191,8 @@ export default function AadhaarKyc() {
                     <View style={styles.header}>
                         <TouchableOpacity
                             onPress={handleBack}
-                            style={styles.backButton}
+                            disabled={isVerified}
+                            style={[styles.backButton, isVerified && styles.backButtonHidden]}
                         >
                             <Ionicons name="chevron-back" size={26} color="#657189" />
                         </TouchableOpacity>
@@ -378,6 +384,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         width: 48,
     },
+    backButtonHidden: { opacity: 0 },
     headerCopy: { flex: 1, marginLeft: 14 },
     headerTitle: { color: "#071329", fontSize: 20, fontWeight: "800" },
     headerSubtitle: { color: "#7D8190", fontSize: 13, marginTop: 3 },
