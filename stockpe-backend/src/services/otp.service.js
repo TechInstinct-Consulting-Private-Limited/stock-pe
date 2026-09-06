@@ -27,6 +27,7 @@ async function createOtpVerification(mobile, purpose) {
             `Please wait ${OTP_RESEND_COOLDOWN_SECONDS} seconds before requesting another OTP`
         );
         error.statusCode = 429;
+        error.isOperational = true;
         throw error;
     }
 

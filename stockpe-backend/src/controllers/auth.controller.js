@@ -40,11 +40,12 @@ async function signUp(req, res, next) {
         }
 
         const existingUser = await pool.query(
-            "SELECT id FROM users WHERE mobile = $1",
+            "SELECT id, mobile_verified FROM users WHERE mobile = $1",
             [mobile]
         );
+        const user = existingUser.rows[0];
 
-        if (existingUser.rowCount > 0) {
+        if (user?.mobile_verified) {
             return res.status(409).json({
                 success: false,
                 message: "An account already exists for this mobile number",
@@ -52,13 +53,22 @@ async function signUp(req, res, next) {
         }
 
         const passwordHash = await bcrypt.hash(password, 12);
-        await pool.query(
-            "INSERT INTO users (mobile, password_hash) VALUES ($1, $2)",
-            [mobile, passwordHash]
-        );
+        if (user) {
+            await pool.query(
+                `UPDATE users
+                 SET password_hash = $1, updated_at = NOW()
+                 WHERE id = $2`,
+                [passwordHash, user.id]
+            );
+        } else {
+            await pool.query(
+                "INSERT INTO users (mobile, password_hash) VALUES ($1, $2)",
+                [mobile, passwordHash]
+            );
+        }
 
         const otpDetails = await createOtpVerification(mobile, "signup");
-        return res.status(201).json({
+        return res.status(user ? 200 : 201).json({
             success: true,
             message: "OTP sent for mobile verification",
             ...otpDetails,
