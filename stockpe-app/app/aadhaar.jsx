@@ -75,10 +75,7 @@ export default function AadhaarVerification() {
     const scrollRef = useRef(null);
     const consentY = useRef(0);
     const [consentHighlight, setConsentHighlight] = useState(false);
-    const [pastedPayload, setPastedPayload] = useState("");
     const isWeb = Platform.OS === "web";
-    const [scanStalled, setScanStalled] = useState(false);
-    const [detectionCount, setDetectionCount] = useState(0);
     const scanLockRef = useRef(false);
     const cameraRef = useRef(null);
     const [isCapturing, setIsCapturing] = useState(false);
@@ -119,15 +116,6 @@ export default function AadhaarVerification() {
     }, [mobile, mode]);
 
     useEffect(() => {
-        if (!scannerOpen || scanLocked) {
-            setScanStalled(false);
-            return undefined;
-        }
-        const timer = setTimeout(() => setScanStalled(true), 10000);
-        return () => clearTimeout(timer);
-    }, [scannerOpen, scanLocked]);
-
-    useEffect(() => {
         if (!consentHighlight) return undefined;
         const timer = setTimeout(() => setConsentHighlight(false), 2600);
         return () => clearTimeout(timer);
@@ -152,7 +140,6 @@ export default function AadhaarVerification() {
         setScanError("");
         scanLockRef.current = false;
         setScanLocked(false);
-        setDetectionCount(0);
         setScannerOpen(true);
         if (isWeb) return;
         if (!cameraPermission?.granted && cameraPermission?.canAskAgain !== false) {
@@ -163,7 +150,6 @@ export default function AadhaarVerification() {
     const handleBarcodeScanned = async ({ data }) => {
         if (scanLockRef.current || !data) return;
         scanLockRef.current = true;
-        setDetectionCount((count) => count + 1);
         setScanLocked(true);
         setScanError("");
 
@@ -196,7 +182,6 @@ export default function AadhaarVerification() {
     };
 
     const resetScan = () => {
-        setPastedPayload("");
         setAadhaarLastFour("");
         setFullName("");
         setDateOfBirth("");
@@ -395,73 +380,30 @@ export default function AadhaarVerification() {
                                 />
                             )}
                             <View style={styles.scanFrame} />
-                            <View style={styles.scanInstructions}>
-                                <Text style={styles.scanInstructionsTitle}>Place the Secure QR inside the frame</Text>
-                                <Text style={styles.scanInstructionsText}>Use the large QR on your downloaded or printed Aadhaar.</Text>
-                                {scanStalled ? (
-                                    <Text style={styles.scanInstructionsText}>
-                                        {detectionCount === 0
-                                            ? "No QR detected yet. Fill the frame with the large Secure QR, hold steady in bright light, and keep about 15 cm distance."
-                                            : "QR detected but not readable yet. Move slightly closer or further away."}
-                                    </Text>
-                                ) : null}
+
+                            <View style={styles.shutterBar}>
                                 {isWeb ? (
-                                    <>
-                                        {createElement("input", {
-                                            type: "file",
-                                            accept: "image/*",
-                                            onChange: handleImageUpload,
-                                            style: {
-                                                marginTop: 14,
-                                                color: "#DCE2F2",
-                                                width: "100%",
-                                            },
-                                        })}
-                                        <Text style={styles.scanInstructionsText}>
-                                            Or upload a photo/screenshot of the Aadhaar Secure QR.
-                                        </Text>
-                                        <TextInput
-                                            style={styles.pasteInput}
-                                            value={pastedPayload}
-                                            onChangeText={setPastedPayload}
-                                            placeholder="Paste the Secure QR text here"
-                                            placeholderTextColor="#8E97AE"
-                                            multiline
-                                        />
-                                        <TouchableOpacity
-                                            style={styles.pasteButton}
-                                            disabled={scanLocked || !pastedPayload.trim()}
-                                            onPress={() =>
-                                                handleBarcodeScanned({ data: pastedPayload.trim() })
-                                            }
-                                        >
-                                            <Text style={styles.pasteButtonText}>VERIFY PASTED QR</Text>
-                                        </TouchableOpacity>
-                                        <Text style={styles.scanInstructionsText}>
-                                            Browser camera scanning is limited. On a phone the QR is read automatically.
-                                        </Text>
-                                    </>
-                                ) : null}
-                                {!isWeb ? (
+                                    createElement("input", {
+                                        type: "file",
+                                        accept: "image/*",
+                                        onChange: handleImageUpload,
+                                        style: { color: "#DCE2F2" },
+                                    })
+                                ) : (
                                     <TouchableOpacity
-                                        style={styles.pasteButton}
+                                        style={styles.shutterButton}
                                         disabled={isCapturing || scanLocked}
                                         onPress={handleCaptureAndScan}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Capture photo and read QR"
                                     >
                                         {isCapturing ? (
-                                            <ActivityIndicator color="#FFFFFF" />
+                                            <ActivityIndicator color="#071329" />
                                         ) : (
-                                            <Text style={styles.pasteButtonText}>
-                                                CAPTURE PHOTO AND READ QR
-                                            </Text>
+                                            <View style={styles.shutterInner} />
                                         )}
                                     </TouchableOpacity>
-                                ) : null}
-                                <TouchableOpacity onPress={() => setScannerOpen(false)}>
-                                    <Text style={styles.manualEntryText}>
-                                        Nothing detected? Enter details manually
-                                    </Text>
-                                </TouchableOpacity>
+                                )}
                             </View>
                         </View>
                     ) : (
@@ -1007,63 +949,28 @@ const styles = StyleSheet.create({
     scannerTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800" },
     cameraContainer: { flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center" },
     scanFrame: { width: "78%", aspectRatio: 1, borderWidth: 3, borderColor: "#FFFFFF", borderRadius: 24 },
-    scanInstructions: { position: "absolute", bottom: 42, left: 24, right: 24, padding: 18, borderRadius: 16, backgroundColor: "rgba(7,19,41,0.82)" },
-    scanInstructionsTitle: { color: "#FFFFFF", textAlign: "center", fontSize: 16, fontWeight: "800" },
-    scanInstructionsText: { color: "#DCE2F2", textAlign: "center", marginTop: 6, lineHeight: 19 },
-    manualEntryText: { color: "#8C86FF", textAlign: "center", marginTop: 14, fontWeight: "700" },
-    pasteInput: {
-        marginTop: 14,
-        minHeight: 56,
-        maxHeight: 96,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#38466A",
-        backgroundColor: "#0D1B33",
-        color: "#FFFFFF",
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
-    pasteButton: {
-        marginTop: 10,
-        minHeight: 44,
-        borderRadius: 12,
-        backgroundColor: "#594BFF",
+    shutterBar: {
+        position: "absolute",
+        bottom: 46,
+        left: 0,
+        right: 0,
         alignItems: "center",
+    },
+    shutterButton: {
+        alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.28)",
+        borderColor: "#FFFFFF",
+        borderRadius: 42,
+        borderWidth: 4,
+        height: 84,
         justifyContent: "center",
+        width: 84,
     },
-    pasteButtonText: { color: "#FFFFFF", fontWeight: "800", letterSpacing: 0.6 },
-    permissionPanel: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
-    permissionTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", marginTop: 18 },
-    permissionText: { color: "#BFC8DA", textAlign: "center", lineHeight: 21, marginTop: 10, maxWidth: 340 },
-    permissionButton: { marginTop: 24, borderRadius: 24, backgroundColor: "#665CFF", paddingHorizontal: 24, paddingVertical: 14 },
-    permissionButtonText: { color: "#FFFFFF", fontWeight: "800" },
-    scanErrorPanel: { position: "absolute", bottom: 28, left: 20, right: 20, borderRadius: 16, backgroundColor: "#FFF0F0", padding: 18 },
-    scanErrorText: { color: "#8E2929", textAlign: "center", lineHeight: 20 },
-    scanRetryText: { color: "#594BFF", textAlign: "center", fontWeight: "900", marginTop: 12 },
-    scanBusy: { position: "absolute", bottom: 32, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "rgba(7,19,41,0.9)", paddingHorizontal: 18, paddingVertical: 14, borderRadius: 24 },
-    scanBusyText: { color: "#FFFFFF", fontWeight: "700" },
-    label: {
-        color: "#657189",
-        fontSize: 11,
-        fontWeight: "700",
-        marginBottom: 8,
-    },
-    input: {
-        width: "100%",
-        minHeight: 58,
-        borderRadius: 16,
+    shutterInner: {
         backgroundColor: "#FFFFFF",
-        color: "#071329",
-        fontSize: 17,
-        paddingHorizontal: 18,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: "#ECEEF5",
-    },
-    consentRow: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-        marginBottom: 20,
+        borderRadius: 31,
+        height: 62,
+        width: 62,
     },
     consentRowHighlight: {
         borderWidth: 1.5,
