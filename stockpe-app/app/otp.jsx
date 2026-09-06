@@ -173,6 +173,7 @@ export default function OTP() {
             await setAuthToken(result.token);
             setIsVerifying(false);
             setIsVerified(true);
+            router.replace("/aadhaar");
         } catch (error) {
             setApiError(getUserFacingError(error));
             setIsVerifying(false);
