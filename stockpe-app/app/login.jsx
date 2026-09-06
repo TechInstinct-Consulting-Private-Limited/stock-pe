@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
 
 import {
+    Animated,
     Keyboard,
     KeyboardAvoidingView,
     Platform,
     SafeAreaView,
-    ScrollView,
     StyleSheet,
     View,
 } from "react-native";
@@ -30,6 +30,13 @@ export default function Login() {
     const [agreeTerms, setAgreeTerms] = useState(false);
 
     const scrollRef = useRef(null);
+    const scrollY = useRef(new Animated.Value(0)).current;
+
+    const headerTranslateY = scrollY.interpolate({
+        inputRange: [0, 355],
+        outputRange: [0, 177],
+        extrapolate: "clamp",
+    });
 
 
     // ============================================
@@ -76,7 +83,7 @@ export default function Login() {
                         : "height"
                 }
             >
-                <ScrollView
+                <Animated.ScrollView
                     ref={scrollRef}
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
@@ -87,8 +94,30 @@ export default function Login() {
                             ? "interactive"
                             : "on-drag"
                     }
+                    onScroll={Animated.event(
+                        [
+                            {
+                                nativeEvent: {
+                                    contentOffset: { y: scrollY },
+                                },
+                            },
+                        ],
+                        {
+                            useNativeDriver:
+                                Platform.OS !== "web",
+                        }
+                    )}
+                    scrollEventThrottle={16}
                 >
-                    <AuthHeader />
+                    <Animated.View
+                        style={{
+                            transform: [
+                                { translateY: headerTranslateY },
+                            ],
+                        }}
+                    >
+                        <AuthHeader />
+                    </Animated.View>
 
                     <View style={styles.formSheet}>
                         <View style={styles.sheetHandle} />
@@ -165,7 +194,7 @@ export default function Login() {
                         </View>
 
                     </View>
-                </ScrollView>
+                </Animated.ScrollView>
 
             </KeyboardAvoidingView>
 
