@@ -136,6 +136,7 @@ export default function Login() {
                             {/* SIGN IN / SIGN UP FORM */}
 
                             <AuthForm
+                                key={activeTab}
                                 activeTab={activeTab}
 
                                 mobile={mobile}
