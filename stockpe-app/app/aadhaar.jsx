@@ -74,6 +74,18 @@ export default function AadhaarVerification() {
     const scrollRef = useRef(null);
     const consentY = useRef(0);
     const [consentHighlight, setConsentHighlight] = useState(false);
+    const [pastedPayload, setPastedPayload] = useState("");
+    const isWeb = Platform.OS === "web";
+    const [scanStalled, setScanStalled] = useState(false);
+
+    useEffect(() => {
+        if (!scannerOpen || scanLocked) {
+            setScanStalled(false);
+            return undefined;
+        }
+        const timer = setTimeout(() => setScanStalled(true), 10000);
+        return () => clearTimeout(timer);
+    }, [scannerOpen, scanLocked]);
 
     useEffect(() => {
         if (!consentHighlight) return undefined;
@@ -105,15 +117,24 @@ export default function AadhaarVerification() {
         }
     };
 
-    const handleBarcodeScanned = async ({ data, type }) => {
-        if (scanLocked || type !== "qr") return;
+    const handleBarcodeScanned = async ({ data }) => {
+        if (scanLocked || !data) return;
         setScanLocked(true);
         setScanError("");
 
         try {
             const localData = await verifyAndParseAadhaarSecureQr(data);
-            const result = await verifyAadhaarSecureQr(data.trim(), true);
-            const verifiedData = result.kycData || localData;
+            let verifiedData = localData;
+
+            try {
+                const result = await verifyAadhaarSecureQr(data.trim(), true);
+                verifiedData = result.kycData || localData;
+            } catch (serverError) {
+                // The QR signature is already verified on-device, so a server
+                // hiccup should not block the user; it is retried on submit.
+                console.warn("Secure QR server verification failed", serverError);
+            }
+
             setAadhaarLastFour(verifiedData.aadhaarLastFour);
             setFullName(verifiedData.name);
             setDateOfBirth(verifiedData.dateOfBirth);
@@ -256,6 +277,40 @@ export default function AadhaarVerification() {
                             <View style={styles.scanInstructions}>
                                 <Text style={styles.scanInstructionsTitle}>Place the Secure QR inside the frame</Text>
                                 <Text style={styles.scanInstructionsText}>Use the large QR on your downloaded or printed Aadhaar.</Text>
+                                {scanStalled ? (
+                                    <Text style={styles.scanInstructionsText}>
+                                        Still nothing detected. Hold steady about 15 cm away in bright light, and make sure you are scanning the large Secure QR, not the small one.
+                                    </Text>
+                                ) : null}
+                                {isWeb ? (
+                                    <>
+                                        <TextInput
+                                            style={styles.pasteInput}
+                                            value={pastedPayload}
+                                            onChangeText={setPastedPayload}
+                                            placeholder="Paste the Secure QR text here"
+                                            placeholderTextColor="#8E97AE"
+                                            multiline
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.pasteButton}
+                                            disabled={scanLocked || !pastedPayload.trim()}
+                                            onPress={() =>
+                                                handleBarcodeScanned({ data: pastedPayload.trim() })
+                                            }
+                                        >
+                                            <Text style={styles.pasteButtonText}>VERIFY PASTED QR</Text>
+                                        </TouchableOpacity>
+                                        <Text style={styles.scanInstructionsText}>
+                                            Browser camera scanning is limited. On a phone the QR is read automatically.
+                                        </Text>
+                                    </>
+                                ) : null}
+                                <TouchableOpacity onPress={() => setScannerOpen(false)}>
+                                    <Text style={styles.manualEntryText}>
+                                        Nothing detected? Enter details manually
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
                         </View>
                     ) : (
@@ -789,6 +844,28 @@ const styles = StyleSheet.create({
     scanInstructions: { position: "absolute", bottom: 42, left: 24, right: 24, padding: 18, borderRadius: 16, backgroundColor: "rgba(7,19,41,0.82)" },
     scanInstructionsTitle: { color: "#FFFFFF", textAlign: "center", fontSize: 16, fontWeight: "800" },
     scanInstructionsText: { color: "#DCE2F2", textAlign: "center", marginTop: 6, lineHeight: 19 },
+    manualEntryText: { color: "#8C86FF", textAlign: "center", marginTop: 14, fontWeight: "700" },
+    pasteInput: {
+        marginTop: 14,
+        minHeight: 56,
+        maxHeight: 96,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#38466A",
+        backgroundColor: "#0D1B33",
+        color: "#FFFFFF",
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    pasteButton: {
+        marginTop: 10,
+        minHeight: 44,
+        borderRadius: 12,
+        backgroundColor: "#594BFF",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    pasteButtonText: { color: "#FFFFFF", fontWeight: "800", letterSpacing: 0.6 },
     permissionPanel: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
     permissionTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", marginTop: 18 },
     permissionText: { color: "#BFC8DA", textAlign: "center", lineHeight: 21, marginTop: 10, maxWidth: 340 },
