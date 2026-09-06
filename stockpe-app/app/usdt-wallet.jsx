@@ -15,6 +15,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import QRCode from "react-native-qrcode-svg";
 
 import { getUserFacingError, linkUsdtWallet } from "../src/services/api";
 
@@ -28,12 +29,25 @@ const DEMO_ADDRESSES = {
 
 const USDT_INR_RATE = "73.42";
 
+const ADDRESS_RULES = {
+    TRC20: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
+    ERC20: /^0x[0-9a-fA-F]{40}$/,
+    BEP20: /^0x[0-9a-fA-F]{40}$/,
+};
+
+function shortenAddress(value) {
+    return value.length > 20 ? `${value.slice(0, 10)}…${value.slice(-8)}` : value;
+}
+
 export default function UsdtWallet() {
     const { mobile, mode } = useLocalSearchParams();
     const [network, setNetwork] = useState("TRC20");
     const [address, setAddress] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
+
+    const trimmedAddress = address.trim();
+    const isAddressValid = ADDRESS_RULES[network].test(trimmedAddress);
 
     const handleBack = () => {
         Keyboard.dismiss();
@@ -54,8 +68,13 @@ export default function UsdtWallet() {
     };
 
     const handleLinkWallet = async () => {
-        if (!address.trim()) {
+        if (!trimmedAddress) {
             setError("Paste your USDT wallet address to continue.");
+            return;
+        }
+
+        if (!isAddressValid) {
+            setError(`This is not a valid ${network} address. Check it and try again.`);
             return;
         }
 
@@ -64,7 +83,7 @@ export default function UsdtWallet() {
         setError("");
 
         try {
-            await linkUsdtWallet(network, address.trim());
+            await linkUsdtWallet(network, trimmedAddress);
             router.replace("/login");
         } catch (linkError) {
             setError(getUserFacingError(linkError));
@@ -185,11 +204,48 @@ export default function UsdtWallet() {
                         </TouchableOpacity>
                     ) : null}
 
+                    {trimmedAddress ? (
+                        <View
+                            style={[
+                                styles.previewCard,
+                                !isAddressValid && styles.previewCardInvalid,
+                            ]}
+                        >
+                            {isAddressValid ? (
+                                <View style={styles.qrTile}>
+                                    <QRCode value={trimmedAddress} size={92} />
+                                </View>
+                            ) : (
+                                <View style={[styles.qrTile, styles.qrTileInvalid]}>
+                                    <Ionicons name="alert-circle-outline" size={38} color="#D8385A" />
+                                </View>
+                            )}
+                            <View style={styles.previewCopy}>
+                                <Text
+                                    style={[
+                                        styles.previewLabel,
+                                        !isAddressValid && styles.previewLabelInvalid,
+                                    ]}
+                                >
+                                    {isAddressValid
+                                        ? `VERIFIED ${network} ADDRESS`
+                                        : `NOT A VALID ${network} ADDRESS`}
+                                </Text>
+                                <Text style={styles.previewAddress}>
+                                    {shortenAddress(trimmedAddress)}
+                                </Text>
+                            </View>
+                        </View>
+                    ) : null}
+
                     {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                     <TouchableOpacity
-                        style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
-                        disabled={isLoading}
+                        style={[
+                            styles.primaryButton,
+                            (isLoading || !isAddressValid) && styles.buttonDisabled,
+                        ]}
+                        disabled={isLoading || !isAddressValid}
                         onPress={handleLinkWallet}
                     >
                         {isLoading ? (
@@ -307,6 +363,36 @@ const styles = StyleSheet.create({
         marginTop: 12,
     },
     errorText: { color: "#D8385A", fontSize: 14, marginTop: 14 },
+    previewCard: {
+        alignItems: "center",
+        backgroundColor: "#E7F8F1",
+        borderColor: "#BFE9D8",
+        borderRadius: 18,
+        borderWidth: 1,
+        flexDirection: "row",
+        gap: 16,
+        marginTop: 20,
+        padding: 16,
+    },
+    previewCardInvalid: { backgroundColor: "#FDECF0", borderColor: "#F3C3CF" },
+    qrTile: {
+        alignItems: "center",
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        height: 116,
+        justifyContent: "center",
+        width: 116,
+    },
+    qrTileInvalid: { backgroundColor: "#FFFFFF" },
+    previewCopy: { flex: 1 },
+    previewLabel: {
+        color: "#0F8A66",
+        fontSize: 12,
+        fontWeight: "800",
+        letterSpacing: 0.8,
+    },
+    previewLabelInvalid: { color: "#D8385A" },
+    previewAddress: { color: "#2B3446", fontSize: 14, marginTop: 8 },
     primaryButton: {
         alignItems: "center",
         backgroundColor: "#199A72",
