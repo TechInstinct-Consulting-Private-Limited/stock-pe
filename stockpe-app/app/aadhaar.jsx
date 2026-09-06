@@ -2,13 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Keyboard,
     KeyboardAvoidingView,
     Linking,
-    Modal,
     Platform,
     SafeAreaView,
     ScrollView,
@@ -29,6 +28,7 @@ import {
     AadhaarQrError,
     verifyAndParseAadhaarSecureQr,
 } from "./services/aadhaarSecureQr";
+import WebQrScanner, { decodeQrFromImageFile } from "./components/WebQrScanner";
 
 function formatAadhaar(value) {
     return value.replace(/\D/g, "").slice(0, 12);
@@ -77,6 +77,8 @@ export default function AadhaarVerification() {
     const [pastedPayload, setPastedPayload] = useState("");
     const isWeb = Platform.OS === "web";
     const [scanStalled, setScanStalled] = useState(false);
+    const [detectionCount, setDetectionCount] = useState(0);
+    const scanLockRef = useRef(false);
 
     useEffect(() => {
         if (!scannerOpen || scanLocked) {
@@ -110,15 +112,20 @@ export default function AadhaarVerification() {
         }
         setFormError("");
         setScanError("");
+        scanLockRef.current = false;
         setScanLocked(false);
+        setDetectionCount(0);
         setScannerOpen(true);
+        if (isWeb) return;
         if (!cameraPermission?.granted && cameraPermission?.canAskAgain !== false) {
             await requestCameraPermission();
         }
     };
 
     const handleBarcodeScanned = async ({ data }) => {
-        if (scanLocked || !data) return;
+        if (scanLockRef.current || !data) return;
+        scanLockRef.current = true;
+        setDetectionCount((count) => count + 1);
         setScanLocked(true);
         setScanError("");
 
@@ -141,6 +148,7 @@ export default function AadhaarVerification() {
             setIsVerified(true);
             setScannerOpen(false);
         } catch (error) {
+            scanLockRef.current = false;
             setScanError(
                 error instanceof AadhaarQrError
                     ? error.message
@@ -150,12 +158,30 @@ export default function AadhaarVerification() {
     };
 
     const resetScan = () => {
+        setPastedPayload("");
         setAadhaarLastFour("");
         setFullName("");
         setDateOfBirth("");
         setIsVerified(false);
         setScanError("");
         setFormError("");
+    };
+
+    const handleImageUpload = async (event) => {
+        const file = event?.target?.files?.[0];
+        if (!file) return;
+
+        setScanError("");
+        try {
+            const payload = await decodeQrFromImageFile(file);
+            if (!payload) {
+                setScanError("No QR code was found in that image. Try a sharper, closer photo.");
+                return;
+            }
+            await handleBarcodeScanned({ data: payload });
+        } catch (_error) {
+            setScanError("That image could not be read. Try a different photo.");
+        }
     };
 
     const handleContinue = () => {
@@ -244,13 +270,8 @@ export default function AadhaarVerification() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <Modal
-                visible={scannerOpen}
-                animationType="slide"
-                presentationStyle="fullScreen"
-                onRequestClose={() => setScannerOpen(false)}
-            >
-                <SafeAreaView style={styles.scannerScreen}>
+            {scannerOpen ? (
+                <SafeAreaView style={[styles.scannerScreen, styles.scannerOverlay]}>
                     <View style={styles.scannerHeader}>
                         <TouchableOpacity
                             onPress={() => setScannerOpen(false)}
@@ -264,26 +285,54 @@ export default function AadhaarVerification() {
                         <View style={styles.scannerClose} />
                     </View>
 
-                    {cameraPermission?.granted ? (
+                    {isWeb || cameraPermission?.granted ? (
                         <View style={styles.cameraContainer}>
-                            <CameraView
-                                style={StyleSheet.absoluteFill}
-                                facing="back"
-                                barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-                                onBarcodeScanned={scanLocked ? undefined : handleBarcodeScanned}
-                                onMountError={() => setScanError("The camera could not start. Close the scanner and try again.")}
-                            />
+                            {isWeb ? (
+                                <WebQrScanner
+                                    paused={scanLocked}
+                                    onScan={handleBarcodeScanned}
+                                    onError={setScanError}
+                                />
+                            ) : (
+                                <CameraView
+                                    style={StyleSheet.absoluteFill}
+                                    facing="back"
+                                    active={scannerOpen}
+                                    autofocus="on"
+                                    animateShutter={false}
+                                    barcodeScannerSettings={{
+                                        barcodeTypes: ["qr", "pdf417", "datamatrix", "aztec"],
+                                    }}
+                                    onBarcodeScanned={handleBarcodeScanned}
+                                    onMountError={() => setScanError("The camera could not start. Close the scanner and try again.")}
+                                />
+                            )}
                             <View style={styles.scanFrame} />
                             <View style={styles.scanInstructions}>
                                 <Text style={styles.scanInstructionsTitle}>Place the Secure QR inside the frame</Text>
                                 <Text style={styles.scanInstructionsText}>Use the large QR on your downloaded or printed Aadhaar.</Text>
                                 {scanStalled ? (
                                     <Text style={styles.scanInstructionsText}>
-                                        Still nothing detected. Hold steady about 15 cm away in bright light, and make sure you are scanning the large Secure QR, not the small one.
+                                        {detectionCount === 0
+                                            ? "No QR detected yet. Fill the frame with the large Secure QR, hold steady in bright light, and keep about 15 cm distance."
+                                            : "QR detected but not readable yet. Move slightly closer or further away."}
                                     </Text>
                                 ) : null}
                                 {isWeb ? (
                                     <>
+                                        {createElement("input", {
+                                            type: "file",
+                                            accept: "image/*",
+                                            onChange: handleImageUpload,
+                                            style: {
+                                                marginTop: 14,
+                                                color: "#DCE2F2",
+                                                width: "100%",
+                                            },
+                                        })}
+                                        <Text style={styles.scanInstructionsText}>
+                                            Or upload a photo/screenshot of the Aadhaar Secure QR.
+                                        </Text>
                                         <TextInput
                                             style={styles.pasteInput}
                                             value={pastedPayload}
@@ -332,7 +381,7 @@ export default function AadhaarVerification() {
                     {scanError ? (
                         <View style={styles.scanErrorPanel}>
                             <Text style={styles.scanErrorText}>{scanError}</Text>
-                            <TouchableOpacity onPress={() => { setScanError(""); setScanLocked(false); }}>
+                            <TouchableOpacity onPress={() => { setScanError(""); scanLockRef.current = false; setScanLocked(false); }}>
                                 <Text style={styles.scanRetryText}>TRY AGAIN</Text>
                             </TouchableOpacity>
                         </View>
@@ -341,7 +390,7 @@ export default function AadhaarVerification() {
                         <View style={styles.scanBusy}><ActivityIndicator color="#FFFFFF" /><Text style={styles.scanBusyText}>Verifying UIDAI signature…</Text></View>
                     ) : null}
                 </SafeAreaView>
-            </Modal>
+            ) : null}
             <KeyboardAvoidingView
                 style={styles.container}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -836,6 +885,11 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
     scannerScreen: { flex: 1, backgroundColor: "#071329" },
+    scannerOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 20,
+        elevation: 20,
+    },
     scannerHeader: { height: 68, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     scannerClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
     scannerTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800" },
