@@ -405,21 +405,29 @@ export default function OTP() {
                         <TouchableOpacity
                             disabled={seconds > 0}
                             onPress={handleResend}
+                            accessibilityRole="button"
+                            accessibilityState={{
+                                disabled: seconds > 0,
+                            }}
                         >
 
-                            <Text style={styles.resendText}>
-
-                                Resend in{" "}
-
-                                <Text
-                                    style={
-                                        seconds > 0
-                                            ? styles.resendTime
-                                            : styles.resendActive
-                                    }
-                                >
-                                    {seconds}s
-                                </Text>
+                            <Text
+                                style={[
+                                    styles.resendText,
+                                    seconds === 0 &&
+                                        styles.resendActive,
+                                ]}
+                            >
+                                {seconds > 0 ? (
+                                    <>
+                                        Resend in{" "}
+                                        <Text style={styles.resendTime}>
+                                            {seconds}s
+                                        </Text>
+                                    </>
+                                ) : (
+                                    "Resend OTP"
+                                )}
 
                             </Text>
 
