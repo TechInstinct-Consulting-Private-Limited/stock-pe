@@ -354,7 +354,7 @@ export default function AadhaarVerification() {
                                 style={styles.input}
                                 value={fullName}
                                 onChangeText={(value) => {
-                                    setFullName(value);
+                                    setFullName(value.toUpperCase());
                                     setFormError("");
                                 }}
                                 placeholder="ARJUN KUMAR"
