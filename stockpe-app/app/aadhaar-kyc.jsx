@@ -34,6 +34,11 @@ export default function AadhaarKyc() {
     const [error, setError] = useState("");
     const otpRefs = useRef([]);
 
+    const handleBack = () => {
+        Keyboard.dismiss();
+        router.replace("/aadhaar");
+    };
+
     const handleAadhaarChange = (value) => {
         setAadhaarNumber(value.replace(/\D/g, "").slice(0, 12));
         setError("");
@@ -128,7 +133,7 @@ export default function AadhaarKyc() {
                 >
                     <View style={styles.header}>
                         <TouchableOpacity
-                            onPress={() => router.back()}
+                            onPress={handleBack}
                             style={styles.backButton}
                         >
                             <Ionicons name="chevron-back" size={26} color="#657189" />

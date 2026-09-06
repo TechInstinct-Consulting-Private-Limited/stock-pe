@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
@@ -49,6 +49,7 @@ function formatDate(value) {
 }
 
 export default function AadhaarVerification() {
+    const { mobile, mode } = useLocalSearchParams();
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
 
@@ -112,7 +113,13 @@ export default function AadhaarVerification() {
             return;
         }
 
-        router.replace("/login");
+        router.replace({
+            pathname: "/otp",
+            params: {
+                mobile: String(mobile || ""),
+                mode: mode === "signin" ? "signin" : "signup",
+            },
+        });
     };
 
     const handleRequestOtp = async () => {

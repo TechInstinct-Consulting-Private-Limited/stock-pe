@@ -173,7 +173,13 @@ export default function OTP() {
             await setAuthToken(result.token);
             setIsVerifying(false);
             setIsVerified(true);
-            router.replace("/aadhaar");
+            router.push({
+                pathname: "/aadhaar",
+                params: {
+                    mobile: String(mobile),
+                    mode: mode === "signin" ? "signin" : "signup",
+                },
+            });
         } catch (error) {
             setApiError(getUserFacingError(error));
             setIsVerifying(false);
@@ -216,12 +222,6 @@ export default function OTP() {
     const handleBack = () => {
 
         Keyboard.dismiss();
-
-        if (router.canGoBack()) {
-            router.back();
-            return;
-        }
-
         router.replace("/login");
 
     };
