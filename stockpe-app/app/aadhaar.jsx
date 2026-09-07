@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, scanFromURLAsync, useCameraPermissions } from "expo-camera";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { router, useLocalSearchParams } from "expo-router";
 import { createElement, useEffect, useRef, useState } from "react";
 import {
@@ -80,6 +81,8 @@ export default function AadhaarVerification() {
     const [scanStalled, setScanStalled] = useState(false);
     const [detectionCount, setDetectionCount] = useState(0);
     const scanLockRef = useRef(false);
+    const cameraRef = useRef(null);
+    const [isCapturing, setIsCapturing] = useState(false);
     const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
     // Aadhaar KYC is one-time. If it is already verified for this account there
@@ -163,18 +166,6 @@ export default function AadhaarVerification() {
         setScanLocked(false);
         setDetectionCount(0);
 
-        if (Platform.OS === "android" && CameraView.isModernBarcodeScannerAvailable) {
-            const subscription = CameraView.onModernBarcodeScanned(handleBarcodeScanned);
-            try {
-                await CameraView.launchScanner({ barcodeTypes: ["qr"] });
-            } catch (_error) {
-                // Closing the Google scanner is a normal cancellation path.
-            } finally {
-                subscription.remove();
-            }
-            return;
-        }
-
         setScannerOpen(true);
         if (isWeb) return;
         if (!cameraPermission?.granted && cameraPermission?.canAskAgain !== false) {
@@ -240,6 +231,55 @@ export default function AadhaarVerification() {
             await handleBarcodeScanned({ data: payload });
         } catch (_error) {
             setScanError("That image could not be read. Try a different photo.");
+        }
+    };
+
+    const handleCaptureAndScan = async () => {
+        if (!cameraRef.current || isCapturing || scanLocked) return;
+
+        setIsCapturing(true);
+        setScanError("");
+        try {
+            const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
+            const shortestSide = Math.min(photo.width, photo.height);
+            const candidates = [photo.uri];
+
+            // Expo's Android decoder works best when the QR occupies most of
+            // the image. Try lossless, centered crops matching the guide box.
+            for (const cropRatio of [0.9, 0.78, 0.68]) {
+                const side = Math.round(shortestSide * cropRatio);
+                const context = ImageManipulator.manipulate(photo.uri);
+                context.crop({
+                    originX: Math.round((photo.width - side) / 2),
+                    originY: Math.round((photo.height - side) / 2),
+                    width: side,
+                    height: side,
+                });
+                if (side > 1800) context.resize({ width: 1800, height: null });
+                const rendered = await context.renderAsync();
+                const cropped = await rendered.saveAsync({
+                    compress: 1,
+                    format: SaveFormat.PNG,
+                });
+                candidates.push(cropped.uri);
+            }
+
+            for (const uri of candidates) {
+                const results = await scanFromURLAsync(uri, ["qr"]);
+                const payload = results?.[0]?.data;
+                if (payload) {
+                    await handleBarcodeScanned({ data: payload });
+                    return;
+                }
+            }
+
+            setScanError(
+                "The QR was captured but could not be decoded. Fill the square with the QR, keep the phone parallel, and capture again."
+            );
+        } catch (_error) {
+            setScanError("The photo could not be captured or decoded. Please try again.");
+        } finally {
+            setIsCapturing(false);
         }
     };
 
@@ -373,6 +413,7 @@ export default function AadhaarVerification() {
                                 />
                             ) : (
                                 <CameraView
+                                    ref={cameraRef}
                                     style={StyleSheet.absoluteFill}
                                     facing="back"
                                     active={scannerOpen}
@@ -415,6 +456,23 @@ export default function AadhaarVerification() {
                                             Browser camera scanning is limited. On a phone the QR is read automatically.
                                         </Text>
                                     </>
+                                ) : null}
+                                {!isWeb ? (
+                                    <TouchableOpacity
+                                        style={styles.captureButton}
+                                        disabled={isCapturing || scanLocked}
+                                        onPress={handleCaptureAndScan}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Capture and decode Aadhaar QR"
+                                    >
+                                        {isCapturing ? (
+                                            <ActivityIndicator color="#FFFFFF" />
+                                        ) : (
+                                            <Text style={styles.captureButtonText}>
+                                                CAPTURE HIGH-RESOLUTION QR
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
                                 ) : null}
                                 <TouchableOpacity onPress={() => setScannerOpen(false)}>
                                     <Text style={styles.manualEntryText}>
@@ -969,6 +1027,8 @@ const styles = StyleSheet.create({
     scanInstructions: { position: "absolute", bottom: 42, left: 24, right: 24, padding: 18, borderRadius: 16, backgroundColor: "rgba(7,19,41,0.82)" },
     scanInstructionsTitle: { color: "#FFFFFF", textAlign: "center", fontSize: 16, fontWeight: "800" },
     scanInstructionsText: { color: "#DCE2F2", textAlign: "center", marginTop: 6, lineHeight: 19 },
+    captureButton: { minHeight: 46, marginTop: 14, borderRadius: 12, backgroundColor: "#594BFF", alignItems: "center", justifyContent: "center" },
+    captureButtonText: { color: "#FFFFFF", fontWeight: "800", letterSpacing: 0.4 },
     manualEntryText: { color: "#8C86FF", textAlign: "center", marginTop: 14, fontWeight: "700" },
     permissionPanel: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
     permissionTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", marginTop: 18 },
