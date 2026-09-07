@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { createElement, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    BackHandler,
     Keyboard,
     KeyboardAvoidingView,
     Linking,
@@ -123,6 +124,17 @@ export default function AadhaarVerification() {
         const timer = setTimeout(() => setScanStalled(true), 10000);
         return () => clearTimeout(timer);
     }, [scannerOpen, scanLocked]);
+
+    useEffect(() => {
+        if (!scannerOpen || Platform.OS !== "android") return undefined;
+
+        const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+            setScannerOpen(false);
+            return true;
+        });
+
+        return () => subscription.remove();
+    }, [scannerOpen]);
 
     useEffect(() => {
         if (!consentHighlight) return undefined;
