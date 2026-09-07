@@ -1,6 +1,9 @@
 const express = require("express");
 const { rateLimit } = require("express-rate-limit");
-const { mobileOrIpKey } = require("../middleware/authRateLimitKey");
+const {
+    mobileIpKey,
+    mobileOrIpKey,
+} = require("../middleware/authRateLimitKey");
 const {
     resendOtp,
     signIn,
@@ -45,10 +48,39 @@ const otpVerificationLimiter = rateLimit({
     },
 });
 
+const otpRequestMobileIpLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    keyGenerator: mobileIpKey,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: "Too many OTP requests for this mobile number from this network. Please try again later.",
+    },
+});
+
+const otpVerificationMobileIpLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    keyGenerator: mobileIpKey,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: "Too many OTP verification attempts for this mobile number from this network. Please try again later.",
+    },
+});
+
 router.use(authIpLimiter);
-router.post("/signup", otpRequestLimiter, signUp);
-router.post("/signin", otpRequestLimiter, signIn);
-router.post("/verify-otp", otpVerificationLimiter, verifyOtp);
-router.post("/resend-otp", otpRequestLimiter, resendOtp);
+router.post("/signup", otpRequestLimiter, otpRequestMobileIpLimiter, signUp);
+router.post("/signin", otpRequestLimiter, otpRequestMobileIpLimiter, signIn);
+router.post(
+    "/verify-otp",
+    otpVerificationLimiter,
+    otpVerificationMobileIpLimiter,
+    verifyOtp
+);
+router.post("/resend-otp", otpRequestLimiter, otpRequestMobileIpLimiter, resendOtp);
 
 module.exports = router;

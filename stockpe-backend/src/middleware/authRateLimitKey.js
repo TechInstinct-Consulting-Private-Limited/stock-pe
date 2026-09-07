@@ -9,4 +9,8 @@ function mobileOrIpKey(req) {
         : `ip:${ipKeyGenerator(req.ip)}`;
 }
 
-module.exports = { mobileOrIpKey };
+function mobileIpKey(req) {
+    return `${mobileOrIpKey(req)}:ip:${ipKeyGenerator(req.ip)}`;
+}
+
+module.exports = { mobileIpKey, mobileOrIpKey };
