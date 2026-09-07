@@ -4,7 +4,6 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -12,13 +11,14 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
 
 
-import BrandLogo from "./components/BrandLogo";
+import BrandLogo from "../src/components/BrandLogo";
 
 export default function Login() {
   const [activeTab, setActiveTab] = useState("signin");
@@ -266,7 +266,7 @@ export default function Login() {
 
                         <TextInput
                         style={styles.input}
-                        placeholder="Min. 6 characters"
+                        placeholder="Min. 8 characters"
                         placeholderTextColor="#AEB5C7"
                         secureTextEntry={!showPassword}
                         value={password}

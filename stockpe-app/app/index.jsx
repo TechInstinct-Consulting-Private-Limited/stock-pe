@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 
-import BrandLogo from "./components/BrandLogo";
+import BrandLogo from "../src/components/BrandLogo";
 
 export default function Index() {
   const [progress, setProgress] = useState(0);

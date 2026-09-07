@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -8,20 +7,28 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from "react-native";
-import { resendOtp, verifyOtp } from "./services/api";
+import { SafeAreaView } from "react-native-safe-area-context";
+import {
+    getUserFacingError,
+    resendOtp,
+    verifyOtp,
+} from "../src/services/api";
+import { setAuthToken } from "../src/services/authStorage";
 
 
 export default function OTP() {
 
     const { mobile, mode } = useLocalSearchParams();
+    const { width, height } = useWindowDimensions();
+    const isCompact = width < 600 || height < 800;
 
     const [otp, setOtp] = useState([
         "",
@@ -84,25 +91,34 @@ export default function OTP() {
        OTP CHANGE
     ========================================= */
 
-    const handleOtpChange = (value, index) => {
-
-        // Only numbers
-        const number = value.replace(/[^0-9]/g, "");
-
+    const fillOtpDigits = (value, startIndex) => {
+        const digits = value.replace(/[^0-9]/g, "");
         const updatedOtp = [...otp];
 
-        updatedOtp[index] = number;
-
-        setOtp(updatedOtp);
-
-
-        // Move to next box
-        if (number && index < 5) {
-
-            inputRefs.current[index + 1]?.focus();
-
+        if (!digits) {
+            updatedOtp[startIndex] = "";
+            setOtp(updatedOtp);
+            return;
         }
 
+        digits
+            .slice(0, otp.length - startIndex)
+            .split("")
+            .forEach((digit, offset) => {
+                updatedOtp[startIndex + offset] = digit;
+            });
+        setOtp(updatedOtp);
+
+        const nextIndex = Math.min(
+            startIndex + digits.length,
+            otp.length - 1
+        );
+        inputRefs.current[nextIndex]?.focus();
+    };
+
+    const handleOtpChange = (value, index) => {
+        const digits = value.replace(/[^0-9]/g, "");
+        fillOtpDigits(value, digits.length > 1 ? 0 : index);
     };
 
 
@@ -154,11 +170,18 @@ export default function OTP() {
                 mode === "signin" ? "signin" : "signup"
             );
 
-            await SecureStore.setItemAsync("stockpe_auth_token", result.token);
+            await setAuthToken(result.token);
             setIsVerifying(false);
             setIsVerified(true);
+            router.replace({
+                pathname: "/aadhaar",
+                params: {
+                    mobile: String(mobile),
+                    mode: mode === "signin" ? "signin" : "signup",
+                },
+            });
         } catch (error) {
-            setApiError(error.message);
+            setApiError(getUserFacingError(error));
             setIsVerifying(false);
         }
     };
@@ -186,7 +209,7 @@ export default function OTP() {
             setSeconds(60);
             inputRefs.current[0]?.focus();
         } catch (error) {
-            setApiError(error.message);
+            setApiError(getUserFacingError(error));
         }
 
     };
@@ -199,8 +222,7 @@ export default function OTP() {
     const handleBack = () => {
 
         Keyboard.dismiss();
-
-        router.back();
+        router.replace("/login");
 
     };
 
@@ -219,6 +241,7 @@ export default function OTP() {
             >
 
                 <ScrollView
+                    style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -304,12 +327,22 @@ export default function OTP() {
                         MAIN CONTENT
                     ===================================== */}
 
-                    <View style={styles.content}>
+                    <View
+                        style={[
+                            styles.content,
+                            isCompact && styles.contentCompact,
+                        ]}
+                    >
 
 
                         {/* PHONE ICON */}
 
-                        <View style={styles.phoneIconContainer}>
+                        <View
+                            style={[
+                                styles.phoneIconContainer,
+                                isCompact && styles.phoneIconCompact,
+                            ]}
+                        >
 
                             <Ionicons
                                 name="call-outline"
@@ -322,14 +355,24 @@ export default function OTP() {
 
                         {/* TITLE */}
 
-                        <Text style={styles.title}>
+                        <Text
+                            style={[
+                                styles.title,
+                                isCompact && styles.titleCompact,
+                            ]}
+                        >
                             Enter OTP
                         </Text>
 
 
                         {/* MOBILE */}
 
-                        <Text style={styles.sentText}>
+                        <Text
+                            style={[
+                                styles.sentText,
+                                isCompact && styles.sentTextCompact,
+                            ]}
+                        >
 
                             Sent to{" "}
 
@@ -344,12 +387,31 @@ export default function OTP() {
                             OTP INPUTS
                         ================================= */}
 
-                        <View style={styles.otpContainer}>
+                        <View
+                            style={[
+                                styles.otpContainer,
+                                isCompact && styles.otpContainerCompact,
+                            ]}
+                        >
 
                             {otp.map((value, index) => (
 
                                 <TextInput
                                     key={index}
+                                    autoFocus={index === 0}
+                                    autoComplete={
+                                        index === 0
+                                            ? "one-time-code"
+                                            : "off"
+                                    }
+                                    textContentType={
+                                        index === 0
+                                            ? "oneTimeCode"
+                                            : "none"
+                                    }
+                                    importantForAutofill={
+                                        index === 0 ? "yes" : "no"
+                                    }
                                     ref={(ref) => {
                                         inputRefs.current[index] =
                                             ref;
@@ -368,10 +430,11 @@ export default function OTP() {
                                         )
                                     }
                                     keyboardType="number-pad"
-                                    maxLength={1}
-                                    textAlign="center"
+                                    selectTextOnFocus
                                     style={[
                                         styles.otpInput,
+                                        isCompact &&
+                                            styles.otpInputCompact,
                                         value &&
                                             styles.otpInputActive,
                                     ]}
@@ -390,32 +453,57 @@ export default function OTP() {
                         <TouchableOpacity
                             disabled={seconds > 0}
                             onPress={handleResend}
+                            accessibilityRole="button"
+                            accessibilityState={{
+                                disabled: seconds > 0,
+                            }}
                         >
 
-                            <Text style={styles.resendText}>
-
-                                Resend in{" "}
-
-                                <Text
-                                    style={
-                                        seconds > 0
-                                            ? styles.resendTime
-                                            : styles.resendActive
-                                    }
-                                >
-                                    {seconds}s
-                                </Text>
+                            <Text
+                                style={[
+                                    styles.resendText,
+                                    isCompact &&
+                                        styles.resendTextCompact,
+                                    seconds === 0 &&
+                                        styles.resendActive,
+                                ]}
+                            >
+                                {seconds > 0 ? (
+                                    <>
+                                        Resend in{" "}
+                                        <Text style={styles.resendTime}>
+                                            {seconds}s
+                                        </Text>
+                                    </>
+                                ) : (
+                                    "Resend OTP"
+                                )}
 
                             </Text>
 
                         </TouchableOpacity>
 
+                    </View>
 
-                        {/* =================================
-                            DEMO MODE
-                        ================================= */}
+                </ScrollView>
 
-                        <View style={styles.demoBox}>
+                <View
+                    style={[
+                        styles.footer,
+                        isCompact && styles.footerCompact,
+                    ]}
+                >
+
+                    {/* =================================
+                        OTP INFORMATION
+                    ================================= */}
+
+                        <View
+                            style={[
+                                styles.demoBox,
+                                isCompact && styles.demoBoxCompact,
+                            ]}
+                        >
 
                             <Ionicons
                                 name="information-circle-outline"
@@ -443,6 +531,8 @@ export default function OTP() {
                         <TouchableOpacity
                             style={[
                                 styles.verifyButton,
+                                isCompact &&
+                                    styles.verifyButtonCompact,
                                 (!isOtpComplete || isVerifying || isVerified) &&
                                     styles.verifyButtonDisabled,
                                 isVerified && styles.verifyButtonSuccess,
@@ -483,9 +573,7 @@ export default function OTP() {
                         </TouchableOpacity>
 
 
-                    </View>
-
-                </ScrollView>
+                </View>
 
             </KeyboardAvoidingView>
 
@@ -509,10 +597,26 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
+    scrollView: {
+        flex: 1,
+    },
+
     scrollContent: {
         flexGrow: 1,
+        paddingTop: 40,
+        paddingBottom: 16,
+    },
+
+    footer: {
+        backgroundColor: "#F5F7FF",
+        paddingHorizontal: 40,
+        paddingTop: 16,
         paddingBottom: 35,
-        paddingTop:40,
+    },
+
+    footerCompact: {
+        paddingHorizontal: 20,
+        paddingBottom: 24,
     },
 
 
@@ -600,13 +704,16 @@ const styles = StyleSheet.create({
     /* ================= CONTENT ================= */
 
     content: {
-        flex: 1,
-
         alignItems: "center",
 
         paddingHorizontal: 40,
 
         paddingTop: 125,
+    },
+
+    contentCompact: {
+        paddingHorizontal: 20,
+        paddingTop: 28,
     },
 
 
@@ -629,6 +736,13 @@ const styles = StyleSheet.create({
         marginBottom: 22,
     },
 
+    phoneIconCompact: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        marginBottom: 14,
+    },
+
 
     /* ================= TITLE ================= */
 
@@ -641,12 +755,22 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
 
+    titleCompact: {
+        fontSize: 30,
+        marginBottom: 4,
+    },
+
     sentText: {
         fontSize: 20,
 
         color: "#737D91",
 
         marginBottom: 43,
+    },
+
+    sentTextCompact: {
+        fontSize: 16,
+        marginBottom: 24,
     },
 
     mobileNumber: {
@@ -659,16 +783,23 @@ const styles = StyleSheet.create({
 
     otpContainer: {
         width: "100%",
-
+        maxWidth: 372,
         flexDirection: "row",
-
-        justifyContent: "space-between",
+        alignSelf: "center",
+        justifyContent: "center",
+        gap: 8,
 
         marginBottom: 48,
     },
 
+    otpContainerCompact: {
+        marginBottom: 28,
+    },
+
     otpInput: {
-        width: 52,
+        flex: 1,
+        maxWidth: 52,
+        minWidth: 0,
         height: 56,
 
         borderRadius: 20,
@@ -680,6 +811,8 @@ const styles = StyleSheet.create({
 
         fontSize: 28,
         fontWeight: "700",
+        textAlign: "center",
+        paddingHorizontal: 0,
 
         color: "#071329",
 
@@ -694,6 +827,12 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
 
+    otpInputCompact: {
+        height: 48,
+        borderRadius: 14,
+        fontSize: 24,
+    },
+
     otpInputActive: {
         borderColor: "#00C987",
     },
@@ -706,6 +845,11 @@ const styles = StyleSheet.create({
         color: "#737D91",
 
         marginBottom: 48,
+    },
+
+    resendTextCompact: {
+        fontSize: 16,
+        marginBottom: 28,
     },
 
     resendTime: {
@@ -743,6 +887,12 @@ const styles = StyleSheet.create({
         marginBottom: 54,
     },
 
+    demoBoxCompact: {
+        minHeight: 58,
+        paddingHorizontal: 14,
+        marginBottom: 24,
+    },
+
     demoText: {
         flex: 1,
 
@@ -760,8 +910,7 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         fontSize: 15,
         lineHeight: 21,
-        marginTop: -30,
-        marginBottom: 30,
+        marginBottom: 16,
         padding: 14,
         textAlign: "center",
     },
@@ -798,6 +947,11 @@ const styles = StyleSheet.create({
         shadowRadius: 14,
 
         elevation: 7,
+    },
+
+    verifyButtonCompact: {
+        height: 60,
+        borderRadius: 18,
     },
 
 

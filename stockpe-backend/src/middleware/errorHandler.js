@@ -10,7 +10,9 @@ function errorHandler(error, req, res, next) {
 
     res.status(error.statusCode || 500).json({
         success: false,
-        message: "An unexpected server error occurred",
+        message: error.isOperational
+            ? error.message
+            : "An unexpected server error occurred",
     });
 }
 

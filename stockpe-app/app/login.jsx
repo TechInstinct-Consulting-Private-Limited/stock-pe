@@ -1,19 +1,19 @@
 import { useRef, useState } from "react";
 
 import {
+    Animated,
     Keyboard,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
-    ScrollView,
     StyleSheet,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import AlternativeAuth from "./components/AlternativeAuth";
-import AuthForm from "./components/AuthForm";
-import AuthHeader from "./components/AuthHeader.jsx";
-import AuthTabs from "./components/AuthTabs";
+import AlternativeAuth from "../src/components/AlternativeAuth";
+import AuthForm from "../src/components/AuthForm";
+import AuthHeader from "../src/components/AuthHeader.jsx";
+import AuthTabs from "../src/components/AuthTabs";
 
 export default function Login() {
 
@@ -30,6 +30,13 @@ export default function Login() {
     const [agreeTerms, setAgreeTerms] = useState(false);
 
     const scrollRef = useRef(null);
+    const scrollY = useRef(new Animated.Value(0)).current;
+
+    const headerTranslateY = scrollY.interpolate({
+        inputRange: [0, 355],
+        outputRange: [0, 177],
+        extrapolate: "clamp",
+    });
 
 
     // ============================================
@@ -68,56 +75,52 @@ export default function Login() {
 
     return (
         <SafeAreaView style={styles.container}>
-
-            {/* ========================================
-                FIXED BRAND / HEADER
-                ======================================== */}
-
-            <AuthHeader />
-
-
-            {/* ========================================
-                ONLY FORM AREA HANDLES KEYBOARD
-                ======================================== */}
-
             <KeyboardAvoidingView
-                style={styles.formContainer}
+                style={styles.keyboardContainer}
                 behavior={
                     Platform.OS === "ios"
                         ? "padding"
                         : "height"
                 }
             >
-
-                {/* ====================================
-                    WHITE SCROLLABLE AREA
-                    ==================================== */}
-
-                <View style={styles.formSheet}>
-
-                    <ScrollView
-                        ref={scrollRef}
-
-                        style={styles.scrollView}
-
-                        contentContainerStyle={
-                            styles.scrollContent
+                <Animated.ScrollView
+                    ref={scrollRef}
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode={
+                        Platform.OS === "ios"
+                            ? "interactive"
+                            : "on-drag"
+                    }
+                    onScroll={Animated.event(
+                        [
+                            {
+                                nativeEvent: {
+                                    contentOffset: { y: scrollY },
+                                },
+                            },
+                        ],
+                        {
+                            useNativeDriver:
+                                Platform.OS !== "web",
                         }
-
-                        showsVerticalScrollIndicator={false}
-
-                        keyboardShouldPersistTaps="handled"
-
-                        keyboardDismissMode={
-                            Platform.OS === "ios"
-                                ? "interactive"
-                                : "on-drag"
-                        }
-
-                        automaticallyAdjustKeyboardInsets={
-                            Platform.OS === "ios"
-                        }
+                    )}
+                    scrollEventThrottle={16}
+                >
+                    <Animated.View
+                        style={{
+                            transform: [
+                                { translateY: headerTranslateY },
+                            ],
+                        }}
                     >
+                        <AuthHeader />
+                    </Animated.View>
+
+                    <View style={styles.formSheet}>
+                        <View style={styles.sheetHandle} />
 
                         {/* =================================
                             AUTH CONTENT
@@ -136,6 +139,7 @@ export default function Login() {
                             {/* SIGN IN / SIGN UP FORM */}
 
                             <AuthForm
+                                key={activeTab}
                                 activeTab={activeTab}
 
                                 mobile={mobile}
@@ -189,9 +193,8 @@ export default function Login() {
 
                         </View>
 
-                    </ScrollView>
-
-                </View>
+                    </View>
+                </Animated.ScrollView>
 
             </KeyboardAvoidingView>
 
@@ -213,10 +216,10 @@ const styles = StyleSheet.create({
 
 
     // ============================================
-    // FORM AREA BELOW FIXED HEADER
+    // KEYBOARD-AWARE SCREEN
     // ============================================
 
-    formContainer: {
+    keyboardContainer: {
         flex: 1,
     },
 
@@ -232,8 +235,18 @@ const styles = StyleSheet.create({
 
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
+        marginTop: -30,
+        paddingTop: 15,
 
         overflow: "hidden",
+    },
+
+    sheetHandle: {
+        width: 38,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: "#F0F1F3",
+        alignSelf: "center",
     },
 
 

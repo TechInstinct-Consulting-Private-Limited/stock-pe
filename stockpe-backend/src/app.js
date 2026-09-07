@@ -4,6 +4,8 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const healthRoutes = require("./routes/health.routes");
 const authRoutes = require("./routes/auth.routes");
+const kycRoutes = require("./routes/kyc.routes");
+const walletRoutes = require("./routes/wallet.routes");
 const {
     errorHandler,
     notFoundHandler,
@@ -23,6 +25,8 @@ app.use(morgan("dev"));
 
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/kyc", kycRoutes);
+app.use("/api/wallet", walletRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
