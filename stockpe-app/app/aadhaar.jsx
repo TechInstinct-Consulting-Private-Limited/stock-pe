@@ -351,10 +351,10 @@ export default function AadhaarVerification() {
                                     style={StyleSheet.absoluteFill}
                                     facing="back"
                                     active={scannerOpen}
-                                    autofocus="on"
+                                    autofocus="off"
                                     animateShutter={false}
                                     barcodeScannerSettings={{
-                                        barcodeTypes: ["qr", "pdf417", "datamatrix", "aztec"],
+                                        barcodeTypes: ["qr"],
                                     }}
                                     onBarcodeScanned={handleBarcodeScanned}
                                     onMountError={() => setScanError("The camera could not start. Close the scanner and try again.")}
