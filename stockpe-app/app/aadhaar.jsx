@@ -162,6 +162,19 @@ export default function AadhaarVerification() {
         scanLockRef.current = false;
         setScanLocked(false);
         setDetectionCount(0);
+
+        if (Platform.OS === "android" && CameraView.isModernBarcodeScannerAvailable) {
+            const subscription = CameraView.onModernBarcodeScanned(handleBarcodeScanned);
+            try {
+                await CameraView.launchScanner({ barcodeTypes: ["qr"] });
+            } catch (_error) {
+                // Closing the Google scanner is a normal cancellation path.
+            } finally {
+                subscription.remove();
+            }
+            return;
+        }
+
         setScannerOpen(true);
         if (isWeb) return;
         if (!cameraPermission?.granted && cameraPermission?.canAskAgain !== false) {
