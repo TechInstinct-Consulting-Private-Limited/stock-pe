@@ -1,0 +1,12 @@
+diff --git a/node_modules/expo-camera/android/src/main/java/expo/modules/camera/CameraViewModule.kt b/node_modules/expo-camera/android/src/main/java/expo/modules/camera/CameraViewModule.kt
+index 6d5a59a..7dbef01 100644
+--- a/node_modules/expo-camera/android/src/main/java/expo/modules/camera/CameraViewModule.kt
++++ b/node_modules/expo-camera/android/src/main/java/expo/modules/camera/CameraViewModule.kt
+@@ -158,6 +158,7 @@ class CameraViewModule : Module() {
+ 
+       try {
+         val options = GmsBarcodeScannerOptions.Builder().apply {
++          enableAutoZoom()
+           if (settings.barcodeTypes.isNotEmpty()) {
+             setBarcodeFormats(
+               settings.barcodeTypes.first().mapToBarcode(),
