@@ -2,9 +2,12 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const pool = require("../config/database");
 const { createOtpDeliveryProvider } = require("./otp-delivery");
+const {
+    OTP_RESEND_COOLDOWN_SECONDS,
+    remainingOtpCooldownSeconds,
+} = require("./otpCooldown");
 
 const OTP_EXPIRY_MINUTES = 10;
-const OTP_RESEND_COOLDOWN_SECONDS = 60;
 
 function createOtp() {
     return crypto.randomInt(100000, 1000000).toString();
@@ -23,8 +26,11 @@ async function createOtpVerification(mobile, purpose) {
     );
 
     if (recentOtp.rowCount > 0) {
+        const retryAfterSeconds = remainingOtpCooldownSeconds(
+            recentOtp.rows[0].created_at
+        );
         const error = new Error(
-            `Please wait ${OTP_RESEND_COOLDOWN_SECONDS} seconds before requesting another OTP`
+            `Please wait ${retryAfterSeconds} seconds before requesting another OTP`
         );
         error.statusCode = 429;
         error.isOperational = true;
