@@ -166,18 +166,6 @@ export default function AadhaarVerification() {
         setScanLocked(false);
         setDetectionCount(0);
 
-        if (Platform.OS === "android" && CameraView.isModernBarcodeScannerAvailable) {
-            const subscription = CameraView.onModernBarcodeScanned(handleBarcodeScanned);
-            try {
-                await CameraView.launchScanner({ barcodeTypes: ["qr"] });
-                return;
-            } catch (_error) {
-                // Fall back to the in-app high-resolution capture scanner.
-            } finally {
-                subscription.remove();
-            }
-        }
-
         setScannerOpen(true);
         if (isWeb) return;
         if (!cameraPermission?.granted && cameraPermission?.canAskAgain !== false) {
