@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { CameraView, scanFromURLAsync, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useLocalSearchParams } from "expo-router";
 import { createElement, useEffect, useRef, useState } from "react";
 import {
@@ -75,13 +75,10 @@ export default function AadhaarVerification() {
     const scrollRef = useRef(null);
     const consentY = useRef(0);
     const [consentHighlight, setConsentHighlight] = useState(false);
-    const [pastedPayload, setPastedPayload] = useState("");
     const isWeb = Platform.OS === "web";
     const [scanStalled, setScanStalled] = useState(false);
     const [detectionCount, setDetectionCount] = useState(0);
     const scanLockRef = useRef(false);
-    const cameraRef = useRef(null);
-    const [isCapturing, setIsCapturing] = useState(false);
     const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
     // Aadhaar KYC is one-time. If it is already verified for this account there
@@ -196,7 +193,6 @@ export default function AadhaarVerification() {
     };
 
     const resetScan = () => {
-        setPastedPayload("");
         setAadhaarLastFour("");
         setFullName("");
         setDateOfBirth("");
@@ -219,35 +215,6 @@ export default function AadhaarVerification() {
             await handleBarcodeScanned({ data: payload });
         } catch (_error) {
             setScanError("That image could not be read. Try a different photo.");
-        }
-    };
-
-    const handleCaptureAndScan = async () => {
-        if (!cameraRef.current || isCapturing) return;
-
-        setIsCapturing(true);
-        setScanError("");
-
-        try {
-            const photo = await cameraRef.current.takePictureAsync({
-                quality: 1,
-                skipProcessing: true,
-            });
-            const results = await scanFromURLAsync(photo.uri, ["qr"]);
-            const payload = results?.[0]?.data;
-
-            if (!payload) {
-                setScanError(
-                    "No QR was found in that photo. Fill the frame with the QR, keep it flat and well lit, then capture again."
-                );
-                return;
-            }
-
-            await handleBarcodeScanned({ data: payload });
-        } catch (_error) {
-            setScanError("The photo could not be read. Please try again.");
-        } finally {
-            setIsCapturing(false);
         }
     };
 
@@ -381,7 +348,6 @@ export default function AadhaarVerification() {
                                 />
                             ) : (
                                 <CameraView
-                                    ref={cameraRef}
                                     style={StyleSheet.absoluteFill}
                                     facing="back"
                                     active={scannerOpen}
@@ -420,42 +386,10 @@ export default function AadhaarVerification() {
                                         <Text style={styles.scanInstructionsText}>
                                             Or upload a photo/screenshot of the Aadhaar Secure QR.
                                         </Text>
-                                        <TextInput
-                                            style={styles.pasteInput}
-                                            value={pastedPayload}
-                                            onChangeText={setPastedPayload}
-                                            placeholder="Paste the Secure QR text here"
-                                            placeholderTextColor="#8E97AE"
-                                            multiline
-                                        />
-                                        <TouchableOpacity
-                                            style={styles.pasteButton}
-                                            disabled={scanLocked || !pastedPayload.trim()}
-                                            onPress={() =>
-                                                handleBarcodeScanned({ data: pastedPayload.trim() })
-                                            }
-                                        >
-                                            <Text style={styles.pasteButtonText}>VERIFY PASTED QR</Text>
-                                        </TouchableOpacity>
                                         <Text style={styles.scanInstructionsText}>
                                             Browser camera scanning is limited. On a phone the QR is read automatically.
                                         </Text>
                                     </>
-                                ) : null}
-                                {!isWeb ? (
-                                    <TouchableOpacity
-                                        style={styles.pasteButton}
-                                        disabled={isCapturing || scanLocked}
-                                        onPress={handleCaptureAndScan}
-                                    >
-                                        {isCapturing ? (
-                                            <ActivityIndicator color="#FFFFFF" />
-                                        ) : (
-                                            <Text style={styles.pasteButtonText}>
-                                                CAPTURE PHOTO AND READ QR
-                                            </Text>
-                                        )}
-                                    </TouchableOpacity>
                                 ) : null}
                                 <TouchableOpacity onPress={() => setScannerOpen(false)}>
                                     <Text style={styles.manualEntryText}>
@@ -1011,27 +945,6 @@ const styles = StyleSheet.create({
     scanInstructionsTitle: { color: "#FFFFFF", textAlign: "center", fontSize: 16, fontWeight: "800" },
     scanInstructionsText: { color: "#DCE2F2", textAlign: "center", marginTop: 6, lineHeight: 19 },
     manualEntryText: { color: "#8C86FF", textAlign: "center", marginTop: 14, fontWeight: "700" },
-    pasteInput: {
-        marginTop: 14,
-        minHeight: 56,
-        maxHeight: 96,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#38466A",
-        backgroundColor: "#0D1B33",
-        color: "#FFFFFF",
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-    },
-    pasteButton: {
-        marginTop: 10,
-        minHeight: 44,
-        borderRadius: 12,
-        backgroundColor: "#594BFF",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    pasteButtonText: { color: "#FFFFFF", fontWeight: "800", letterSpacing: 0.6 },
     permissionPanel: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
     permissionTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", marginTop: 18 },
     permissionText: { color: "#BFC8DA", textAlign: "center", lineHeight: 21, marginTop: 10, maxWidth: 340 },
