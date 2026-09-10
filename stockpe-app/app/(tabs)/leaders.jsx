@@ -7,9 +7,11 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import UsdtBadge from "../components/UsdtBadge";
 
 export default function LeadersScreen() {
+  const router = useRouter();
   const [activeChip, setActiveChip] = useState("NIFTY");
 
   const chips = ["NIFTY", "SENSEX", "BANKNIFTY", "MIDCAP", "NIFTY IT"];
@@ -98,21 +100,33 @@ export default function LeadersScreen() {
       avatarColor: "#059669",
       initials: "VN",
       name: "Vikram Nair",
-      prediction: "24,199.80",
-      accuracy: "99.95%",
-      usdt: "1021.52",
+      prediction: "24,175.20",
+      accuracy: "99.94%",
+      usdt: "1089.62",
     },
     {
       rank: 6,
       rankBg: "#F1F5F9",
       rankColor: "#64748B",
-      avatarBg: "#FEF3C7",
-      avatarColor: "#D97706",
-      initials: "AS",
-      name: "Ananya Singh",
-      prediction: "24,182.10",
-      accuracy: "99.94%",
-      usdt: "812.40",
+      avatarBg: "#FEF9C3",
+      avatarColor: "#CA8A04",
+      initials: "AK",
+      name: "Ananya Kapoor",
+      prediction: "24,172.00",
+      accuracy: "99.93%",
+      usdt: "817.22",
+    },
+    {
+      rank: 7,
+      rankBg: "#F1F5F9",
+      rankColor: "#64748B",
+      avatarBg: "#FEE2E2",
+      avatarColor: "#DC2626",
+      initials: "KK",
+      name: "Karan Khanna",
+      prediction: "24,168.40",
+      accuracy: "99.91%",
+      usdt: "544.81",
     },
   ];
 
@@ -123,7 +137,7 @@ export default function LeadersScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Chips Bar */}
+        {/* Index Filter Chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -135,11 +149,11 @@ export default function LeadersScreen() {
               <TouchableOpacity
                 key={chip}
                 style={[
-                  styles.chip,
-                  isActive && styles.chipActive,
+                  styles.chipPill,
+                  isActive && styles.chipPillActive,
                 ]}
-                onPress={() => setActiveChip(chip)}
                 activeOpacity={0.7}
+                onPress={() => setActiveChip(chip)}
               >
                 <Text
                   style={[
@@ -154,26 +168,25 @@ export default function LeadersScreen() {
           })}
         </ScrollView>
 
-        {/* Header Info */}
-        <View style={styles.headerInfoRow}>
-          <View>
+        {/* Live Leaderboard Card */}
+        <View style={styles.liveCard}>
+          <View style={styles.liveLeft}>
+            <View style={styles.liveBadgeRow}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE RANKINGS</Text>
+            </View>
             <Text style={styles.mainTitle}>NIFTY 50</Text>
             <View style={styles.subInfoRow}>
               <Text style={styles.playersCount}>8,431 players</Text>
               <UsdtBadge amount="13620.27" />
             </View>
           </View>
-
-          <View style={styles.closesRight}>
-            <Text style={styles.closesLabel}>CLOSES IN</Text>
-            <Text style={styles.closesTimer}>02:59:57</Text>
-          </View>
         </View>
 
         {/* Top 3 Podium Cards */}
         <View style={styles.podiumRow}>
-          {topThree.map((pod) => (
-            <View
+          {topThree.map((pod, index) => (
+            <TouchableOpacity
               key={pod.position}
               style={[
                 styles.podiumCard,
@@ -182,6 +195,8 @@ export default function LeadersScreen() {
                   backgroundColor: pod.bgColor,
                 },
               ]}
+              activeOpacity={0.75}
+              onPress={() => router.push(`/leaders/${index + 1}`)}
             >
               <Ionicons name="trophy-outline" size={22} color={pod.posColor} />
               <Text style={[styles.podiumPos, { color: pod.posColor }]}>
@@ -189,14 +204,19 @@ export default function LeadersScreen() {
               </Text>
               <Text style={styles.podiumInr}>{pod.amountInr}</Text>
               <UsdtBadge amount={pod.amountUsdt} style={{ marginTop: 4 }} />
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
         {/* Ranked Leaderboard List */}
         <View style={styles.rankingsList}>
           {rankings.map((item) => (
-            <View key={item.rank} style={styles.rankCard}>
+            <TouchableOpacity
+              key={item.rank}
+              style={styles.rankCard}
+              activeOpacity={0.75}
+              onPress={() => router.push(`/leaders/${item.rank}`)}
+            >
               {/* Rank Badge */}
               <View
                 style={[
@@ -232,7 +252,7 @@ export default function LeadersScreen() {
                 <Text style={styles.accuracyValue}>{item.accuracy}</Text>
                 <UsdtBadge amount={item.usdt} style={{ marginTop: 2 }} />
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       </ScrollView>

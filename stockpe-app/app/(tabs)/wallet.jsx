@@ -8,8 +8,11 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function WalletScreen() {
+  const router = useRouter();
+
   const quickActions = [
     {
       id: "scan",
@@ -17,6 +20,7 @@ export default function WalletScreen() {
       icon: "qr-code-outline",
       iconColor: "#059669",
       bgColor: "#ECFDF5",
+      route: "/wallet/qr",
     },
     {
       id: "deposit",
@@ -24,6 +28,7 @@ export default function WalletScreen() {
       icon: "arrow-down-outline",
       iconColor: "#00C987",
       bgColor: "#E6FBF3",
+      route: "/wallet/deposit",
     },
     {
       id: "withdraw",
@@ -31,6 +36,7 @@ export default function WalletScreen() {
       icon: "arrow-up-outline",
       iconColor: "#F59E0B",
       bgColor: "#FEF3C7",
+      route: "/wallet/withdraw",
     },
     {
       id: "history",
@@ -38,6 +44,7 @@ export default function WalletScreen() {
       icon: "stats-chart-outline",
       iconColor: "#6366F1",
       bgColor: "#EEF2FF",
+      route: "/wallet/history",
     },
   ];
 
@@ -121,7 +128,7 @@ export default function WalletScreen() {
           <View style={styles.heroTopRow}>
             <View>
               <Text style={styles.balanceLabel}>TOTAL BALANCE</Text>
-              <Text style={styles.balanceAmount}>₹1,283.00</Text>
+              <Text style={styles.balanceAmount}>₹12,450.00</Text>
             </View>
 
             {/* USDT Card */}
@@ -129,7 +136,7 @@ export default function WalletScreen() {
               <View style={styles.usdtHeroIcon}>
                 <Text style={styles.usdtHeroIconText}>₮</Text>
               </View>
-              <Text style={styles.usdtHeroValue}>17.47</Text>
+              <Text style={styles.usdtHeroValue}>169.57</Text>
               <Text style={styles.usdtHeroUnit}>USDT</Text>
             </View>
           </View>
@@ -143,6 +150,7 @@ export default function WalletScreen() {
             <TouchableOpacity
               style={styles.addFundsBtn}
               activeOpacity={0.8}
+              onPress={() => router.push("/wallet/deposit")}
             >
               <Ionicons name="arrow-down-outline" size={16} color="#FFFFFF" />
               <Text style={styles.addFundsText}>ADD FUNDS</Text>
@@ -151,6 +159,7 @@ export default function WalletScreen() {
             <TouchableOpacity
               style={styles.withdrawBtn}
               activeOpacity={0.8}
+              onPress={() => router.push("/wallet/withdraw")}
             >
               <Ionicons name="arrow-up-outline" size={16} color="#FFFFFF" />
               <Text style={styles.withdrawText}>WITHDRAW</Text>
@@ -165,6 +174,7 @@ export default function WalletScreen() {
               key={action.id}
               style={styles.quickItem}
               activeOpacity={0.7}
+              onPress={() => router.push(action.route)}
             >
               <View
                 style={[
@@ -186,14 +196,22 @@ export default function WalletScreen() {
         {/* Recent Transactions */}
         <View style={styles.transactionsHeader}>
           <Text style={styles.sectionTitle}>RECENT TRANSACTIONS</Text>
-          <TouchableOpacity activeOpacity={0.7}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => router.push("/wallet/history")}
+          >
             <Text style={styles.viewAllText}>View All</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.transactionsList}>
           {transactions.map((tx) => (
-            <View key={tx.id} style={styles.txCard}>
+            <TouchableOpacity
+              key={tx.id}
+              style={styles.txCard}
+              activeOpacity={0.7}
+              onPress={() => router.push("/wallet/history")}
+            >
               {/* Icon */}
               <View
                 style={[
@@ -243,7 +261,7 @@ export default function WalletScreen() {
                 </Text>
                 <Text style={styles.txAmountUsdt}>{tx.amountUsdt}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       </ScrollView>

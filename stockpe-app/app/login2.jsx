@@ -1,16 +1,16 @@
 import { useRef, useState } from "react";
 
 import {
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -37,528 +37,528 @@ export default function Login() {
 
   const switchTab = (tab) => {
 
-        // Close keyboard immediately
-        Keyboard.dismiss();   
+    // Close keyboard immediately
+    Keyboard.dismiss();
 
-        setActiveTab(tab);
+    setActiveTab(tab);
 
-        // Clear form fields
-        setMobile("");
-        setPassword("");
-        setConfirmPassword("");
+    // Clear form fields
+    setMobile("");
+    setPassword("");
+    setConfirmPassword("");
 
-        // Reset password visibility
-        setShowPassword(false);
-        setShowConfirmPassword(false);
+    // Reset password visibility
+    setShowPassword(false);
+    setShowConfirmPassword(false);
 
-        // Reset terms checkbox
-        setAgreeTerms(false);
+    // Reset terms checkbox
+    setAgreeTerms(false);
 
-        // Move form back to the top
-        scrollRef.current?.scrollTo({
-            y: 0,
-            animated: false,
-        });
-    };
+    // Move form back to the top
+    scrollRef.current?.scrollTo({
+      y: 0,
+      animated: false,
+    });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
 
-        <KeyboardAvoidingView
-            style={styles.keyboardContainer}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+
+        <ScrollView
+          ref={scrollRef}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={styles.scrollContent}
         >
 
-            <ScrollView
-                ref={scrollRef}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                contentContainerStyle={styles.scrollContent}
-            >
+          {/* ================= TOP SECTION ================= */}
 
-                {/* ================= TOP SECTION ================= */}
+          <LinearGradient
+            colors={["#071B2D", "#10264D", "#1B3565"]}
+            style={styles.topSection}
+          >
 
-                <LinearGradient
-                colors={["#071B2D", "#10264D", "#1B3565"]}
-                style={styles.topSection}
+            {/* Logo */}
+
+            <BrandLogo size="small" />
+
+            {/* Brand */}
+
+            <Text style={styles.brand}>
+              STOCKPE
+            </Text>
+
+            <Text style={styles.subtitle}>
+              India's #1 Stock Prediction Market
+            </Text>
+
+            {/* Stats */}
+
+            <View style={styles.statsContainer}>
+
+              <View style={styles.stat}>
+                <Text
+                  style={[
+                    styles.statValue,
+                    styles.green,
+                  ]}
+                >
+                  ₹49.5L
+                </Text>
+
+                <Text style={styles.statLabel}>
+                  Prize Pool
+                </Text>
+              </View>
+
+              <View style={styles.stat}>
+                <Text
+                  style={[
+                    styles.statValue,
+                    styles.blue,
+                  ]}
+                >
+                  2.1M+
+                </Text>
+
+                <Text style={styles.statLabel}>
+                  Players
+                </Text>
+              </View>
+
+              <View style={styles.stat}>
+                <Text
+                  style={[
+                    styles.statValue,
+                    styles.yellow,
+                  ]}
+                >
+                  4.8★
+                </Text>
+
+                <Text style={styles.statLabel}>
+                  Rating
+                </Text>
+              </View>
+
+            </View>
+
+          </LinearGradient>
+
+
+          {/* ================= LOGIN SECTION ================= */}
+
+          <View style={styles.loginSection}>
+
+            {/* ================= SIGN IN / SIGN UP TABS ================= */}
+
+            <View style={styles.tabs}>
+
+              {/* SIGN IN */}
+
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  activeTab === "signin" &&
+                  styles.activeTab,
+                ]}
+                onPress={() =>
+                  switchTab("signin")
+                }
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === "signin" &&
+                    styles.activeTabText,
+                  ]}
+                >
+                  SIGN IN
+                </Text>
+              </TouchableOpacity>
+
+
+              {/* SIGN UP */}
+
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  activeTab === "signup" &&
+                  styles.activeTab,
+                ]}
+                onPress={() =>
+                  switchTab("signup")
+                }
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === "signup" &&
+                    styles.activeTabText,
+                  ]}
+                >
+                  SIGN UP
+                </Text>
+              </TouchableOpacity>
+
+            </View>
+
+
+            {/* ================================================= */}
+            {/*                    SIGN IN FORM                   */}
+            {/* ================================================= */}
+
+            {activeTab === "signin" && (
+              <>
+
+                {/* MOBILE NUMBER */}
+
+                <Text style={styles.label}>
+                  MOBILE NUMBER
+                </Text>
+
+                <View style={styles.inputContainer}>
+
+                  <Text style={styles.countryCode}>
+                    +91
+                  </Text>
+
+                  <View style={styles.verticalLine} />
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="98765 43210"
+                    placeholderTextColor="#AEB5C7"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={mobile}
+                    onChangeText={setMobile}
+                  />
+
+                  <Ionicons
+                    name="call-outline"
+                    size={22}
+                    color="#657189"
+                  />
+
+                </View>
+
+
+                {/* PASSWORD */}
+
+                <Text style={styles.label}>
+                  PASSWORD
+                </Text>
+
+                <View style={styles.inputContainer}>
+
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={21}
+                    color="#657189"
+                  />
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Min. 6 characters"
+                    placeholderTextColor="#AEB5C7"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      setShowPassword(
+                        !showPassword
+                      )
+                    }
+                  >
+                    <Ionicons
+                      name={
+                        showPassword
+                          ? "eye-outline"
+                          : "eye-off-outline"
+                      }
+                      size={22}
+                      color="#657189"
+                    />
+                  </TouchableOpacity>
+
+                </View>
+
+
+                {/* SEND OTP */}
+
+                <TouchableOpacity
+                  style={styles.otpButton}
+                >
+                  <Text style={styles.otpText}>
+                    SEND OTP
+                  </Text>
+
+                  <Ionicons
+                    name="arrow-forward"
+                    size={28}
+                    color="#FFFFFF"
+                    style={styles.otpArrow}
+                  />
+                </TouchableOpacity>
+
+
+                {/* OR */}
+
+                <View style={styles.orContainer}>
+
+                  <View style={styles.line} />
+
+                  <Text style={styles.orText}>
+                    OR
+                  </Text>
+
+                  <View style={styles.line} />
+
+                </View>
+
+
+                {/* USDT WALLET */}
+
+                <TouchableOpacity
+                  style={styles.walletButton}
                 >
 
-                {/* Logo */}
+                  <View style={styles.walletIcon}>
+                    <Text style={styles.walletIconText}>
+                      ₹
+                    </Text>
+                  </View>
 
-                <BrandLogo size="small" />
+                  <View
+                    style={styles.walletTextContainer}
+                  >
 
-                {/* Brand */}
+                    <Text style={styles.walletTitle}>
+                      Continue with USDT Wallet
+                    </Text>
 
-                <Text style={styles.brand}>
-                    STOCKPE
+                    <Text style={styles.walletSubtitle}>
+                      Connect your crypto wallet
+                    </Text>
+
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={24}
+                    color="#657189"
+                  />
+
+                </TouchableOpacity>
+
+              </>
+            )}
+
+
+            {/* ================================================= */}
+            {/*                    SIGN UP FORM                   */}
+            {/* ================================================= */}
+
+            {activeTab === "signup" && (
+              <>
+
+                {/* MOBILE NUMBER */}
+
+                <Text style={styles.label}>
+                  MOBILE NUMBER
                 </Text>
 
-                <Text style={styles.subtitle}>
-                    India's #1 Stock Prediction Market
+                <View style={styles.inputContainer}>
+
+                  <Text style={styles.countryCode}>
+                    +91
+                  </Text>
+
+                  <View style={styles.verticalLine} />
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="98765 43210"
+                    placeholderTextColor="#AEB5C7"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={mobile}
+                    onChangeText={setMobile}
+                  />
+
+                  <Ionicons
+                    name="call-outline"
+                    size={22}
+                    color="#657189"
+                  />
+
+                </View>
+
+
+                {/* PASSWORD */}
+
+                <Text style={styles.label}>
+                  PASSWORD
                 </Text>
 
-                {/* Stats */}
+                <View style={styles.inputContainer}>
 
-                <View style={styles.statsContainer}>
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={21}
+                    color="#657189"
+                  />
 
-                    <View style={styles.stat}>
-                    <Text
-                        style={[
-                        styles.statValue,
-                        styles.green,
-                        ]}
-                    >
-                        ₹49.5L
-                    </Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Create a password"
+                    placeholderTextColor="#AEB5C7"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
 
-                    <Text style={styles.statLabel}>
-                        Prize Pool
-                    </Text>
-                    </View>
-
-                    <View style={styles.stat}>
-                    <Text
-                        style={[
-                        styles.statValue,
-                        styles.blue,
-                        ]}
-                    >
-                        2.1M+
-                    </Text>
-
-                    <Text style={styles.statLabel}>
-                        Players
-                    </Text>
-                    </View>
-
-                    <View style={styles.stat}>
-                    <Text
-                        style={[
-                        styles.statValue,
-                        styles.yellow,
-                        ]}
-                    >
-                        4.8★
-                    </Text>
-
-                    <Text style={styles.statLabel}>
-                        Rating
-                    </Text>
-                    </View>
-
-                </View>
-
-                </LinearGradient>
-
-
-                {/* ================= LOGIN SECTION ================= */}
-
-                <View style={styles.loginSection}>
-
-                {/* ================= SIGN IN / SIGN UP TABS ================= */}
-
-                <View style={styles.tabs}>
-
-                    {/* SIGN IN */}
-
-                    <TouchableOpacity
-                    style={[
-                        styles.tab,
-                        activeTab === "signin" &&
-                        styles.activeTab,
-                    ]}
+                  <TouchableOpacity
                     onPress={() =>
-                        switchTab("signin")
+                      setShowPassword(
+                        !showPassword
+                      )
                     }
-                    >
-                    <Text
-                        style={[
-                        styles.tabText,
-                        activeTab === "signin" &&
-                            styles.activeTabText,
-                        ]}
-                    >
-                        SIGN IN
-                    </Text>
-                    </TouchableOpacity>
+                  >
+                    <Ionicons
+                      name={
+                        showPassword
+                          ? "eye-outline"
+                          : "eye-off-outline"
+                      }
+                      size={22}
+                      color="#657189"
+                    />
+                  </TouchableOpacity>
+
+                </View>
 
 
-                    {/* SIGN UP */}
+                {/* CONFIRM PASSWORD */}
 
-                    <TouchableOpacity
-                    style={[
-                        styles.tab,
-                        activeTab === "signup" &&
-                        styles.activeTab,
-                    ]}
+                <Text style={styles.label}>
+                  CONFIRM PASSWORD
+                </Text>
+
+                <View style={styles.inputContainer}>
+
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={21}
+                    color="#657189"
+                  />
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm your password"
+                    placeholderTextColor="#AEB5C7"
+                    secureTextEntry={!showConfirmPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                  />
+
+                  <TouchableOpacity
                     onPress={() =>
-                        switchTab("signup")
+                      setShowConfirmPassword(
+                        !showConfirmPassword
+                      )
                     }
-                    >
-                    <Text
-                        style={[
-                        styles.tabText,
-                        activeTab === "signup" &&
-                            styles.activeTabText,
-                        ]}
-                    >
-                        SIGN UP
-                    </Text>
-                    </TouchableOpacity>
+                  >
+                    <Ionicons
+                      name={
+                        showConfirmPassword
+                          ? "eye-outline"
+                          : "eye-off-outline"
+                      }
+                      size={22}
+                      color="#657189"
+                    />
+                  </TouchableOpacity>
 
                 </View>
 
 
-                {/* ================================================= */}
-                {/*                    SIGN IN FORM                   */}
-                {/* ================================================= */}
+                {/* TERMS */}
 
-                {activeTab === "signin" && (
-                    <>
+                <TouchableOpacity
+                  style={styles.termsContainer}
+                  onPress={() =>
+                    setAgreeTerms(!agreeTerms)
+                  }
+                >
 
-                    {/* MOBILE NUMBER */}
-
-                    <Text style={styles.label}>
-                        MOBILE NUMBER
-                    </Text>
-
-                    <View style={styles.inputContainer}>
-
-                        <Text style={styles.countryCode}>
-                        +91
-                        </Text>
-
-                        <View style={styles.verticalLine} />
-
-                        <TextInput
-                        style={styles.input}
-                        placeholder="98765 43210"
-                        placeholderTextColor="#AEB5C7"
-                        keyboardType="phone-pad"
-                        maxLength={10}
-                        value={mobile}
-                        onChangeText={setMobile}
-                        />
-
-                        <Ionicons
-                        name="call-outline"
-                        size={22}
-                        color="#657189"
-                        />
-
-                    </View>
-
-
-                    {/* PASSWORD */}
-
-                    <Text style={styles.label}>
-                        PASSWORD
-                    </Text>
-
-                    <View style={styles.inputContainer}>
-
-                        <Ionicons
-                        name="lock-closed-outline"
-                        size={21}
-                        color="#657189"
-                        />
-
-                        <TextInput
-                        style={styles.input}
-                        placeholder="Min. 6 characters"
-                        placeholderTextColor="#AEB5C7"
-                        secureTextEntry={!showPassword}
-                        value={password}
-                        onChangeText={setPassword}
-                        />
-
-                        <TouchableOpacity
-                        onPress={() =>
-                            setShowPassword(
-                            !showPassword
-                            )
-                        }
-                        >
-                        <Ionicons
-                            name={
-                            showPassword
-                                ? "eye-outline"
-                                : "eye-off-outline"
-                            }
-                            size={22}
-                            color="#657189"
-                        />
-                        </TouchableOpacity>
-
-                    </View>
-
-
-                    {/* SEND OTP */}
-
-                    <TouchableOpacity
-                        style={styles.otpButton}
-                    >
-                        <Text style={styles.otpText}>
-                        SEND OTP
-                        </Text>
-
-                        <Ionicons
-                        name="arrow-forward"
-                        size={28}
+                  <View
+                    style={[
+                      styles.checkbox,
+                      agreeTerms &&
+                      styles.checkboxActive,
+                    ]}
+                  >
+                    {agreeTerms && (
+                      <Ionicons
+                        name="checkmark"
+                        size={17}
                         color="#FFFFFF"
-                        style={styles.otpArrow}
-                        />
-                    </TouchableOpacity>
+                      />
+                    )}
+                  </View>
 
-
-                    {/* OR */}
-
-                    <View style={styles.orContainer}>
-
-                        <View style={styles.line} />
-
-                        <Text style={styles.orText}>
-                        OR
-                        </Text>
-
-                        <View style={styles.line} />
-
-                    </View>
-
-
-                    {/* USDT WALLET */}
-
-                    <TouchableOpacity
-                        style={styles.walletButton}
-                    >
-
-                        <View style={styles.walletIcon}>
-                        <Text style={styles.walletIconText}>
-                            ₹
-                        </Text>
-                        </View>
-
-                        <View
-                        style={styles.walletTextContainer}
-                        >
-
-                        <Text style={styles.walletTitle}>
-                            Continue with USDT Wallet
-                        </Text>
-
-                        <Text style={styles.walletSubtitle}>
-                            Connect your crypto wallet
-                        </Text>
-
-                        </View>
-
-                        <Ionicons
-                        name="chevron-forward"
-                        size={24}
-                        color="#657189"
-                        />
-
-                    </TouchableOpacity>
-
-                    </>
-                )}
-
-
-                {/* ================================================= */}
-                {/*                    SIGN UP FORM                   */}
-                {/* ================================================= */}
-
-                {activeTab === "signup" && (
-                    <>
-
-                    {/* MOBILE NUMBER */}
-
-                    <Text style={styles.label}>
-                        MOBILE NUMBER
+                  <Text style={styles.termsText}>
+                    I agree to the{" "}
+                    <Text style={styles.termsLink}>
+                      Terms & Conditions
+                    </Text>{" "}
+                    and{" "}
+                    <Text style={styles.termsLink}>
+                      Privacy Policy
                     </Text>
+                  </Text>
 
-                    <View style={styles.inputContainer}>
-
-                        <Text style={styles.countryCode}>
-                        +91
-                        </Text>
-
-                        <View style={styles.verticalLine} />
-
-                        <TextInput
-                        style={styles.input}
-                        placeholder="98765 43210"
-                        placeholderTextColor="#AEB5C7"
-                        keyboardType="phone-pad"
-                        maxLength={10}
-                        value={mobile}
-                        onChangeText={setMobile}
-                        />
-
-                        <Ionicons
-                        name="call-outline"
-                        size={22}
-                        color="#657189"
-                        />
-
-                    </View>
+                </TouchableOpacity>
 
 
-                    {/* PASSWORD */}
+                {/* CREATE ACCOUNT */}
 
-                    <Text style={styles.label}>
-                        PASSWORD
-                    </Text>
+                <TouchableOpacity
+                  style={styles.otpButton}
+                >
 
-                    <View style={styles.inputContainer}>
+                  <Text style={styles.otpText}>
+                    CREATE ACCOUNT
+                  </Text>
 
-                        <Ionicons
-                        name="lock-closed-outline"
-                        size={21}
-                        color="#657189"
-                        />
+                  <Ionicons
+                    name="arrow-forward"
+                    size={28}
+                    color="#FFFFFF"
+                    style={styles.otpArrow}
+                  />
 
-                        <TextInput
-                        style={styles.input}
-                        placeholder="Create a password"
-                        placeholderTextColor="#AEB5C7"
-                        secureTextEntry={!showPassword}
-                        value={password}
-                        onChangeText={setPassword}
-                        />
+                </TouchableOpacity>
 
-                        <TouchableOpacity
-                        onPress={() =>
-                            setShowPassword(
-                            !showPassword
-                            )
-                        }
-                        >
-                        <Ionicons
-                            name={
-                            showPassword
-                                ? "eye-outline"
-                                : "eye-off-outline"
-                            }
-                            size={22}
-                            color="#657189"
-                        />
-                        </TouchableOpacity>
+              </>
+            )}
 
-                    </View>
+          </View>
 
+        </ScrollView>
 
-                    {/* CONFIRM PASSWORD */}
-
-                    <Text style={styles.label}>
-                        CONFIRM PASSWORD
-                    </Text>
-
-                    <View style={styles.inputContainer}>
-
-                        <Ionicons
-                        name="lock-closed-outline"
-                        size={21}
-                        color="#657189"
-                        />
-
-                        <TextInput
-                        style={styles.input}
-                        placeholder="Confirm your password"
-                        placeholderTextColor="#AEB5C7"
-                        secureTextEntry={!showConfirmPassword}
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        />
-
-                        <TouchableOpacity
-                        onPress={() =>
-                            setShowConfirmPassword(
-                            !showConfirmPassword
-                            )
-                        }
-                        >
-                        <Ionicons
-                            name={
-                            showConfirmPassword
-                                ? "eye-outline"
-                                : "eye-off-outline"
-                            }
-                            size={22}
-                            color="#657189"
-                        />
-                        </TouchableOpacity>
-
-                    </View>
-
-
-                    {/* TERMS */}
-
-                    <TouchableOpacity
-                        style={styles.termsContainer}
-                        onPress={() =>
-                        setAgreeTerms(!agreeTerms)
-                        }
-                    >
-
-                        <View
-                        style={[
-                            styles.checkbox,
-                            agreeTerms &&
-                            styles.checkboxActive,
-                        ]}
-                        >
-                        {agreeTerms && (
-                            <Ionicons
-                            name="checkmark"
-                            size={17}
-                            color="#FFFFFF"
-                            />
-                        )}
-                        </View>
-
-                        <Text style={styles.termsText}>
-                        I agree to the{" "}
-                        <Text style={styles.termsLink}>
-                            Terms & Conditions
-                        </Text>{" "}
-                        and{" "}
-                        <Text style={styles.termsLink}>
-                            Privacy Policy
-                        </Text>
-                        </Text>
-
-                    </TouchableOpacity>
-
-
-                    {/* CREATE ACCOUNT */}
-
-                    <TouchableOpacity
-                        style={styles.otpButton}
-                    >
-
-                        <Text style={styles.otpText}>
-                        CREATE ACCOUNT
-                        </Text>
-
-                        <Ionicons
-                        name="arrow-forward"
-                        size={28}
-                        color="#FFFFFF"
-                        style={styles.otpArrow}
-                        />
-
-                    </TouchableOpacity>
-
-                    </>
-                )}
-
-                </View>
-
-            </ScrollView>
-
-        </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
 
     </SafeAreaView>
   );
@@ -581,8 +581,8 @@ const styles = StyleSheet.create({
   },
 
   keyboardContainer: {
-  flex: 1,
-},
+    flex: 1,
+  },
 
 
   /* ================= TOP ================= */

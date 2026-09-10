@@ -1,16 +1,20 @@
 import React from "react";
-import { Platform, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { Platform, StatusBar, StyleSheet, Text, View } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import MarketTicker from "../components/MarketTicker";
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={styles.shellContainer}>
+    <SafeAreaView edges={["top"]} style={styles.shellContainer}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
       {/* 
         Persistent Top Live Market Ticker:
-        Placed at the root shell level so it NEVER unmounts, restarts, or flickers
-        when switching between tabs.
+        Placed at the root shell level below safe area notch so it never gets clipped.
       */}
       <MarketTicker />
 
@@ -18,12 +22,17 @@ export default function TabLayout() {
         screenOptions={{
           headerShown: false,
           tabBarShowLabel: true,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle: [
+            styles.tabBar,
+            {
+              height: 60 + (insets.bottom > 0 ? insets.bottom : 8),
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+            },
+          ],
           tabBarActiveTintColor: "#00C987",
           tabBarInactiveTintColor: "#94A3B8",
           tabBarLabelStyle: styles.tabBarLabel,
           tabBarItemStyle: styles.tabBarItem,
-          // Optimization: Retain tab states for instant, flicker-free switching
           lazy: false,
           sceneStyle: { backgroundColor: "#F4F6FB" },
         }}
@@ -125,9 +134,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#EDF2F7",
-    height: Platform.OS === "ios" ? 86 : 66,
-    paddingBottom: Platform.OS === "ios" ? 26 : 10,
-    paddingTop: 10,
+    paddingTop: 8,
     elevation: 10,
     shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: -3 },

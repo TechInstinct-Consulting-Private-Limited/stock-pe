@@ -75,3 +75,7 @@ export function resendOtp(mobile, purpose) {
         body: JSON.stringify({ mobile, purpose }),
     });
 }
+
+export default function ApiServicePlaceholder() {
+    return null;
+}

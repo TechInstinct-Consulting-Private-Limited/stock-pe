@@ -7,8 +7,11 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function ProfileScreen() {
+  const router = useRouter();
+
   const menuItems = [
     {
       id: "predictions",
@@ -16,6 +19,7 @@ export default function ProfileScreen() {
       icon: "stats-chart-outline",
       iconColor: "#6366F1",
       bgColor: "#EEF2FF",
+      route: "/profile/predictions",
     },
     {
       id: "winnings",
@@ -23,6 +27,7 @@ export default function ProfileScreen() {
       icon: "trophy-outline",
       iconColor: "#F59E0B",
       bgColor: "#FEF3C7",
+      route: "/profile/winnings",
     },
     {
       id: "kyc",
@@ -30,6 +35,23 @@ export default function ProfileScreen() {
       icon: "shield-checkmark-outline",
       iconColor: "#00C987",
       bgColor: "#E6FBF3",
+      route: "/profile/kyc",
+    },
+    {
+      id: "refer",
+      title: "Refer & Earn (₹250/friend)",
+      icon: "gift-outline",
+      iconColor: "#EC4899",
+      bgColor: "#FDF2F8",
+      route: "/support/refer-earn",
+    },
+    {
+      id: "help",
+      title: "Help & 24x7 Support",
+      icon: "headset-outline",
+      iconColor: "#06B6D4",
+      bgColor: "#ECFEFF",
+      route: "/support/faq",
     },
   ];
 
@@ -60,10 +82,14 @@ export default function ProfileScreen() {
 
               {/* Badges */}
               <View style={styles.badgesRow}>
-                <View style={styles.kycBadge}>
+                <TouchableOpacity
+                  style={styles.kycBadge}
+                  activeOpacity={0.7}
+                  onPress={() => router.push("/profile/kyc")}
+                >
                   <Ionicons name="checkmark-circle" size={11} color="#00C987" />
                   <Text style={styles.kycBadgeText}>KYC</Text>
-                </View>
+                </TouchableOpacity>
 
                 <View style={styles.usdtBadgePill}>
                   <Text style={styles.usdtIconText}>₮</Text>
@@ -73,7 +99,11 @@ export default function ProfileScreen() {
             </View>
 
             {/* Bell Icon */}
-            <TouchableOpacity style={styles.bellButton} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.bellButton}
+              activeOpacity={0.7}
+              onPress={() => router.push("/profile/notifications")}
+            >
               <Ionicons
                 name="notifications-outline"
                 size={20}
@@ -86,34 +116,50 @@ export default function ProfileScreen() {
         {/* 2x2 Stats Grid */}
         <View style={styles.statsGrid}>
           {/* Total Events */}
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.7}
+            onPress={() => router.push("/profile/predictions")}
+          >
             <Text style={styles.statCardLabel}>TOTAL EVENTS</Text>
             <Text style={styles.statCardValue}>47</Text>
             <Text style={styles.statCardSub}>Participated</Text>
-          </View>
+          </TouchableOpacity>
 
           {/* Win Rate */}
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.7}
+            onPress={() => router.push("/profile/predictions")}
+          >
             <Text style={styles.statCardLabel}>WIN RATE</Text>
             <Text style={[styles.statCardValue, { color: "#00C987" }]}>31%</Text>
             <Text style={styles.statCardSub}>14 wins</Text>
-          </View>
+          </TouchableOpacity>
 
           {/* Winnings */}
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.7}
+            onPress={() => router.push("/profile/winnings")}
+          >
             <Text style={styles.statCardLabel}>WINNINGS</Text>
             <Text style={[styles.statCardValue, { color: "#F59E0B" }]}>₹2.4L</Text>
             <Text style={styles.statCardSub}>~ 3,269 USDT</Text>
-          </View>
+          </TouchableOpacity>
 
           {/* Best Accuracy */}
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.7}
+            onPress={() => router.push("/profile/predictions")}
+          >
             <Text style={styles.statCardLabel}>BEST ACCURACY</Text>
             <Text style={[styles.statCardValue, { color: "#6366F1" }]}>
               99.99%
             </Text>
             <Text style={styles.statCardSub}>NIFTY Jan</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Current Rank Card */}
@@ -169,6 +215,7 @@ export default function ProfileScreen() {
               key={item.id}
               style={styles.menuItem}
               activeOpacity={0.7}
+              onPress={() => router.push(item.route)}
             >
               <View
                 style={[
