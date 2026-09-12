@@ -6,6 +6,8 @@ const healthRoutes = require("./routes/health.routes");
 const authRoutes = require("./routes/auth.routes");
 const kycRoutes = require("./routes/kyc.routes");
 const walletRoutes = require("./routes/wallet.routes");
+const walletPaymentsRoutes = require("./routes/wallet-payments.routes");
+const onboardingRoutes = require("./routes/onboarding.routes");
 const {
     errorHandler,
     notFoundHandler,
@@ -27,6 +29,8 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/kyc", kycRoutes);
 app.use("/api/wallet", walletRoutes);
+app.use("/api/wallet/payments", walletPaymentsRoutes);
+app.use("/api/onboarding", onboardingRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

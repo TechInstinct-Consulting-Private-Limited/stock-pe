@@ -151,9 +151,41 @@ export function getUsdtWallet() {
     return authenticatedRequest("/wallet/usdt");
 }
 
+export function getOnboardingStatus() {
+    return authenticatedRequest("/onboarding/status", {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
 export function linkUsdtWallet(network, address) {
     return authenticatedRequest("/wallet/usdt", {
         method: "POST",
         body: JSON.stringify({ network, address }),
+    });
+}
+
+export function getWalletPaymentSummary() {
+    return authenticatedRequest("/wallet/payments/summary", {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function createMockDepositAddress() {
+    return authenticatedRequest("/wallet/payments/mock/deposit-address", {
+        method: "POST",
+    });
+}
+
+export function simulateMockDeposit(amountUsdt) {
+    return authenticatedRequest("/wallet/payments/mock/deposits", {
+        method: "POST",
+        body: JSON.stringify({ amountUsdt }),
+    });
+}
+
+export function simulateMockWithdrawal(amountUsdt, idempotencyKey) {
+    return authenticatedRequest("/wallet/payments/mock/withdrawals", {
+        method: "POST",
+        body: JSON.stringify({ amountUsdt, idempotencyKey }),
     });
 }
