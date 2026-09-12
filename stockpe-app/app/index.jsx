@@ -29,10 +29,11 @@ export default function Index() {
     return () => clearInterval(interval);
   }, []);
 
-  // Go to Login after splash
+  // Navigate directly to Dashboard after splash (Login bypassed for stakeholder demo)
   useEffect(() => {
     if (progress >= 100) {
-      router.replace("/login");
+      // router.replace("/login"); // Disabled: Login screen disconnected
+      router.replace("/(tabs)/events");
     }
   }, [progress]);
 
