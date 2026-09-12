@@ -11,7 +11,11 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { signIn, signUp } from "../../src/services/api";
+import {
+    getUserFacingError,
+    signIn,
+    signUp,
+} from "../services/api";
 
 export default function AuthForm({
     activeTab,
@@ -43,6 +47,13 @@ export default function AuthForm({
 
     const [mobileError, setMobileError] = useState("");
     const [passwordError, setPasswordError] = useState("");
+    // A field is "touched" once the user has typed in it or left it, so
+    // validation messages appear on blur instead of only on submit.
+    const [touched, setTouched] = useState({
+        mobile: false,
+        password: false,
+        confirmPassword: false,
+    });
     const [confirmPasswordError, setConfirmPasswordError] =
         useState("");
     const [termsError, setTermsError] = useState("");
@@ -83,9 +94,9 @@ export default function AuthForm({
             return false;
         }
 
-        if (password.length < 6) {
+        if (password.length < 8) {
             setPasswordError(
-                "Password must be at least 6 characters."
+                "Password must be at least 8 characters."
             );
             return false;
         }
@@ -164,7 +175,7 @@ export default function AuthForm({
                 },
             });
         } catch (error) {
-            setApiError(error.message);
+            setApiError(getUserFacingError(error));
         } finally {
             setIsLoading(false);
         }
@@ -207,7 +218,7 @@ export default function AuthForm({
                 },
             });
         } catch (error) {
-            setApiError(error.message);
+            setApiError(getUserFacingError(error));
         } finally {
             setIsLoading(false);
         }
@@ -226,11 +237,16 @@ export default function AuthForm({
 
         setMobile(onlyNumbers);
         setApiError("");
+        setTouched((current) => ({ ...current, mobile: true }));
 
         // Remove error while user corrects input
         if (mobileError) {
             setMobileError("");
         }
+    };
+
+    const handleMobileBlur = () => {
+        if (touched.mobile) validateMobile();
     };
 
 
@@ -242,9 +258,20 @@ export default function AuthForm({
 
         setPassword(text);
         setApiError("");
+        setTouched((current) => ({ ...current, password: true }));
 
         if (passwordError) {
             setPasswordError("");
+        }
+    };
+
+    const handlePasswordBlur = () => {
+        if (!touched.password) return;
+        validatePassword();
+
+        // Re-check the confirmation too, since it compares against this value.
+        if (touched.confirmPassword && confirmPassword) {
+            validateConfirmPassword();
         }
     };
 
@@ -257,10 +284,15 @@ export default function AuthForm({
 
         setConfirmPassword(text);
         setApiError("");
+        setTouched((current) => ({ ...current, confirmPassword: true }));
 
         if (confirmPasswordError) {
             setConfirmPasswordError("");
         }
+    };
+
+    const handleConfirmPasswordBlur = () => {
+        if (touched.confirmPassword) validateConfirmPassword();
     };
 
 
@@ -322,6 +354,7 @@ export default function AuthForm({
                             onChangeText={
                                 handleMobileChange
                             }
+                            onBlur={handleMobileBlur}
                         />
 
                         <Ionicons
@@ -361,13 +394,14 @@ export default function AuthForm({
 
                         <TextInput
                             style={styles.input}
-                            placeholder="Min. 6 characters"
+                            placeholder="Min. 8 characters"
                             placeholderTextColor="#AEB5C7"
                             secureTextEntry={!showPassword}
                             value={password}
                             onChangeText={
                                 handlePasswordChange
                             }
+                            onBlur={handlePasswordBlur}
                         />
 
                         <TouchableOpacity
@@ -476,6 +510,7 @@ export default function AuthForm({
                             onChangeText={
                                 handleMobileChange
                             }
+                            onBlur={handleMobileBlur}
                         />
 
                         <Ionicons
@@ -522,6 +557,7 @@ export default function AuthForm({
                             onChangeText={
                                 handlePasswordChange
                             }
+                            onBlur={handlePasswordBlur}
                         />
 
                         <TouchableOpacity
@@ -582,6 +618,7 @@ export default function AuthForm({
                             onChangeText={
                                 handleConfirmPasswordChange
                             }
+                            onBlur={handleConfirmPasswordBlur}
                         />
 
                         <TouchableOpacity
@@ -702,123 +739,125 @@ export default function AuthForm({
 
 
 const styles = StyleSheet.create({
+
     label: {
-        fontSize: 11,
-        letterSpacing: 1,
-        fontWeight: "800",
-        color: "#64748B",
-        marginBottom: 8,
+        fontSize: 12,
+        letterSpacing: 2.2,
+        color: "#737D91",
+        marginBottom: 10,
     },
 
     inputContainer: {
-        height: 52,
-        borderRadius: 14,
-        backgroundColor: "#F8FAFC",
+        height: 64,
+        borderRadius: 20,
+        backgroundColor: "#EEF1FB",
+
         borderWidth: 1,
-        borderColor: "#E2E8F0",
+        borderColor: "#DDE2F0",
+
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 16,
-        marginBottom: 18,
+
+        paddingHorizontal: 18,
+        marginBottom: 24,
     },
 
     inputError: {
-        borderColor: "#EF4444",
+        borderColor: "#E05252",
     },
 
     errorText: {
-        fontSize: 11.5,
-        fontWeight: "600",
-        color: "#EF4444",
-        marginTop: -12,
-        marginBottom: 14,
+        fontSize: 12,
+        color: "#E05252",
+        marginTop: -18,
+        marginBottom: 18,
         paddingHorizontal: 4,
     },
 
     apiErrorText: {
-        color: "#DC2626",
-        backgroundColor: "#FEF2F2",
+        color: "#C73D3D",
+        backgroundColor: "#FFF0F0",
         borderRadius: 12,
-        fontSize: 12.5,
-        fontWeight: "600",
-        lineHeight: 18,
-        marginBottom: 16,
+        fontSize: 13,
+        lineHeight: 19,
+        marginBottom: 18,
         padding: 12,
-        borderWidth: 1,
-        borderColor: "#FEE2E2",
     },
 
     countryCode: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#0F172A",
+        fontSize: 16,
+        color: "#657189",
     },
 
     verticalLine: {
         width: 1,
-        height: 22,
-        backgroundColor: "#CBD5E1",
-        marginHorizontal: 12,
+        height: 28,
+        backgroundColor: "#D1D6E3",
+        marginHorizontal: 14,
     },
 
     input: {
         flex: 1,
-        fontSize: 15,
-        fontWeight: "600",
-        color: "#0F172A",
-        paddingHorizontal: 8,
+        fontSize: 17,
+        color: "#18233B",
+        paddingHorizontal: 12,
     },
 
     otpButton: {
-        height: 52,
+        height: 64,
         backgroundColor: "#00C987",
-        borderRadius: 14,
+        borderRadius: 20,
+
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        marginTop: 4,
+
+        marginTop: 3,
+
         shadowColor: "#00C987",
         shadowOffset: {
             width: 0,
-            height: 4,
+            height: 7,
         },
-        shadowOpacity: 0.22,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+
+        elevation: 6,
     },
 
     otpButtonDisabled: {
-        opacity: 0.6,
+        opacity: 0.5,
     },
 
     otpText: {
         color: "#FFFFFF",
-        fontSize: 15,
+        fontSize: 18,
         fontWeight: "900",
-        letterSpacing: 0.8,
     },
 
     otpArrow: {
-        marginLeft: 10,
+        marginLeft: 12,
     },
 
     termsContainer: {
         flexDirection: "row",
         alignItems: "flex-start",
-        marginTop: 2,
-        marginBottom: 20,
+        marginTop: 0,
+        marginBottom: 25,
     },
 
     checkbox: {
-        width: 20,
-        height: 20,
-        borderRadius: 6,
+        width: 22,
+        height: 22,
+        borderRadius: 7,
+
         borderWidth: 1.5,
-        borderColor: "#CBD5E1",
+        borderColor: "#CBD1DF",
+
         alignItems: "center",
         justifyContent: "center",
+
         marginRight: 10,
-        marginTop: 1,
     },
 
     checkboxActive: {
@@ -828,14 +867,14 @@ const styles = StyleSheet.create({
 
     termsText: {
         flex: 1,
-        fontSize: 12,
-        lineHeight: 18,
-        color: "#64748B",
+        fontSize: 13,
+        lineHeight: 20,
+        color: "#737D91",
     },
 
     termsLink: {
-        color: "#00C987",
-        fontWeight: "800",
+        color: "#00A875",
+        fontWeight: "700",
     },
-});
 
+});

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -8,6 +7,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -24,7 +24,7 @@ export default function Signup() {
   const [agreeTerms, setAgreeTerms] = useState(false);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}

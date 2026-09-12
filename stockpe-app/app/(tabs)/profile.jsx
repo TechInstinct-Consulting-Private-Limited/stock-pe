@@ -9,8 +9,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
+import { removeAuthToken } from "../../src/services/authStorage";
+
 export default function ProfileScreen() {
   const router = useRouter();
+
+  const handleLogout = async () => {
+    await removeAuthToken();
+    router.replace("/login");
+  };
 
   const menuItems = [
     {
@@ -36,6 +43,14 @@ export default function ProfileScreen() {
       iconColor: "#00C987",
       bgColor: "#E6FBF3",
       route: "/profile/kyc",
+    },
+    {
+      id: "aadhaar",
+      title: "Aadhaar QR Scanner",
+      icon: "qr-code-outline",
+      iconColor: "#3B82F6",
+      bgColor: "#EFF6FF",
+      route: "/aadhaar",
     },
     {
       id: "refer",
@@ -233,6 +248,19 @@ export default function ProfileScreen() {
               <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
             </TouchableOpacity>
           ))}
+
+          {/* Log Out Button */}
+          <TouchableOpacity
+            style={styles.logoutBtn}
+            activeOpacity={0.7}
+            onPress={handleLogout}
+          >
+            <View style={styles.logoutIconCircle}>
+              <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+            </View>
+            <Text style={styles.logoutText}>Log Out</Text>
+            <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -559,5 +587,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: "#0F172A",
+  },
+  logoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: "#FEE2E2",
+    marginTop: 4,
+  },
+  logoutIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  logoutText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#EF4444",
   },
 });

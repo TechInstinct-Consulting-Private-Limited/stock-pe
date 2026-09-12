@@ -8,7 +8,6 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -16,7 +15,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { resendOtp, verifyOtp } from "./services/api";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { resendOtp, verifyOtp } from "../src/services/api";
 
 
 export default function OTP() {
@@ -172,8 +172,11 @@ export default function OTP() {
             setIsVerifying(false);
             setIsVerified(true);
             setTimeout(() => {
-                router.replace("/(tabs)/events");
-            }, 600);
+                router.replace({
+                    pathname: "/aadhaar",
+                    params: { mobile: String(mobile), mode: mode || "signin" },
+                });
+            }, 500);
         } catch (error) {
             setApiError(error.message);
             setIsVerifying(false);
@@ -224,97 +227,57 @@ export default function OTP() {
 
     return (
 
-        <SafeAreaView style={styles.safeArea}>
-
+        <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.safeArea}>
             <KeyboardAvoidingView
                 style={styles.container}
-                behavior={
-                    Platform.OS === "ios"
-                        ? "padding"
-                        : "height"
-                }
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
+                {/* Fixed Header */}
+                <View style={styles.header}>
+                    <View style={styles.headerLeft}>
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={handleBack}
+                        >
+                            <Ionicons
+                                name="chevron-back"
+                                size={22}
+                                color="#64748B"
+                            />
+                        </TouchableOpacity>
+
+                        <View>
+                            <Text style={styles.headerTitle}>
+                                Verify Mobile
+                            </Text>
+                            <Text style={styles.headerSubtitle}>
+                                Step 1 of 4
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.stepBadge}>
+                        <Text style={styles.stepBadgeText}>
+                            1/4
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Progress Bar */}
+                <View style={styles.progressBackground}>
+                    <LinearGradient
+                        colors={["#00C987", "#38BDF8"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.progress}
+                    />
+                </View>
 
                 <ScrollView
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-
-
-                    {/* =====================================
-                        HEADER
-                    ===================================== */}
-
-                    <View style={styles.header}>
-
-                        <View style={styles.headerLeft}>
-
-                            <TouchableOpacity
-                                style={styles.backButton}
-                                onPress={handleBack}
-                            >
-
-                                <Ionicons
-                                    name="chevron-back"
-                                    size={27}
-                                    color="#657189"
-                                />
-
-                            </TouchableOpacity>
-
-
-                            <View>
-
-                                <Text style={styles.headerTitle}>
-                                    Verify Mobile
-                                </Text>
-
-                                <Text style={styles.headerSubtitle}>
-                                    Step 1 of 4
-                                </Text>
-
-                            </View>
-
-                        </View>
-
-
-                        {/* STEP BADGE */}
-
-                        <View style={styles.stepBadge}>
-
-                            <Text style={styles.stepBadgeText}>
-                                1/4
-                            </Text>
-
-                        </View>
-
-                    </View>
-
-
-                    {/* =====================================
-                        PROGRESS
-                    ===================================== */}
-
-                    <View style={styles.progressBackground}>
-
-                        <LinearGradient
-                            colors={[
-                                "#00C987",
-                                "#6366F1",
-                            ]}
-                            start={{
-                                x: 0,
-                                y: 0,
-                            }}
-                            end={{
-                                x: 1,
-                                y: 0,
-                            }}
-                            style={styles.progress}
-                        />
-
-                    </View>
 
 
                     {/* =====================================
@@ -516,10 +479,9 @@ export default function OTP() {
 ===================================================== */
 
 const styles = StyleSheet.create({
-
     safeArea: {
         flex: 1,
-        backgroundColor: "#F5F7FF",
+        backgroundColor: "#FFFFFF",
     },
 
     container: {
@@ -529,51 +491,43 @@ const styles = StyleSheet.create({
     scrollContent: {
         flexGrow: 1,
         paddingBottom: 35,
-        paddingTop:40,
     },
 
-
     /* ================= HEADER ================= */
-
     header: {
-        height: 90,
+        height: 56,
         backgroundColor: "#FFFFFF",
-
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-
-        paddingHorizontal: 27, 
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: "#EDF2F7",
     },
 
     headerLeft: {
-        marginLeft:-10,
         flexDirection: "row",
         alignItems: "center",
     },
 
     backButton: {
-        width: 40,
-        height: 40,
-
-        borderRadius: 29,
-
-        backgroundColor: "#EEF1FB",
-
+        width: 38,
+        height: 38,
+        borderRadius: 12,
+        backgroundColor: "#F8FAFC",
         alignItems: "center",
         justifyContent: "center",
-
-        marginRight: 14,
-
+        marginRight: 12,
         borderWidth: 1,
-        borderColor: "#E0E5F1",
+        borderColor: "#E2E8F0",
     },
 
     headerTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "900",
-        color: "#071329",
+        color: "#0F172A",
     },
+
 
     headerSubtitle: {
         fontSize: 14,
@@ -582,30 +536,25 @@ const styles = StyleSheet.create({
     },
 
     stepBadge: {
-        paddingHorizontal: 18,
-        paddingVertical: 9,
-
-        borderRadius: 22,
-
-        backgroundColor: "#EEF1FB",
-
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderRadius: 12,
+        backgroundColor: "#E6FBF3",
         borderWidth: 1,
-        borderColor: "#E0E5F1",
+        borderColor: "#A7F3D0",
     },
 
     stepBadgeText: {
-        fontSize: 12,
-         fontWeight: "700",
-        color: "#657189",
+        fontSize: 11,
+        fontWeight: "900",
+        color: "#059669",
     },
 
-
     /* ================= PROGRESS ================= */
-
     progressBackground: {
-        height: 4,
+        height: 3,
         width: "100%",
-        backgroundColor: "#E5E8F1",
+        backgroundColor: "#EDF2F7",
     },
 
     progress: {
@@ -613,223 +562,164 @@ const styles = StyleSheet.create({
         height: "100%",
     },
 
-
     /* ================= CONTENT ================= */
-
     content: {
         flex: 1,
-
         alignItems: "center",
-
-        paddingHorizontal: 40,
-
-        paddingTop: 125,
+        paddingHorizontal: 20,
+        paddingTop: 28,
     },
-
 
     /* ================= PHONE ================= */
-
     phoneIconContainer: {
-        width: 112,
-        height: 112,
-        borderRadius: 56,
-
-        borderWidth: 2,
-
-        borderColor: "rgba(0,201,135,0.25)",
-
-        backgroundColor: "rgba(0,201,135,0.04)",
-
+        width: 64,
+        height: 64,
+        borderRadius: 20,
+        borderWidth: 1.5,
+        borderColor: "#A7F3D0",
+        backgroundColor: "#E6FBF3",
         alignItems: "center",
         justifyContent: "center",
-
-        marginBottom: 22,
+        marginBottom: 16,
     },
 
-
     /* ================= TITLE ================= */
-
     title: {
-        fontSize: 42,
+        fontSize: 22,
         fontWeight: "900",
-
-        color: "#071329",
-
-        marginBottom: 8,
+        color: "#0F172A",
+        marginBottom: 6,
     },
 
     sentText: {
-        fontSize: 20,
-
-        color: "#737D91",
-
-        marginBottom: 43,
+        fontSize: 13,
+        color: "#64748B",
+        marginBottom: 28,
+        textAlign: "center",
     },
 
     mobileNumber: {
-        color: "#071329",
-        fontWeight: "700",
+        color: "#0F172A",
+        fontWeight: "800",
     },
 
-
     /* ================= OTP ================= */
-
     otpContainer: {
         width: "100%",
-
         flexDirection: "row",
-
         justifyContent: "space-between",
-
-        marginBottom: 48,
+        marginBottom: 24,
     },
 
     otpInput: {
-        width: 52,
-        height: 56,
-
-        borderRadius: 20,
-
-        backgroundColor: "#FFFFFF",
-
-        borderWidth: 1,
-        borderColor: "rgba(0, 201, 135, 1.00)",
-
-        fontSize: 28,
-        fontWeight: "700",
-
-        color: "#071329",
-
-        shadowColor: "#000000",
+        width: 48,
+        height: 54,
+        borderRadius: 14,
+        backgroundColor: "#F8FAFC",
+        borderWidth: 1.5,
+        borderColor: "#E2E8F0",
+        fontSize: 22,
+        fontWeight: "800",
+        color: "#0F172A",
+        textAlign: "center",
+        shadowColor: "#0F172A",
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: 1,
         },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-
-        elevation: 2,
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
+        elevation: 1,
     },
 
     otpInputActive: {
         borderColor: "#00C987",
+        backgroundColor: "#FFFFFF",
     },
 
-
     /* ================= RESEND ================= */
-
     resendText: {
-        fontSize: 20,
-        color: "#737D91",
-
-        marginBottom: 48,
+        fontSize: 13,
+        color: "#64748B",
+        marginBottom: 24,
     },
 
     resendTime: {
-        color: "#E8A400",
+        color: "#F59E0B",
         fontWeight: "700",
     },
 
     resendActive: {
-        color: "#00A875",
-        fontWeight: "700",
+        color: "#00C987",
+        fontWeight: "800",
     },
 
-
     /* ================= DEMO ================= */
-
     demoBox: {
         width: "100%",
-
-        minHeight: 68,
-
-        borderRadius: 18,
-
-        borderWidth: 1.5,
-
-        borderColor: "#F2D86D",
-
-        backgroundColor: "#FFFBEA",
-
+        minHeight: 52,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: "#FDE68A",
+        backgroundColor: "#FFFBEB",
         flexDirection: "row",
-
         alignItems: "center",
-
-        paddingHorizontal: 20,
-
-        marginBottom: 54,
+        paddingHorizontal: 14,
+        marginBottom: 24,
     },
 
     demoText: {
         flex: 1,
-
-        fontSize: 16,
-
-        color: "#737D91",
-
-        marginLeft: 13,
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#92400E",
+        marginLeft: 10,
     },
 
     apiErrorText: {
         width: "100%",
-        color: "#C73D3D",
-        backgroundColor: "#FFF0F0",
-        borderRadius: 14,
-        fontSize: 15,
-        lineHeight: 21,
-        marginTop: -30,
-        marginBottom: 30,
-        padding: 14,
+        color: "#DC2626",
+        backgroundColor: "#FEF2F2",
+        borderRadius: 12,
+        fontSize: 12.5,
+        fontWeight: "600",
+        lineHeight: 18,
+        marginBottom: 16,
+        padding: 12,
         textAlign: "center",
+        borderWidth: 1,
+        borderColor: "#FEE2E2",
     },
-
 
     /* ================= VERIFY ================= */
-
     verifyButton: {
         width: "100%",
-
-        height: 78,
-
-        borderRadius: 21,
-
+        height: 52,
+        borderRadius: 14,
         backgroundColor: "#00C987",
-
         flexDirection: "row",
-
         alignItems: "center",
-
         justifyContent: "center",
-
-        gap: 13,
-
+        gap: 8,
         shadowColor: "#00C987",
-
         shadowOffset: {
             width: 0,
-            height: 8,
+            height: 4,
         },
-
-        shadowOpacity: 0.25,
-
-        shadowRadius: 14,
-
-        elevation: 7,
+        shadowOpacity: 0.22,
+        shadowRadius: 8,
+        elevation: 4,
     },
 
-
     verifyButtonDisabled: {
-        opacity: 0.45,
+        opacity: 0.5,
     },
 
     verifyText: {
         color: "#FFFFFF",
-
-        fontSize: 21,
-
+        fontSize: 15,
         fontWeight: "900",
-
-        letterSpacing: 0.5,
+        letterSpacing: 0.8,
     },
-
 });
+

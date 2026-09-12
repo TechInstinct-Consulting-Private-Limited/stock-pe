@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.base,
-    paddingTop: spacing.sm,
+    paddingTop: 6,
     paddingBottom: spacing.xxl,
   },
   quickBar: {

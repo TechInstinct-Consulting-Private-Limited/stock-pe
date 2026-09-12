@@ -4,11 +4,11 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import AlternativeAuth from "./components/AlternativeAuth";
 import AuthForm from "./components/AuthForm";
@@ -67,7 +67,7 @@ export default function Login() {
 
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.container}>
 
             {/* ========================================
                 FIXED BRAND / HEADER
@@ -201,74 +201,36 @@ export default function Login() {
 
 
 const styles = StyleSheet.create({
-
-    // ============================================
-    // MAIN SCREEN
-    // ============================================
-
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#060D1E",
     },
-
-
-    // ============================================
-    // FORM AREA BELOW FIXED HEADER
-    // ============================================
 
     formContainer: {
         flex: 1,
     },
 
-
-    // ============================================
-    // WHITE SHEET
-    // ============================================
-
     formSheet: {
         flex: 1,
-
         backgroundColor: "#FFFFFF",
-
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
         overflow: "hidden",
     },
-
-
-    // ============================================
-    // SCROLL VIEW
-    // ============================================
 
     scrollView: {
         flex: 1,
     },
 
-
-    // ============================================
-    // SCROLL CONTENT
-    // ============================================
-
     scrollContent: {
         flexGrow: 1,
-
-        paddingBottom: 40,
+        paddingBottom: 30,
     },
-
-
-    // ============================================
-    // AUTH CONTENT
-    // ============================================
 
     loginSection: {
         backgroundColor: "#FFFFFF",
-
-        paddingHorizontal: 24,
-
-        paddingTop: 24,
-
-        paddingBottom: 35,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 30,
     },
-
-});
+});

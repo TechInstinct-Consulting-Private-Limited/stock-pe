@@ -7,19 +7,7 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 
-import { router } from "expo-router";
-import { setAuthToken } from "../../src/services/authStorage";
-
 export default function AlternativeAuth() {
-    const handleWalletConnect = async () => {
-        try {
-            await setAuthToken("stockpe_demo_usdt_wallet_token");
-        } catch (_e) {
-            // advisory
-        }
-        router.replace("/(tabs)/events");
-    };
-
     return (
         <>
             {/* OR */}
@@ -34,15 +22,11 @@ export default function AlternativeAuth() {
             </View>
 
             {/* USDT WALLET */}
-            <TouchableOpacity
-                style={styles.walletButton}
-                activeOpacity={0.8}
-                onPress={handleWalletConnect}
-            >
+            <TouchableOpacity style={styles.walletButton}>
 
                 <View style={styles.walletIcon}>
                     <Text style={styles.walletIconText}>
-                        ₮
+                        ₹
                     </Text>
                 </View>
 
@@ -52,7 +36,7 @@ export default function AlternativeAuth() {
                     </Text>
 
                     <Text style={styles.walletSubtitle}>
-                        Connect TRC-20 / BEP-20 Web3 wallet
+                        Connect your crypto wallet
                     </Text>
                 </View>
 
@@ -71,74 +55,76 @@ const styles = StyleSheet.create({
     orContainer: {
         flexDirection: "row",
         alignItems: "center",
-        marginVertical: 18,
+        marginVertical: 22,
     },
 
     line: {
         flex: 1,
         height: 1,
-        backgroundColor: "#E2E8F0",
+        backgroundColor: "#E5E7EE",
     },
 
     orText: {
-        marginHorizontal: 12,
-        color: "#94A3B8",
-        fontSize: 11,
-        fontWeight: "800",
-        letterSpacing: 1,
+        marginHorizontal: 14,
+        color: "#7D8493",
+        fontSize: 12,
     },
 
     walletButton: {
-        minHeight: 68,
-        borderRadius: 16,
+        minHeight: 80,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: "#E2E8F0",
+        borderColor: "#E5E5E5",
+
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 14,
+
+        paddingHorizontal: 15,
+
         backgroundColor: "#FFFFFF",
-        shadowColor: "#0F172A",
+
+        shadowColor: "#000",
         shadowOffset: {
             width: 0,
             height: 2,
         },
-        shadowOpacity: 0.04,
-        shadowRadius: 6,
+        shadowOpacity: 0.06,
+        shadowRadius: 5,
+
         elevation: 2,
     },
 
     walletIcon: {
-        width: 42,
-        height: 42,
-        borderRadius: 12,
-        backgroundColor: "#E6FBF3",
-        borderWidth: 1,
-        borderColor: "#A7F3D0",
+        width: 50,
+        height: 50,
+        borderRadius: 15,
+
+        backgroundColor: "#29A27F",
+
         alignItems: "center",
         justifyContent: "center",
     },
 
     walletIconText: {
-        color: "#00C987",
-        fontSize: 20,
-        fontWeight: "900",
+        color: "#FFFFFF",
+        fontSize: 24,
+        fontWeight: "bold",
     },
 
     walletTextContainer: {
         flex: 1,
-        marginLeft: 12,
+        marginLeft: 15,
     },
 
     walletTitle: {
-        fontSize: 13.5,
-        fontWeight: "800",
-        color: "#0F172A",
+        fontSize: 17,
+        fontWeight: "600",
+        color: "#10192C",
     },
 
     walletSubtitle: {
-        fontSize: 11,
-        fontWeight: "500",
-        color: "#64748B",
-        marginTop: 2,
+        fontSize: 13,
+        color: "#747D8E",
+        marginTop: 3,
     },
 });
