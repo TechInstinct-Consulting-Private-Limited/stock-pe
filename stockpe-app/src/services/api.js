@@ -1,8 +1,8 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-// Dummy / Mock mode enabled so login and auth work smoothly without requiring a live backend server
-const USE_MOCK_AUTH = true;
+// Mock auth is disabled by default so the app connects to the real backend APIs
+const USE_MOCK_AUTH = process.env.EXPO_PUBLIC_USE_MOCK === "true";
 
 function resolveApiBaseUrl() {
     if (process.env.EXPO_PUBLIC_API_URL) {
@@ -42,8 +42,7 @@ async function request(path, options = {}) {
             ...options,
         });
     } catch (_error) {
-        // Fallback to mock on network failure so UI never crashes
-        return { success: true, message: "Offline mock fallback" };
+        throw new Error("Unable to connect to backend server. Please verify the server is running.");
     }
 
     const data = await response.json().catch(() => ({}));
