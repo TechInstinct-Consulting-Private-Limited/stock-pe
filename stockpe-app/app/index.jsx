@@ -29,11 +29,11 @@ export default function Index() {
     return () => clearInterval(interval);
   }, []);
 
-  // Navigate directly to Dashboard after splash (Login bypassed for stakeholder demo)
+  // Start every session through the existing sign-in/sign-up flow.
+  // The dashboard becomes available only after the OTP, KYC and wallet flow.
   useEffect(() => {
     if (progress >= 100) {
-      // router.replace("/login"); // Disabled: Login screen disconnected
-      router.replace("/(tabs)/events");
+      router.replace("/login");
     }
   }, [progress]);
 
