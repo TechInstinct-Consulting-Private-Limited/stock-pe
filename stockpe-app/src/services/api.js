@@ -136,13 +136,6 @@ export function verifyAadhaarOtp(verificationId, otp) {
     });
 }
 
-export function verifyAadhaarSecureQr(payload, consent) {
-    return authenticatedRequest("/kyc/aadhaar/verify-secure-qr", {
-        method: "POST",
-        body: JSON.stringify({ payload, consent }),
-    });
-}
-
 export function getAadhaarKycStatus() {
     return authenticatedRequest("/kyc/aadhaar/status");
 }

@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { CameraView, scanFromURLAsync, useCameraPermissions } from "expo-camera";
-import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import { router, useLocalSearchParams } from "expo-router";
-import { createElement, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+    AccessibilityInfo,
     ActivityIndicator,
     BackHandler,
     Keyboard,
@@ -18,6 +19,7 @@ import {
     TouchableOpacity,
     useWindowDimensions,
     View,
+    findNodeHandle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -25,13 +27,23 @@ import {
     getUserFacingError,
     requestAadhaarOtp,
     verifyAadhaarOtp,
-    verifyAadhaarSecureQr,
 } from "../src/services/api";
-import {
-    AadhaarQrError,
-    verifyAndParseAadhaarSecureQr,
-} from "../src/services/aadhaarSecureQr";
-import WebQrScanner, { decodeQrFromImageFile } from "../src/components/WebQrScanner";
+import { parseAadhaarCardText } from "../src/services/aadhaarCardText";
+
+function getTextExtractor() {
+    if (
+        Platform.OS === "web" ||
+        Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+    ) {
+        return null;
+    }
+
+    try {
+        return require("expo-text-extractor");
+    } catch (_error) {
+        return null;
+    }
+}
 
 function formatAadhaar(value) {
     return value.replace(/\D/g, "").slice(0, 12);
@@ -70,18 +82,13 @@ export default function AadhaarVerification() {
     const [isVerified, setIsVerified] = useState(false);
     const [formError, setFormError] = useState("");
     const [scannerOpen, setScannerOpen] = useState(false);
-    const [scanLocked, setScanLocked] = useState(false);
     const [scanError, setScanError] = useState("");
-    const [aadhaarLastFour, setAadhaarLastFour] = useState("");
     const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-    const scrollRef = useRef(null);
-    const consentY = useRef(0);
-    const [consentHighlight, setConsentHighlight] = useState(false);
-    const isWeb = Platform.OS === "web";
-    const [scanStalled, setScanStalled] = useState(false);
-    const [detectionCount, setDetectionCount] = useState(0);
-    const scanLockRef = useRef(false);
     const cameraRef = useRef(null);
+    const scrollRef = useRef(null);
+    const formErrorRef = useRef(null);
+    const formErrorY = useRef(0);
+    const scanErrorRef = useRef(null);
     const [isCapturing, setIsCapturing] = useState(false);
     const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
@@ -120,15 +127,6 @@ export default function AadhaarVerification() {
     }, [mobile, mode]);
 
     useEffect(() => {
-        if (!scannerOpen || scanLocked) {
-            setScanStalled(false);
-            return undefined;
-        }
-        const timer = setTimeout(() => setScanStalled(true), 10000);
-        return () => clearTimeout(timer);
-    }, [scannerOpen, scanLocked]);
-
-    useEffect(() => {
         if (!scannerOpen || Platform.OS !== "android") return undefined;
 
         const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -139,145 +137,79 @@ export default function AadhaarVerification() {
         return () => subscription.remove();
     }, [scannerOpen]);
 
-    useEffect(() => {
-        if (!consentHighlight) return undefined;
-        const timer = setTimeout(() => setConsentHighlight(false), 2600);
-        return () => clearTimeout(timer);
-    }, [consentHighlight]);
+    const focusAlert = useCallback((ref) => {
+        const node = findNodeHandle(ref.current);
+        if (node) AccessibilityInfo.setAccessibilityFocus(node);
+    }, []);
 
-    const promptForConsent = () => {
-        Keyboard.dismiss();
-        setFormError("Tick the consent checkbox below to scan your Aadhaar Secure QR.");
-        setConsentHighlight(true);
+    const revealFormError = useCallback(() => {
         scrollRef.current?.scrollTo({
-            y: Math.max(consentY.current - 90, 0),
+            y: Math.max(formErrorY.current - 120, 0),
             animated: true,
         });
-    };
+        focusAlert(formErrorRef);
+    }, [focusAlert]);
+
+    useEffect(() => {
+        if (!formError) return undefined;
+        const frame = requestAnimationFrame(revealFormError);
+        return () => cancelAnimationFrame(frame);
+    }, [formError, revealFormError]);
+
+    useEffect(() => {
+        if (!scanError) return undefined;
+        const frame = requestAnimationFrame(() => focusAlert(scanErrorRef));
+        return () => cancelAnimationFrame(frame);
+    }, [focusAlert, scanError]);
 
     const openScanner = async () => {
-        if (!consent) {
-            promptForConsent();
+        const textExtractor = getTextExtractor();
+        if (!textExtractor?.isSupported) {
+            setFormError("Aadhaar card scanning requires the latest iOS or Android app build. Enter your details manually here.");
             return;
         }
         setFormError("");
         setScanError("");
-        scanLockRef.current = false;
-        setScanLocked(false);
-        setDetectionCount(0);
-
         setScannerOpen(true);
-        if (isWeb) return;
         if (!cameraPermission?.granted && cameraPermission?.canAskAgain !== false) {
             await requestCameraPermission();
         }
     };
 
-    const handleBarcodeScanned = async ({ data }) => {
-        if (scanLockRef.current || !data) return;
-        scanLockRef.current = true;
-        setDetectionCount((count) => count + 1);
-        setScanLocked(true);
-        setScanError("");
-
-        try {
-            const localData = await verifyAndParseAadhaarSecureQr(data);
-            let verifiedData = localData;
-
-            try {
-                const result = await verifyAadhaarSecureQr(data.trim(), true);
-                verifiedData = result.kycData || localData;
-            } catch (serverError) {
-                // The QR signature is already verified on-device, so a server
-                // hiccup should not block the user; it is retried on submit.
-                console.warn("Secure QR server verification failed", serverError);
-            }
-
-            setAadhaarLastFour(verifiedData.aadhaarLastFour);
-            setFullName(verifiedData.name);
-            setDateOfBirth(verifiedData.dateOfBirth);
-            setIsVerified(true);
-            setScannerOpen(false);
-        } catch (error) {
-            scanLockRef.current = false;
-            setScanError(
-                error instanceof AadhaarQrError
-                    ? error.message
-                    : getUserFacingError(error, "We could not verify this Aadhaar QR. Please try again.")
-            );
-        }
-    };
-
-    const resetScan = () => {
-        setAadhaarLastFour("");
-        setFullName("");
-        setDateOfBirth("");
-        setIsVerified(false);
-        setScanError("");
-        setFormError("");
-    };
-
-    const handleImageUpload = async (event) => {
-        const file = event?.target?.files?.[0];
-        if (!file) return;
-
-        setScanError("");
-        try {
-            const payload = await decodeQrFromImageFile(file);
-            if (!payload) {
-                setScanError("No QR code was found in that image. Try a sharper, closer photo.");
-                return;
-            }
-            await handleBarcodeScanned({ data: payload });
-        } catch (_error) {
-            setScanError("That image could not be read. Try a different photo.");
-        }
-    };
-
     const handleCaptureAndScan = async () => {
-        if (!cameraRef.current || isCapturing || scanLocked) return;
+        if (!cameraRef.current || isCapturing) return;
+
+        const textExtractor = getTextExtractor();
+        if (!textExtractor?.isSupported) {
+            setScannerOpen(false);
+            setFormError("Aadhaar card scanning requires the latest app build. Enter your details manually here.");
+            return;
+        }
 
         setIsCapturing(true);
         setScanError("");
         try {
             const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
-            const shortestSide = Math.min(photo.width, photo.height);
-            const candidates = [photo.uri];
+            const fields = parseAadhaarCardText(
+                await textExtractor.extractTextFromImage(photo.uri)
+            );
 
-            // Expo's Android decoder works best when the QR occupies most of
-            // the image. Try lossless, centered crops matching the guide box.
-            for (const cropRatio of [0.9, 0.78, 0.68]) {
-                const side = Math.round(shortestSide * cropRatio);
-                const context = ImageManipulator.manipulate(photo.uri);
-                context.crop({
-                    originX: Math.round((photo.width - side) / 2),
-                    originY: Math.round((photo.height - side) / 2),
-                    width: side,
-                    height: side,
-                });
-                if (side > 1800) context.resize({ width: 1800, height: null });
-                const rendered = await context.renderAsync();
-                const cropped = await rendered.saveAsync({
-                    compress: 1,
-                    format: SaveFormat.PNG,
-                });
-                candidates.push(cropped.uri);
+            if (!fields.aadhaarNumber && !fields.fullName && !fields.dateOfBirth) {
+                setScanError("We could not read the card. Keep the front flat inside the frame, avoid glare, and try again.");
+                return;
             }
 
-            for (const uri of candidates) {
-                const results = await scanFromURLAsync(uri, ["qr"]);
-                const payload = results?.[0]?.data;
-                if (payload) {
-                    await handleBarcodeScanned({ data: payload });
-                    return;
-                }
-            }
-
-            setScanError(
-                "The QR was captured but could not be decoded. Fill the square with the QR, keep the phone parallel, and capture again."
+            if (fields.aadhaarNumber) setAadhaarNumber(fields.aadhaarNumber);
+            if (fields.fullName) setFullName(fields.fullName);
+            if (fields.dateOfBirth) setDateOfBirth(fields.dateOfBirth);
+            setScannerOpen(false);
+            setFormError(
+                fields.aadhaarNumber && fields.fullName && fields.dateOfBirth
+                    ? ""
+                    : "We filled the details we could read. Check and complete the remaining fields."
             );
         } catch (_error) {
-            setScanError("The photo could not be captured or decoded. Please try again.");
+            setScanError("The photo could not be read. Please try again or enter the details manually.");
         } finally {
             setIsCapturing(false);
         }
@@ -291,7 +223,7 @@ export default function AadhaarVerification() {
                 mobile: String(mobile || ""),
                 mode: mode === "signin" ? "signin" : "signup",
                 verified: "1",
-                aadhaarLastFour,
+                aadhaarLastFour: aadhaarNumber.slice(-4),
             },
         });
     };
@@ -395,85 +327,44 @@ export default function AadhaarVerification() {
                             onPress={() => setScannerOpen(false)}
                             style={styles.scannerClose}
                             accessibilityRole="button"
-                            accessibilityLabel="Cancel Aadhaar QR scan"
+                            accessibilityLabel="Cancel Aadhaar card scan"
                         >
                             <Ionicons name="close" size={28} color="#FFFFFF" />
                         </TouchableOpacity>
-                        <Text style={styles.scannerTitle}>Scan Aadhaar Secure QR</Text>
+                        <Text style={styles.scannerTitle}>Scan Aadhaar Front</Text>
                         <View style={styles.scannerClose} />
                     </View>
 
-                    {isWeb || cameraPermission?.granted ? (
+                    {cameraPermission?.granted ? (
                         <View style={styles.cameraContainer}>
-                            {isWeb ? (
-                                <WebQrScanner
-                                    paused={scanLocked}
-                                    onScan={handleBarcodeScanned}
-                                    onError={setScanError}
-                                />
-                            ) : (
-                                <CameraView
-                                    ref={cameraRef}
-                                    style={StyleSheet.absoluteFill}
-                                    facing="back"
-                                    active={scannerOpen}
-                                    autofocus="off"
-                                    animateShutter={false}
-                                    barcodeScannerSettings={{
-                                        barcodeTypes: ["qr"],
-                                    }}
-                                    onBarcodeScanned={handleBarcodeScanned}
-                                    onMountError={() => setScanError("The camera could not start. Close the scanner and try again.")}
-                                />
-                            )}
-                            <View style={styles.scanFrame} />
+                            <CameraView
+                                ref={cameraRef}
+                                style={StyleSheet.absoluteFill}
+                                facing="back"
+                                active={scannerOpen}
+                                autofocus="on"
+                                animateShutter
+                                onMountError={() => setScanError("The camera could not start. Close the scanner and try again.")}
+                            />
+                            <View style={styles.scanGuideArea}>
+                                <View style={styles.scanFrame} />
+                            </View>
                             <View style={styles.scanInstructions}>
-                                <Text style={styles.scanInstructionsTitle}>Place the Secure QR inside the frame</Text>
-                                <Text style={styles.scanInstructionsText}>Use the large QR on your downloaded or printed Aadhaar.</Text>
-                                {scanStalled ? (
-                                    <Text style={styles.scanInstructionsText}>
-                                        {detectionCount === 0
-                                            ? "No QR detected yet. Fill the frame with the large Secure QR, hold steady in bright light, and keep about 15 cm distance."
-                                            : "QR detected but not readable yet. Move slightly closer or further away."}
-                                    </Text>
-                                ) : null}
-                                {isWeb ? (
-                                    <>
-                                        {createElement("input", {
-                                            type: "file",
-                                            accept: "image/*",
-                                            onChange: handleImageUpload,
-                                            style: {
-                                                marginTop: 14,
-                                                color: "#DCE2F2",
-                                                width: "100%",
-                                            },
-                                        })}
-                                        <Text style={styles.scanInstructionsText}>
-                                            Or upload a photo/screenshot of the Aadhaar Secure QR.
-                                        </Text>
-                                        <Text style={styles.scanInstructionsText}>
-                                            Browser camera scanning is limited. On a phone the QR is read automatically.
-                                        </Text>
-                                    </>
-                                ) : null}
-                                {!isWeb ? (
-                                    <TouchableOpacity
-                                        style={styles.captureButton}
-                                        disabled={isCapturing || scanLocked}
-                                        onPress={handleCaptureAndScan}
-                                        accessibilityRole="button"
-                                        accessibilityLabel="Capture and decode Aadhaar QR"
-                                    >
-                                        {isCapturing ? (
-                                            <ActivityIndicator color="#FFFFFF" />
-                                        ) : (
-                                            <Text style={styles.captureButtonText}>
-                                                CAPTURE HIGH-RESOLUTION QR
-                                            </Text>
-                                        )}
-                                    </TouchableOpacity>
-                                ) : null}
+                                <Text style={styles.scanInstructionsTitle}>Place the front of the card inside the frame</Text>
+                                <Text style={styles.scanInstructionsText}>Keep all four corners visible and avoid glare. Your image is processed on this device.</Text>
+                                <TouchableOpacity
+                                    style={styles.captureButton}
+                                    disabled={isCapturing}
+                                    onPress={handleCaptureAndScan}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Capture and read Aadhaar card front"
+                                >
+                                    {isCapturing ? (
+                                        <ActivityIndicator color="#FFFFFF" />
+                                    ) : (
+                                        <Text style={styles.captureButtonText}>CAPTURE CARD</Text>
+                                    )}
+                                </TouchableOpacity>
                                 <TouchableOpacity onPress={() => setScannerOpen(false)}>
                                     <Text style={styles.manualEntryText}>
                                         Nothing detected? Enter details manually
@@ -485,7 +376,7 @@ export default function AadhaarVerification() {
                         <View style={styles.permissionPanel}>
                             <Ionicons name="camera-outline" size={54} color="#8C86FF" />
                             <Text style={styles.permissionTitle}>Camera access is needed</Text>
-                            <Text style={styles.permissionText}>StockPe uses the camera only to read the Secure QR on your Aadhaar.</Text>
+                            <Text style={styles.permissionText}>StockPe uses the camera only to read the details on the front of your Aadhaar card.</Text>
                             <TouchableOpacity
                                 style={styles.permissionButton}
                                 onPress={cameraPermission?.canAskAgain === false ? Linking.openSettings : requestCameraPermission}
@@ -499,14 +390,19 @@ export default function AadhaarVerification() {
 
                     {scanError ? (
                         <View style={styles.scanErrorPanel}>
-                            <Text style={styles.scanErrorText}>{scanError}</Text>
-                            <TouchableOpacity onPress={() => { setScanError(""); scanLockRef.current = false; setScanLocked(false); }}>
+                            <Text
+                                ref={scanErrorRef}
+                                style={styles.scanErrorText}
+                                accessibilityRole="alert"
+                                accessibilityLiveRegion="assertive"
+                                focusable
+                            >
+                                {scanError}
+                            </Text>
+                            <TouchableOpacity onPress={() => setScanError("")}>
                                 <Text style={styles.scanRetryText}>TRY AGAIN</Text>
                             </TouchableOpacity>
                         </View>
-                    ) : null}
-                    {scanLocked && !scanError ? (
-                        <View style={styles.scanBusy}><ActivityIndicator color="#FFFFFF" /><Text style={styles.scanBusyText}>Verifying UIDAI signature…</Text></View>
                     ) : null}
                 </SafeAreaView>
             ) : null}
@@ -582,62 +478,34 @@ export default function AadhaarVerification() {
                                     <TouchableOpacity
                                         style={[
                                             styles.scanButton,
-                                            aadhaarLastFour && styles.scanButtonDone,
                                         ]}
-                                        onPress={aadhaarLastFour ? resetScan : openScanner}
+                                        onPress={openScanner}
                                         accessibilityRole="button"
-                                        accessibilityLabel={
-                                            aadhaarLastFour
-                                                ? "Scan a different Aadhaar"
-                                                : "Scan Aadhaar Secure QR"
-                                        }
+                                        accessibilityLabel="Scan the front of Aadhaar card"
                                     >
                                         <Ionicons
-                                            name={aadhaarLastFour ? "refresh" : "scan-outline"}
+                                            name="scan-outline"
                                             size={18}
-                                            color={aadhaarLastFour ? "#00A66E" : "#594BFF"}
+                                            color="#594BFF"
                                         />
-                                        <Text
-                                            style={[
-                                                styles.scanButtonText,
-                                                aadhaarLastFour && styles.scanButtonTextDone,
-                                            ]}
-                                        >
-                                            {aadhaarLastFour ? "Rescan" : "Tap to Scan"}
+                                        <Text style={styles.scanButtonText}>
+                                            Scan Front
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
 
-                                {aadhaarLastFour ? (
-                                    <View style={styles.scannedPanel}>
-                                        <Text style={styles.scannedName}>{fullName}</Text>
-                                        <Text style={styles.scannedMeta}>DOB: {dateOfBirth}</Text>
-                                        <Text style={styles.scannedAadhaar}>
-                                            XXXX XXXX {aadhaarLastFour}
-                                        </Text>
-                                        <View style={styles.scannedBadge}>
-                                            <Ionicons name="shield-checkmark" size={15} color="#00A66E" />
-                                            <Text style={styles.scannedBadgeText}>
-                                                UIDAI signature verified
-                                            </Text>
-                                        </View>
-                                    </View>
-                                ) : (
-                                    <TouchableOpacity
-                                        style={styles.scanArea}
-                                        onPress={openScanner}
-                                        accessibilityRole="button"
-                                    >
-                                        <Ionicons name="qr-code-outline" size={26} color="#8C86FF" />
-                                        <Text style={styles.scanText}>
-                                            Scan the Secure QR on your Aadhaar card
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
+                                <TouchableOpacity
+                                    style={styles.scanArea}
+                                    onPress={openScanner}
+                                    accessibilityRole="button"
+                                >
+                                    <Ionicons name="card-outline" size={26} color="#8C86FF" />
+                                    <Text style={styles.scanText}>
+                                        Scan the card front to fill the fields below
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
 
-                            {aadhaarLastFour ? null : (
-                                <>
                             <Text style={styles.label}>AADHAAR NUMBER</Text>
                             <TextInput
                                 style={styles.input}
@@ -650,7 +518,6 @@ export default function AadhaarVerification() {
                                 placeholderTextColor="#C2C8D6"
                                 keyboardType="number-pad"
                                 maxLength={14}
-                                autoFocus
                             />
 
                             <Text style={styles.label}>FULL NAME (AS ON AADHAAR)</Text>
@@ -685,20 +552,10 @@ export default function AadhaarVerification() {
                                 keyboardType="number-pad"
                                 maxLength={10}
                             />
-                                </>
-                            )}
-
                             <TouchableOpacity
-                                style={[
-                                    styles.consentRow,
-                                    consentHighlight && styles.consentRowHighlight,
-                                ]}
-                                onLayout={(event) => {
-                                    consentY.current = event.nativeEvent.layout.y;
-                                }}
+                                style={styles.consentRow}
                                 onPress={() => {
                                     setConsent((current) => !current);
-                                    setConsentHighlight(false);
                                     setFormError("");
                                 }}
                                 accessibilityRole="checkbox"
@@ -762,7 +619,19 @@ export default function AadhaarVerification() {
                     )}
 
                     {formError ? (
-                        <Text style={styles.errorText}>{formError}</Text>
+                        <Text
+                            ref={formErrorRef}
+                            style={styles.errorText}
+                            onLayout={(event) => {
+                                formErrorY.current = event.nativeEvent.layout.y;
+                                revealFormError();
+                            }}
+                            accessibilityRole="alert"
+                            accessibilityLiveRegion="assertive"
+                            focusable
+                        >
+                            {formError}
+                        </Text>
                     ) : null}
 
                     {!isVerified ? (
@@ -955,48 +824,6 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: "700",
     },
-    scanButtonDone: {
-        borderColor: "#7ED9B4",
-        backgroundColor: "#EDFBF5",
-    },
-    scanButtonTextDone: {
-        color: "#00A66E",
-    },
-    scannedPanel: {
-        borderRadius: 12,
-        backgroundColor: "#F5FFFA",
-        borderWidth: 1,
-        borderColor: "#BFEFD9",
-        padding: 16,
-    },
-    scannedName: {
-        color: "#071329",
-        fontSize: 19,
-        fontWeight: "800",
-    },
-    scannedMeta: {
-        color: "#657189",
-        fontSize: 14,
-        marginTop: 4,
-    },
-    scannedAadhaar: {
-        color: "#00A66E",
-        fontSize: 17,
-        fontWeight: "800",
-        letterSpacing: 1.5,
-        marginTop: 6,
-    },
-    scannedBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        marginTop: 12,
-    },
-    scannedBadgeText: {
-        color: "#00A66E",
-        fontSize: 12,
-        fontWeight: "700",
-    },
     scanArea: {
         minHeight: 74,
         borderRadius: 12,
@@ -1022,9 +849,22 @@ const styles = StyleSheet.create({
     scannerHeader: { height: 68, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     scannerClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
     scannerTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800" },
-    cameraContainer: { flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center" },
-    scanFrame: { width: "78%", aspectRatio: 1, borderWidth: 3, borderColor: "#FFFFFF", borderRadius: 24 },
-    scanInstructions: { position: "absolute", bottom: 42, left: 24, right: 24, padding: 18, borderRadius: 16, backgroundColor: "rgba(7,19,41,0.82)" },
+    cameraContainer: {
+        flex: 1,
+        overflow: "hidden",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        paddingTop: 16,
+        paddingBottom: 24,
+    },
+    scanGuideArea: {
+        flex: 1,
+        width: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    scanFrame: { width: "90%", aspectRatio: 1.586, borderWidth: 3, borderColor: "#FFFFFF", borderRadius: 18 },
+    scanInstructions: { width: "90%", padding: 18, borderRadius: 16, backgroundColor: "rgba(7,19,41,0.82)" },
     scanInstructionsTitle: { color: "#FFFFFF", textAlign: "center", fontSize: 16, fontWeight: "800" },
     scanInstructionsText: { color: "#DCE2F2", textAlign: "center", marginTop: 6, lineHeight: 19 },
     captureButton: { minHeight: 46, marginTop: 14, borderRadius: 12, backgroundColor: "#594BFF", alignItems: "center", justifyContent: "center" },
@@ -1038,8 +878,6 @@ const styles = StyleSheet.create({
     scanErrorPanel: { position: "absolute", bottom: 28, left: 20, right: 20, borderRadius: 16, backgroundColor: "#FFF0F0", padding: 18 },
     scanErrorText: { color: "#8E2929", textAlign: "center", lineHeight: 20 },
     scanRetryText: { color: "#594BFF", textAlign: "center", fontWeight: "900", marginTop: 12 },
-    scanBusy: { position: "absolute", bottom: 32, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "rgba(7,19,41,0.9)", paddingHorizontal: 18, paddingVertical: 14, borderRadius: 24 },
-    scanBusyText: { color: "#FFFFFF", fontWeight: "700" },
     label: {
         color: "#657189",
         fontSize: 11,
@@ -1062,14 +900,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "flex-start",
         marginBottom: 20,
-    },
-    consentRowHighlight: {
-        borderWidth: 1.5,
-        borderColor: "#594BFF",
-        backgroundColor: "#EEF0FF",
-        borderRadius: 14,
-        padding: 12,
-        marginHorizontal: -12,
     },
     checkbox: {
         width: 22,
