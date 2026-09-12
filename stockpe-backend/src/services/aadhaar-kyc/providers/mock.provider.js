@@ -13,13 +13,6 @@ class MockAadhaarKycProvider {
     }
 
     async requestOtp({ aadhaarNumber }) {
-        if (!/^9999\d{8}$/.test(aadhaarNumber)) {
-            return {
-                accepted: false,
-                reason: "MOCK_AADHAAR_REQUIRED",
-            };
-        }
-
         const transactionId = crypto.randomUUID();
         console.log(`[DEV AADHAAR OTP] transaction ${transactionId}: ${MOCK_OTP}`);
 

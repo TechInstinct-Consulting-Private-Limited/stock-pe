@@ -25,7 +25,7 @@ test("selects the mock provider using only AADHAAR_KYC_PROVIDER", async () => {
     assert.equal(verification.kycData.isMock, true);
 });
 
-test("rejects non-synthetic Aadhaar numbers", async () => {
+test("accepts any 12-digit Aadhaar number in mock mode", async () => {
     const provider = createAadhaarKycProvider({
         env: { NODE_ENV: "development" },
         providerName: "mock",
@@ -35,10 +35,8 @@ test("rejects non-synthetic Aadhaar numbers", async () => {
         aadhaarNumber: "123456789012",
     });
 
-    assert.deepEqual(result, {
-        accepted: false,
-        reason: "MOCK_AADHAAR_REQUIRED",
-    });
+    assert.equal(result.accepted, true);
+    assert.equal(typeof result.transactionId, "string");
 });
 
 test("blocks the mock provider in production", () => {
