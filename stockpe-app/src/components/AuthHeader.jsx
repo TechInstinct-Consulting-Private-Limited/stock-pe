@@ -1,12 +1,11 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, Text, View } from "react-native";
-
 import BrandLogo from "./BrandLogo";
 
 export default function AuthHeader() {
     return (
         <LinearGradient
-            colors={["#071B2D", "#10264D", "#1B3565"]}
+            colors={["#FFFFFF", "#F8FAFC", "#F1F5F9"]}
             style={styles.topSection}
         >
             {/* Logo */}
@@ -17,22 +16,24 @@ export default function AuthHeader() {
                 STOCKPE
             </Text>
 
-            <Text style={styles.subtitle}>
-                India's #1 Stock Prediction Market
-            </Text>
+            <View style={styles.badgePill}>
+                <Text style={styles.badgePillText}>CRYPTO INDEX PREDICTIONS</Text>
+            </View>
 
             {/* Stats */}
             <View style={styles.statsContainer}>
 
                 <View style={styles.stat}>
                     <Text style={[styles.statValue, styles.green]}>
-                        ₹49.5L
+                        $50K
                     </Text>
 
                     <Text style={styles.statLabel}>
-                        Prize Pool
+                        Daily Pool (₮)
                     </Text>
                 </View>
+
+                <View style={styles.divider} />
 
                 <View style={styles.stat}>
                     <Text style={[styles.statValue, styles.blue]}>
@@ -40,9 +41,11 @@ export default function AuthHeader() {
                     </Text>
 
                     <Text style={styles.statLabel}>
-                        Players
+                        Traders
                     </Text>
                 </View>
+
+                <View style={styles.divider} />
 
                 <View style={styles.stat}>
                     <Text style={[styles.statValue, styles.yellow]}>
@@ -50,7 +53,7 @@ export default function AuthHeader() {
                     </Text>
 
                     <Text style={styles.statLabel}>
-                        Rating
+                        App Rating
                     </Text>
                 </View>
 
@@ -61,30 +64,54 @@ export default function AuthHeader() {
 
 const styles = StyleSheet.create({
     topSection: {
-        minHeight: 355,
         alignItems: "center",
-        paddingTop: 28,
-        paddingBottom: 28,
+        paddingTop: 20,
+        paddingBottom: 24,
+        paddingHorizontal: 20,
     },
 
     brand: {
-        fontSize: 46,
+        fontSize: 34,
         fontWeight: "900",
-        letterSpacing: 7,
-        color: "#FFFFFF",
+        letterSpacing: 5,
+        color: "#0F172A",
+        marginTop: 6,
     },
 
-    subtitle: {
-        fontSize: 14,
-        color: "#8995AA",
-        marginTop: 5,
+    badgePill: {
+        backgroundColor: "#E6FBF3",
+        borderWidth: 1,
+        borderColor: "#A7F3D0",
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        borderRadius: 12,
+        marginTop: 4,
+    },
+
+    badgePillText: {
+        fontSize: 9.5,
+        fontWeight: "900",
+        letterSpacing: 1.5,
+        color: "#059669",
     },
 
     statsContainer: {
         flexDirection: "row",
-        width: "92%",
+        width: "100%",
+        alignItems: "center",
         justifyContent: "space-between",
-        marginTop: 28,
+        marginTop: 18,
+        backgroundColor: "#FFFFFF",
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        shadowColor: "#0F172A",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+        elevation: 2,
     },
 
     stat: {
@@ -92,26 +119,33 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
+    divider: {
+        width: 1,
+        height: 24,
+        backgroundColor: "#E2E8F0",
+    },
+
     statValue: {
-        fontSize: 24,
-        fontWeight: "800",
+        fontSize: 18,
+        fontWeight: "900",
     },
 
     statLabel: {
-        color: "#8993A8",
-        fontSize: 13,
-        marginTop: 4,
+        color: "#64748B",
+        fontSize: 10.5,
+        fontWeight: "600",
+        marginTop: 2,
     },
 
     green: {
-        color: "#00C987",
+        color: "#059669",
     },
 
     blue: {
-        color: "#8494FF",
+        color: "#0284C7",
     },
 
     yellow: {
-        color: "#F5C33B",
+        color: "#D97706",
     },
 });

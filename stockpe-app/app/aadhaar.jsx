@@ -379,15 +379,15 @@ export default function AadhaarVerification() {
 
     if (isCheckingStatus) {
         return (
-            <SafeAreaView style={[styles.safeArea, styles.statusCheck]}>
-                <ActivityIndicator color="#594BFF" size="large" />
+            <SafeAreaView edges={["top", "bottom", "left", "right"]} style={[styles.safeArea, styles.statusCheck]}>
+                <ActivityIndicator color="#00C987" size="large" />
                 <Text style={styles.statusCheckText}>Checking your KYC status…</Text>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.safeArea}>
             {scannerOpen ? (
                 <SafeAreaView style={[styles.scannerScreen, styles.scannerOverlay]}>
                     <View style={styles.scannerHeader}>
@@ -537,8 +537,17 @@ export default function AadhaarVerification() {
                         </View>
                     </View>
 
-                    <View style={styles.stepBadge}>
-                        <Text style={styles.stepBadgeText}>2/4</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <TouchableOpacity
+                            onPress={() => router.replace("/(tabs)/events")}
+                            style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                        >
+                            <Text style={{ fontSize: 12, fontWeight: "700", color: "#64748B" }}>Skip</Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.stepBadge}>
+                            <Text style={styles.stepBadgeText}>2/4</Text>
+                        </View>
                     </View>
                 </View>
 
@@ -681,7 +690,7 @@ export default function AadhaarVerification() {
                                     setFormError("");
                                 }}
                                 placeholder="dd/mm/yyyy"
-                                placeholderTextColor="#172033"
+                                placeholderTextColor="#94A3B8"
                                 keyboardType="number-pad"
                                 maxLength={10}
                             />

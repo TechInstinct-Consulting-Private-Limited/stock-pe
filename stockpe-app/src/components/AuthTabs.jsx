@@ -46,42 +46,44 @@ export default function AuthTabs({ activeTab, onChange }) {
 
 const styles = StyleSheet.create({
     tabs: {
-        height: 65,
-        backgroundColor: "#EDF0FA",
-        borderRadius: 20,
+        height: 52,
+        backgroundColor: "#F1F5F9",
+        borderRadius: 16,
         flexDirection: "row",
-        padding: 5,
-        marginBottom: 32,
+        padding: 4,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
     },
 
     tab: {
         flex: 1,
-        borderRadius: 16,
+        borderRadius: 12,
         alignItems: "center",
         justifyContent: "center",
     },
 
     activeTab: {
         backgroundColor: "#00C987",
-
         shadowColor: "#00C987",
         shadowOffset: {
             width: 0,
-            height: 5,
+            height: 3,
         },
         shadowOpacity: 0.25,
-        shadowRadius: 10,
-
-        elevation: 5,
+        shadowRadius: 6,
+        elevation: 3,
     },
 
     tabText: {
-        fontSize: 17,
+        fontSize: 14,
         fontWeight: "800",
-        color: "#6D7890",
+        letterSpacing: 0.8,
+        color: "#64748B",
     },
 
     activeTabText: {
         color: "#FFFFFF",
+        fontWeight: "900",
     },
 });

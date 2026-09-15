@@ -3,30 +3,30 @@ import { Platform } from "react-native";
 import { getAuthToken } from "./authStorage";
 
 function resolveApiBaseUrl() {
-    const hostUri = Constants.expoConfig?.hostUri;
-    const host = hostUri?.split(":")[0];
-    const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.replace(
-        /\/$/,
-        ""
-    );
-
-    if (configuredUrl) {
-        const usesLoopbackHost = /^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(
-            configuredUrl
-        );
-
-        if (Platform.OS !== "web" && usesLoopbackHost && host) {
-            return configuredUrl.replace(
-                /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
-                `$1${host}`
-            );
+    // 1. If running in Web browser
+    if (Platform.OS === "web") {
+        if (typeof window !== "undefined" && window.location) {
+            const hostname = window.location.hostname;
+            if (hostname === "localhost" || hostname === "127.0.0.1") {
+                return "http://localhost:5000/api";
+            }
         }
-
-        return configuredUrl;
+        if (process.env.EXPO_PUBLIC_API_URL) {
+            return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, "");
+        }
+        return "http://localhost:5000/api";
     }
+
+    // 2. If running on mobile via Expo Go, dynamically use the bundler host IP
+    const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || Constants.manifest2?.extra?.expoClient?.hostUri;
+    const host = hostUri?.split(":")[0];
 
     if (host) {
         return `http://${host}:5000/api`;
+    }
+
+    if (process.env.EXPO_PUBLIC_API_URL) {
+        return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, "");
     }
 
     if (Platform.OS === "android") {
@@ -36,32 +36,45 @@ function resolveApiBaseUrl() {
     return "http://localhost:5000/api";
 }
 
-const API_BASE_URL = resolveApiBaseUrl();
-
 class ApiError extends Error {}
 
 export function getUserFacingError(
     error,
     fallback = "Something went wrong. Please try again."
 ) {
-    return error instanceof ApiError ? error.message : fallback;
+    if (!error) return fallback;
+    if (typeof error === "string") return error;
+    return error.message || fallback;
 }
 
 async function request(path, options = {}) {
+    const baseUrl = resolveApiBaseUrl();
     let response;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+
     try {
-        response = await fetch(`${API_BASE_URL}${path}`, {
+        console.log(`[API Request] ${options.method || "GET"} ${baseUrl}${path}`);
+        response = await fetch(`${baseUrl}${path}`, {
             ...options,
+            signal: controller.signal,
             headers: {
                 "Content-Type": "application/json",
                 ...options.headers,
             },
         });
-    } catch (_error) {
+    } catch (error) {
+        if (error.name === "AbortError") {
+            throw new ApiError(
+                `Connection timed out connecting to ${baseUrl}. Check your server and network.`
+            );
+        }
         throw new ApiError(
-            "Unable to connect. Check your internet connection and try again."
+            `Unable to connect to backend at ${baseUrl}. Ensure backend server is running.`
         );
+    } finally {
+        clearTimeout(timeoutId);
     }
 
     const data = await response.json().catch(() => ({}));
@@ -119,7 +132,7 @@ async function authenticatedRequest(path, options = {}) {
     });
 }
 
-export function requestAadhaarOtp(aadhaarNumber, consent) {
+export function requestAadhaarOtp(aadhaarNumber, consent = true) {
     return authenticatedRequest("/kyc/aadhaar/request-otp", {
         method: "POST",
         body: JSON.stringify({
@@ -136,7 +149,7 @@ export function verifyAadhaarOtp(verificationId, otp) {
     });
 }
 
-export function verifyAadhaarSecureQr(payload, consent) {
+export function verifyAadhaarSecureQr(payload, consent = true) {
     return authenticatedRequest("/kyc/aadhaar/verify-secure-qr", {
         method: "POST",
         body: JSON.stringify({ payload, consent }),
