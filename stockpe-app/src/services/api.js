@@ -36,7 +36,7 @@ function resolveApiBaseUrl() {
     return "http://localhost:5000/api";
 }
 
-class ApiError extends Error {}
+class ApiError extends Error { }
 
 export function getUserFacingError(
     error,

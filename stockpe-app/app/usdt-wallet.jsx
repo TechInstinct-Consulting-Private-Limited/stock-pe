@@ -4,7 +4,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
-    Image,
     Keyboard,
     KeyboardAvoidingView,
     Platform,
@@ -16,6 +15,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import QRCode from "react-native-qrcode-svg";
 
 import { getUserFacingError, linkUsdtWallet } from "../src/services/api";
 
@@ -93,14 +93,14 @@ export default function UsdtWallet() {
     };
 
     return (
-        <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.container}
             >
                 <View style={styles.header}>
                     <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                        <Ionicons name="chevron-back" size={24} color="#64748B" />
+                        <Ionicons name="chevron-back" size={26} color="#657189" />
                     </TouchableOpacity>
                     <View style={styles.headerCopy}>
                         <Text style={styles.headerTitle}>USDT Wallet</Text>
@@ -108,16 +108,8 @@ export default function UsdtWallet() {
                             Link your crypto wallet · Step 4 of 4
                         </Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                        <TouchableOpacity
-                            onPress={() => router.replace("/(tabs)/events")}
-                            style={{ paddingHorizontal: 6, paddingVertical: 4 }}
-                        >
-                            <Text style={{ fontSize: 12, fontWeight: "700", color: "#64748B" }}>Skip</Text>
-                        </TouchableOpacity>
-                        <View style={styles.stepBadge}>
-                            <Text style={styles.stepBadgeText}>4/4</Text>
-                        </View>
+                    <View style={styles.stepBadge}>
+                        <Text style={styles.stepBadgeText}>4/4</Text>
                     </View>
                 </View>
 
@@ -136,7 +128,7 @@ export default function UsdtWallet() {
                     showsVerticalScrollIndicator={false}
                 >
                     <LinearGradient
-                        colors={["#059669", "#0D9488"]}
+                        colors={["#0C1B2E", "#123049"]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={styles.heroCard}
@@ -201,14 +193,16 @@ export default function UsdtWallet() {
                         multiline
                     />
 
-                    <TouchableOpacity
-                        onPress={() => {
-                            setAddress(DEMO_ADDRESSES[network]);
-                            setError("");
-                        }}
-                    >
-                        <Text style={styles.demoLink}>Use demo address</Text>
-                    </TouchableOpacity>
+                    {__DEV__ ? (
+                        <TouchableOpacity
+                            onPress={() => {
+                                setAddress(DEMO_ADDRESSES[network]);
+                                setError("");
+                            }}
+                        >
+                            <Text style={styles.demoLink}>Use demo address</Text>
+                        </TouchableOpacity>
+                    ) : null}
 
                     {trimmedAddress ? (
                         <View
@@ -219,13 +213,7 @@ export default function UsdtWallet() {
                         >
                             {isAddressValid ? (
                                 <View style={styles.qrTile}>
-                                    <Image
-                                        source={{
-                                            uri: `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(trimmedAddress)}`,
-                                        }}
-                                        style={{ width: 84, height: 84, borderRadius: 6 }}
-                                        resizeMode="contain"
-                                    />
+                                    <QRCode value={trimmedAddress} size={92} />
                                 </View>
                             ) : (
                                 <View style={[styles.qrTile, styles.qrTileInvalid]}>
@@ -268,6 +256,15 @@ export default function UsdtWallet() {
                                 <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
                             </>
                         )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={{ marginTop: 14, alignItems: "center", paddingVertical: 8 }}
+                        onPress={() => router.replace("/(tabs)/events")}
+                    >
+                        <Text style={{ color: "#657189", fontSize: 14, fontWeight: "700" }}>
+                            Skip for now →
+                        </Text>
                     </TouchableOpacity>
 
                     <Text style={styles.footnote}>

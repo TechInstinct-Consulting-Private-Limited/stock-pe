@@ -60,7 +60,7 @@ export default function AadhaarKyc() {
         requestAnimationFrame(() => otpRefs.current[0]?.focus());
     }, [verificationId, isVerified]);
 
-    // Arriving here already verified (Secure QR scan or a previous session)
+    // Arriving here already verified from a previous session
     // means step 3 has nothing to collect, so continue to the wallet step.
     useEffect(() => {
         if (verified !== "1") return;
@@ -203,7 +203,7 @@ export default function AadhaarKyc() {
     };
 
     return (
-        <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.container}
@@ -380,7 +380,7 @@ export default function AadhaarKyc() {
 
                         {__DEV__ && !isVerified ? (
                             <Text style={styles.devHint}>
-                                Development: use Aadhaar 999999999999 and OTP 123456.
+                                Development: use any 12-digit Aadhaar number and OTP 123456.
                             </Text>
                         ) : null}
                     </View>
@@ -391,68 +391,60 @@ export default function AadhaarKyc() {
 }
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: "#F4F6FB" },
+    safeArea: { flex: 1, backgroundColor: "#F5F7FF" },
     container: { flex: 1 },
     scrollContent: { flexGrow: 1, paddingBottom: 32 },
     header: {
         alignItems: "center",
         flexDirection: "row",
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        backgroundColor: "#FFFFFF",
-        borderBottomWidth: 1,
-        borderBottomColor: "#EDF2F7",
+        paddingHorizontal: 20,
+        paddingVertical: 18,
     },
     backButton: {
         alignItems: "center",
-        backgroundColor: "#F8FAFC",
-        borderRadius: 12,
-        height: 40,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 16,
+        height: 48,
         justifyContent: "center",
-        width: 40,
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
+        width: 48,
     },
     backButtonHidden: { opacity: 0 },
-    headerCopy: { flex: 1, marginLeft: 12 },
-    headerTitle: { color: "#0F172A", fontSize: 17, fontWeight: "900" },
-    headerSubtitle: { color: "#64748B", fontSize: 12, marginTop: 1 },
+    headerCopy: { flex: 1, marginLeft: 14 },
+    headerTitle: { color: "#071329", fontSize: 20, fontWeight: "800" },
+    headerSubtitle: { color: "#7D8190", fontSize: 13, marginTop: 3 },
     stepBadge: {
-        backgroundColor: "#E6FBF3",
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderWidth: 1,
-        borderColor: "#A7F3D0",
+        backgroundColor: "#E8E8FF",
+        borderRadius: 15,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
     },
-    stepBadgeText: { color: "#059669", fontSize: 11, fontWeight: "900" },
+    stepBadgeText: { color: "#5865D9", fontSize: 13, fontWeight: "800" },
     maskedAadhaar: {
-        color: "#0F172A",
-        fontSize: 18,
-        fontWeight: "900",
+        color: "#594BFF",
+        fontSize: 20,
+        fontWeight: "800",
         letterSpacing: 2,
         marginTop: 6,
         textAlign: "center",
     },
-    resendRow: { marginTop: 20, alignSelf: "center" },
-    resendText: { color: "#64748B", fontSize: 13 },
-    resendAccent: { color: "#F59E0B", fontWeight: "800" },
+    resendRow: { marginTop: 26, alignSelf: "center" },
+    resendText: { color: "#737D91", fontSize: 15 },
+    resendAccent: { color: "#F5A524", fontWeight: "800" },
     infoBanner: {
         alignItems: "center",
-        borderColor: "#E2E8F0",
+        borderColor: "#D7DCF5",
         borderRadius: 14,
         borderWidth: 1,
-        backgroundColor: "#FFFFFF",
         flexDirection: "row",
         gap: 10,
-        marginTop: 20,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
+        marginTop: 28,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
     },
-    infoBannerText: { color: "#64748B", flex: 1, fontSize: 12, lineHeight: 17 },
-    progressTrack: { backgroundColor: "#EDF2F7", height: 3 },
-    progress: { borderRadius: 2, height: 3, width: "75%", backgroundColor: "#00C987" },
-    content: { flex: 1, paddingHorizontal: 20, paddingTop: 24 },
+    infoBannerText: { color: "#4A5468", flex: 1, fontSize: 13, lineHeight: 18 },
+    progressTrack: { backgroundColor: "#DFE4F2", height: 4 },
+    progress: { borderRadius: 2, height: 4, width: "75%" },
+    content: { flex: 1, paddingHorizontal: 24, paddingTop: 42 },
     iconCircle: {
         alignItems: "center",
         alignSelf: "center",

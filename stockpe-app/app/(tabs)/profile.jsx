@@ -45,14 +45,6 @@ export default function ProfileScreen() {
       route: "/profile/kyc",
     },
     {
-      id: "aadhaar",
-      title: "Aadhaar QR Scanner",
-      icon: "qr-code-outline",
-      iconColor: "#3B82F6",
-      bgColor: "#EFF6FF",
-      route: "/aadhaar",
-    },
-    {
       id: "refer",
       title: "Refer & Earn (₹250/friend)",
       icon: "gift-outline",

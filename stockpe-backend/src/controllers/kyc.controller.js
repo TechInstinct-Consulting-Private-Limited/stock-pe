@@ -1,7 +1,6 @@
 const {
     getAadhaarKycStatus,
     requestAadhaarOtp,
-    verifyAadhaarSecureQr,
     verifyAadhaarOtp,
 } = require("../services/aadhaar-kyc.service");
 
@@ -74,22 +73,8 @@ async function getStatus(req, res, next) {
     }
 }
 
-async function verifySecureQr(req, res, next) {
-    try {
-        const { payload, consent } = req.body;
-        if (consent !== true || typeof payload !== "string" || payload.length > 12000) {
-            return validationError(res, "Invalid Aadhaar Secure QR verification request");
-        }
-        const result = await verifyAadhaarSecureQr({ userId: req.auth.sub, payload: payload.trim() });
-        return res.status(200).json({ success: true, message: "Aadhaar Secure QR verified", ...result });
-    } catch (error) {
-        return next(error);
-    }
-}
-
 module.exports = {
     getStatus,
     requestOtp,
-    verifySecureQr,
     verifyOtp,
 };

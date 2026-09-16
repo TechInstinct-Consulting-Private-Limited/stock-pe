@@ -7,19 +7,7 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 
-import { router } from "expo-router";
-import { setAuthToken } from "../../src/services/authStorage";
-
 export default function AlternativeAuth() {
-    const handleWalletConnect = async () => {
-        try {
-            await setAuthToken("stockpe_demo_usdt_wallet_token");
-        } catch (_e) {
-            // advisory
-        }
-        router.replace("/(tabs)/events");
-    };
-
     return (
         <>
             {/* OR */}
@@ -36,8 +24,7 @@ export default function AlternativeAuth() {
             {/* USDT WALLET */}
             <TouchableOpacity
                 style={styles.walletButton}
-                activeOpacity={0.8}
-                onPress={handleWalletConnect}
+                activeOpacity={1}
             >
 
                 <View style={styles.walletIcon}>

@@ -1,7 +1,5 @@
-const crypto = require("crypto");
 const pool = require("../config/database");
 const { createAadhaarKycProvider } = require("./aadhaar-kyc");
-const { createAadhaarSecureQrProvider } = require("./aadhaar-secure-qr");
 
 const MAX_OTP_ATTEMPTS = 5;
 
@@ -29,10 +27,7 @@ async function requestAadhaarOtp({ userId, aadhaarNumber }) {
     const providerResult = await provider.requestOtp({ aadhaarNumber });
 
     if (!providerResult.accepted) {
-        throw publicError(
-            400,
-            "The mock provider accepts only synthetic Aadhaar numbers beginning with 9999"
-        );
+        throw publicError(400, "The Aadhaar KYC request was rejected");
     }
 
     const insertResult = await pool.query(
@@ -127,33 +122,6 @@ async function verifyAadhaarOtp({ userId, verificationId, otp }) {
     };
 }
 
-async function verifyAadhaarSecureQr({ userId, payload }) {
-    const existingResult = await pool.query(
-        `SELECT id FROM aadhaar_kyc_verifications
-         WHERE user_id = $1 AND status = 'verified' LIMIT 1`,
-        [userId]
-    );
-    if (existingResult.rowCount > 0) throw publicError(409, "Aadhaar KYC is already verified");
-
-    let kycData;
-    try {
-        kycData = createAadhaarSecureQrProvider().verify({ payload });
-    } catch (_error) {
-        throw publicError(400, "This Aadhaar Secure QR code could not be verified");
-    }
-
-    const [day, month, year] = kycData.dateOfBirth.split("/");
-    const result = await pool.query(
-        `INSERT INTO aadhaar_kyc_verifications (
-            user_id, provider, provider_transaction_id, aadhaar_last_four,
-            status, consent_given_at, verified_at, full_name, date_of_birth
-         ) VALUES ($1, $2, $3, $4, 'verified', NOW(), NOW(), $5, $6)
-         RETURNING id, verified_at`,
-        [userId, "uidai_secure_qr", `secure-qr-${crypto.randomUUID()}`, kycData.aadhaarLastFour, kycData.name, `${year}-${month}-${day}`]
-    );
-    return { verificationId: result.rows[0].id, status: "verified", verifiedAt: result.rows[0].verified_at, kycData };
-}
-
 async function getAadhaarKycStatus({ userId }) {
     const result = await pool.query(
         `SELECT id, aadhaar_last_four, status, verified_at, created_at
@@ -181,6 +149,5 @@ async function getAadhaarKycStatus({ userId }) {
 module.exports = {
     getAadhaarKycStatus,
     requestAadhaarOtp,
-    verifyAadhaarSecureQr,
     verifyAadhaarOtp,
 };
