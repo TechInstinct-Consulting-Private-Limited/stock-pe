@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
 
 import {
-    Animated,
     Keyboard,
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     StyleSheet,
     View,
 } from "react-native";
@@ -30,13 +30,6 @@ export default function Login() {
     const [agreeTerms, setAgreeTerms] = useState(false);
 
     const scrollRef = useRef(null);
-    const scrollY = useRef(new Animated.Value(0)).current;
-
-    const headerTranslateY = scrollY.interpolate({
-        inputRange: [0, 355],
-        outputRange: [0, 177],
-        extrapolate: "clamp",
-    });
 
 
     // ============================================
@@ -74,53 +67,57 @@ export default function Login() {
 
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.container}>
+
+            {/* ========================================
+                FIXED BRAND / HEADER
+                ======================================== */}
+
+            <AuthHeader />
+
+
+            {/* ========================================
+                ONLY FORM AREA HANDLES KEYBOARD
+                ======================================== */}
+
             <KeyboardAvoidingView
-                style={styles.keyboardContainer}
+                style={styles.formContainer}
                 behavior={
                     Platform.OS === "ios"
                         ? "padding"
                         : "height"
                 }
             >
-                <Animated.ScrollView
-                    ref={scrollRef}
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode={
-                        Platform.OS === "ios"
-                            ? "interactive"
-                            : "on-drag"
-                    }
-                    onScroll={Animated.event(
-                        [
-                            {
-                                nativeEvent: {
-                                    contentOffset: { y: scrollY },
-                                },
-                            },
-                        ],
-                        {
-                            useNativeDriver:
-                                Platform.OS !== "web",
-                        }
-                    )}
-                    scrollEventThrottle={16}
-                >
-                    <Animated.View
-                        style={{
-                            transform: [
-                                { translateY: headerTranslateY },
-                            ],
-                        }}
-                    >
-                        <AuthHeader />
-                    </Animated.View>
 
-                    <View style={styles.formSheet}>
-                        <View style={styles.sheetHandle} />
+                {/* ====================================
+                    WHITE SCROLLABLE AREA
+                    ==================================== */}
+
+                <View style={styles.formSheet}>
+
+                    <ScrollView
+                        ref={scrollRef}
+
+                        style={styles.scrollView}
+
+                        contentContainerStyle={
+                            styles.scrollContent
+                        }
+
+                        showsVerticalScrollIndicator={false}
+
+                        keyboardShouldPersistTaps="handled"
+
+                        keyboardDismissMode={
+                            Platform.OS === "ios"
+                                ? "interactive"
+                                : "on-drag"
+                        }
+
+                        automaticallyAdjustKeyboardInsets={
+                            Platform.OS === "ios"
+                        }
+                    >
 
                         {/* =================================
                             AUTH CONTENT
@@ -139,7 +136,6 @@ export default function Login() {
                             {/* SIGN IN / SIGN UP FORM */}
 
                             <AuthForm
-                                key={activeTab}
                                 activeTab={activeTab}
 
                                 mobile={mobile}
@@ -193,8 +189,9 @@ export default function Login() {
 
                         </View>
 
-                    </View>
-                </Animated.ScrollView>
+                    </ScrollView>
+
+                </View>
 
             </KeyboardAvoidingView>
 
@@ -204,84 +201,36 @@ export default function Login() {
 
 
 const styles = StyleSheet.create({
-
-    // ============================================
-    // MAIN SCREEN
-    // ============================================
-
     container: {
         flex: 1,
         backgroundColor: "#FFFFFF",
     },
 
-
-    // ============================================
-    // KEYBOARD-AWARE SCREEN
-    // ============================================
-
-    keyboardContainer: {
+    formContainer: {
         flex: 1,
     },
-
-
-    // ============================================
-    // WHITE SHEET
-    // ============================================
 
     formSheet: {
         flex: 1,
-
         backgroundColor: "#FFFFFF",
-
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-        marginTop: -30,
-        paddingTop: 15,
-
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
         overflow: "hidden",
     },
-
-    sheetHandle: {
-        width: 38,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: "#F0F1F3",
-        alignSelf: "center",
-    },
-
-
-    // ============================================
-    // SCROLL VIEW
-    // ============================================
 
     scrollView: {
         flex: 1,
     },
 
-
-    // ============================================
-    // SCROLL CONTENT
-    // ============================================
-
     scrollContent: {
         flexGrow: 1,
-
-        paddingBottom: 40,
+        paddingBottom: 30,
     },
-
-
-    // ============================================
-    // AUTH CONTENT
-    // ============================================
 
     loginSection: {
         backgroundColor: "#FFFFFF",
-
-        paddingHorizontal: 24,
-
-        paddingTop: 24,
-
-        paddingBottom: 35,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 30,
     },
-
 });

@@ -3,9 +3,14 @@ import { Platform } from "react-native";
 import { getAuthToken } from "./authStorage";
 
 function resolveApiBaseUrl() {
+    const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
+
+    if (Platform.OS === "web") {
+        return configuredUrl || "http://localhost:5000/api";
+    }
+
     const hostUri = Constants.expoConfig?.hostUri;
     const host = hostUri?.split(":")[0];
-    const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
 
     if (configuredUrl) {
         const usesLoopbackHost =

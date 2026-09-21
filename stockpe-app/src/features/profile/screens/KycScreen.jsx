@@ -315,12 +315,24 @@ export default function KycScreen() {
                 ) : null}
 
                 {!otpSent ? (
-                  <TouchableOpacity
-                    style={styles.modalSubmitBtn}
-                    onPress={handleSendAadhaarOtp}
-                  >
-                    <Text style={styles.modalSubmitBtnText}>GET OTP</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      style={styles.modalSubmitBtn}
+                      onPress={handleSendAadhaarOtp}
+                    >
+                      <Text style={styles.modalSubmitBtnText}>GET OTP</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.modalSubmitBtn, { backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#BFDBFE", marginTop: 8 }]}
+                      onPress={() => {
+                        setActiveStep(null);
+                        router.push("/aadhaar");
+                      }}
+                    >
+                      <Text style={[styles.modalSubmitBtnText, { color: "#2563EB" }]}>📷 SCAN AADHAAR QR CODE</Text>
+                    </TouchableOpacity>
+                  </>
                 ) : (
                   <TouchableOpacity
                     style={styles.modalSubmitBtn}

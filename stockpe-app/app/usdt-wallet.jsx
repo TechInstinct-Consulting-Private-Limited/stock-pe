@@ -27,6 +27,8 @@ const DEMO_ADDRESSES = {
     BEP20: "0x9f2c4b7a1d6e8035ab41cd52e79f0b3d16a8c4e7",
 };
 
+const USDT_INR_RATE = "73.42";
+
 const ADDRESS_RULES = {
     TRC20: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
     ERC20: /^0x[0-9a-fA-F]{40}$/,
@@ -46,7 +48,6 @@ export default function UsdtWallet() {
 
     const trimmedAddress = address.trim();
     const isAddressValid = ADDRESS_RULES[network].test(trimmedAddress);
-    const isDemoAddress = trimmedAddress === DEMO_ADDRESSES[network];
 
     const handleBack = () => {
         Keyboard.dismiss();
@@ -83,7 +84,7 @@ export default function UsdtWallet() {
 
         try {
             await linkUsdtWallet(network, trimmedAddress);
-            router.replace("/onboarding-complete");
+            router.replace("/(tabs)/events");
         } catch (linkError) {
             setError(getUserFacingError(linkError));
         } finally {
@@ -137,7 +138,7 @@ export default function UsdtWallet() {
                         </View>
                         <Text style={styles.heroTitle}>Tether USDT</Text>
                         <Text style={styles.heroRate}>
-                            Demo wallet interface · No fund transfer
+                            1 USDT = ₹{USDT_INR_RATE} · Live rate
                         </Text>
                         <View style={styles.heroBadges}>
                             <Text style={styles.heroBadge}>⚡ Instant</Text>
@@ -182,7 +183,7 @@ export default function UsdtWallet() {
                         style={styles.addressInput}
                         value={address}
                         onChangeText={(value) => {
-                            setAddress(value);
+                            setAddress(value.trim());
                             setError("");
                         }}
                         placeholder={`Paste your ${network} wallet address`}
@@ -203,21 +204,36 @@ export default function UsdtWallet() {
                         </TouchableOpacity>
                     ) : null}
 
-                    {trimmedAddress && isAddressValid ? (
-                        <View style={styles.previewCard}>
-                            <View style={styles.qrTile}>
-                                <QRCode value={trimmedAddress} size={92} />
-                            </View>
+                    {trimmedAddress ? (
+                        <View
+                            style={[
+                                styles.previewCard,
+                                !isAddressValid && styles.previewCardInvalid,
+                            ]}
+                        >
+                            {isAddressValid ? (
+                                <View style={styles.qrTile}>
+                                    <QRCode value={trimmedAddress} size={92} />
+                                </View>
+                            ) : (
+                                <View style={[styles.qrTile, styles.qrTileInvalid]}>
+                                    <Ionicons name="alert-circle-outline" size={38} color="#D8385A" />
+                                </View>
+                            )}
                             <View style={styles.previewCopy}>
-                                <Text style={styles.previewLabel}>WALLET QR PREVIEW</Text>
+                                <Text
+                                    style={[
+                                        styles.previewLabel,
+                                        !isAddressValid && styles.previewLabelInvalid,
+                                    ]}
+                                >
+                                    {isAddressValid
+                                        ? `VERIFIED ${network} ADDRESS`
+                                        : `NOT A VALID ${network} ADDRESS`}
+                                </Text>
                                 <Text style={styles.previewAddress}>
                                     {shortenAddress(trimmedAddress)}
                                 </Text>
-                                {isDemoAddress ? (
-                                    <Text style={styles.demoPreviewNote}>
-                                        Demo address only · no fund transfer
-                                    </Text>
-                                ) : null}
                             </View>
                         </View>
                     ) : null}
@@ -242,8 +258,17 @@ export default function UsdtWallet() {
                         )}
                     </TouchableOpacity>
 
+                    <TouchableOpacity
+                        style={{ marginTop: 14, alignItems: "center", paddingVertical: 8 }}
+                        onPress={() => router.replace("/(tabs)/events")}
+                    >
+                        <Text style={{ color: "#657189", fontSize: 14, fontWeight: "700" }}>
+                            Skip for now →
+                        </Text>
+                    </TouchableOpacity>
+
                     <Text style={styles.footnote}>
-                        Demo Wallet v1: linking only. Deposits and withdrawals are unavailable.
+                        Demo wallet linking only. Deposits, withdrawals, and payouts are unavailable.
                     </Text>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -349,8 +374,8 @@ const styles = StyleSheet.create({
     errorText: { color: "#D8385A", fontSize: 14, marginTop: 14 },
     previewCard: {
         alignItems: "center",
-        backgroundColor: "#EAF7F8",
-        borderColor: "#C7E5E8",
+        backgroundColor: "#E7F8F1",
+        borderColor: "#BFE9D8",
         borderRadius: 18,
         borderWidth: 1,
         flexDirection: "row",
@@ -358,6 +383,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
         padding: 16,
     },
+    previewCardInvalid: { backgroundColor: "#FDECF0", borderColor: "#F3C3CF" },
     qrTile: {
         alignItems: "center",
         backgroundColor: "#FFFFFF",
@@ -366,6 +392,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         width: 116,
     },
+    qrTileInvalid: { backgroundColor: "#FFFFFF" },
     previewCopy: { flex: 1 },
     previewLabel: {
         color: "#0F8A66",
@@ -373,8 +400,8 @@ const styles = StyleSheet.create({
         fontWeight: "800",
         letterSpacing: 0.8,
     },
+    previewLabelInvalid: { color: "#D8385A" },
     previewAddress: { color: "#2B3446", fontSize: 14, marginTop: 8 },
-    demoPreviewNote: { color: "#77570A", fontSize: 12, marginTop: 8 },
     primaryButton: {
         alignItems: "center",
         backgroundColor: "#199A72",

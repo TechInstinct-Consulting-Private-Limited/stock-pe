@@ -19,3 +19,12 @@ export async function getAuthToken() {
 
     return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
 }
+
+export async function removeAuthToken() {
+    if (Platform.OS === "web") {
+        globalThis.localStorage?.removeItem(AUTH_TOKEN_KEY);
+        return;
+    }
+
+    await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+}

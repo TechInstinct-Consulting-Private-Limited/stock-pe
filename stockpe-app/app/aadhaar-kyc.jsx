@@ -60,7 +60,7 @@ export default function AadhaarKyc() {
         requestAnimationFrame(() => otpRefs.current[0]?.focus());
     }, [verificationId, isVerified]);
 
-    // Arriving here already verified (Secure QR scan or a previous session)
+    // Arriving here already verified from a previous session
     // means step 3 has nothing to collect, so continue to the wallet step.
     useEffect(() => {
         if (verified !== "1") return;
@@ -380,7 +380,7 @@ export default function AadhaarKyc() {
 
                         {__DEV__ && !isVerified ? (
                             <Text style={styles.devHint}>
-                                Development: use Aadhaar 999999999999 and OTP 123456.
+                                Development: use any 12-digit Aadhaar number and OTP 123456.
                             </Text>
                         ) : null}
                     </View>

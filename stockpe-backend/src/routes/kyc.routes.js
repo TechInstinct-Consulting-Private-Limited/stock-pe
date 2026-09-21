@@ -3,7 +3,6 @@ const rateLimit = require("express-rate-limit");
 const {
     getStatus,
     requestOtp,
-    verifySecureQr,
     verifyOtp,
 } = require("../controllers/kyc.controller");
 const { requireAuth } = require("../middleware/auth");
@@ -24,7 +23,6 @@ const kycLimiter = rateLimit({
 router.use(requireAuth);
 router.get("/aadhaar/status", getStatus);
 router.post("/aadhaar/request-otp", kycLimiter, requestOtp);
-router.post("/aadhaar/verify-secure-qr", kycLimiter, verifySecureQr);
 router.post("/aadhaar/verify-otp", kycLimiter, verifyOtp);
 
 module.exports = router;

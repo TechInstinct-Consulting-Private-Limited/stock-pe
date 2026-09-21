@@ -17,13 +17,12 @@ export default function MyContestsScreen() {
   ];
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
-      <View style={styles.container}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
           {/* Top Dark Summary Card */}
           <View style={styles.summaryCard}>
             {/* Header */}
@@ -253,7 +252,6 @@ export default function MyContestsScreen() {
           </View>
         </ScrollView>
       </View>
-    </SafeAreaView>
   );
 }
 

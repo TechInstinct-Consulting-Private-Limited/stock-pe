@@ -739,125 +739,123 @@ export default function AuthForm({
 
 
 const styles = StyleSheet.create({
-
     label: {
-        fontSize: 12,
-        letterSpacing: 2.2,
-        color: "#737D91",
-        marginBottom: 10,
+        fontSize: 11,
+        letterSpacing: 1,
+        fontWeight: "800",
+        color: "#64748B",
+        marginBottom: 8,
     },
 
     inputContainer: {
-        height: 64,
-        borderRadius: 20,
-        backgroundColor: "#EEF1FB",
-
+        height: 52,
+        borderRadius: 14,
+        backgroundColor: "#F8FAFC",
         borderWidth: 1,
-        borderColor: "#DDE2F0",
-
+        borderColor: "#E2E8F0",
         flexDirection: "row",
         alignItems: "center",
-
-        paddingHorizontal: 18,
-        marginBottom: 24,
+        paddingHorizontal: 16,
+        marginBottom: 18,
     },
 
     inputError: {
-        borderColor: "#E05252",
+        borderColor: "#EF4444",
     },
 
     errorText: {
-        fontSize: 12,
-        color: "#E05252",
-        marginTop: -18,
-        marginBottom: 18,
+        fontSize: 11.5,
+        fontWeight: "600",
+        color: "#EF4444",
+        marginTop: -12,
+        marginBottom: 14,
         paddingHorizontal: 4,
     },
 
     apiErrorText: {
-        color: "#C73D3D",
-        backgroundColor: "#FFF0F0",
+        color: "#DC2626",
+        backgroundColor: "#FEF2F2",
         borderRadius: 12,
-        fontSize: 13,
-        lineHeight: 19,
-        marginBottom: 18,
+        fontSize: 12.5,
+        fontWeight: "600",
+        lineHeight: 18,
+        marginBottom: 16,
         padding: 12,
+        borderWidth: 1,
+        borderColor: "#FEE2E2",
     },
 
     countryCode: {
-        fontSize: 16,
-        color: "#657189",
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#0F172A",
     },
 
     verticalLine: {
         width: 1,
-        height: 28,
-        backgroundColor: "#D1D6E3",
-        marginHorizontal: 14,
+        height: 22,
+        backgroundColor: "#CBD5E1",
+        marginHorizontal: 12,
     },
 
     input: {
         flex: 1,
-        fontSize: 17,
-        color: "#18233B",
-        paddingHorizontal: 12,
+        fontSize: 15,
+        fontWeight: "600",
+        color: "#0F172A",
+        paddingHorizontal: 8,
     },
 
     otpButton: {
-        height: 64,
+        height: 52,
         backgroundColor: "#00C987",
-        borderRadius: 20,
-
+        borderRadius: 14,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-
-        marginTop: 3,
-
+        marginTop: 4,
         shadowColor: "#00C987",
         shadowOffset: {
             width: 0,
-            height: 7,
+            height: 4,
         },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-
-        elevation: 6,
+        shadowOpacity: 0.22,
+        shadowRadius: 8,
+        elevation: 4,
     },
 
     otpButtonDisabled: {
-        opacity: 0.5,
+        opacity: 0.6,
     },
 
     otpText: {
         color: "#FFFFFF",
-        fontSize: 18,
+        fontSize: 15,
         fontWeight: "900",
+        letterSpacing: 0.8,
     },
 
     otpArrow: {
-        marginLeft: 12,
+        marginLeft: 10,
     },
 
     termsContainer: {
         flexDirection: "row",
         alignItems: "flex-start",
-        marginTop: 0,
-        marginBottom: 25,
+        marginTop: 2,
+        marginBottom: 20,
     },
 
     checkbox: {
-        width: 22,
-        height: 22,
-        borderRadius: 7,
-
+        width: 20,
+        height: 20,
+        borderRadius: 6,
         borderWidth: 1.5,
-        borderColor: "#CBD1DF",
-
+        borderColor: "#CBD5E1",
         alignItems: "center",
         justifyContent: "center",
-
         marginRight: 10,
+        marginTop: 1,
     },
 
     checkboxActive: {
@@ -867,14 +865,13 @@ const styles = StyleSheet.create({
 
     termsText: {
         flex: 1,
-        fontSize: 13,
-        lineHeight: 20,
-        color: "#737D91",
+        fontSize: 12,
+        lineHeight: 18,
+        color: "#64748B",
     },
 
     termsLink: {
-        color: "#00A875",
-        fontWeight: "700",
+        color: "#00C987",
+        fontWeight: "800",
     },
-
 });

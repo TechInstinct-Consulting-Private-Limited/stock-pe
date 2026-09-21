@@ -1,14 +1,10 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-
-import {
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-
+import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import BrandLogo from "../src/components/BrandLogo";
+import { getAuthToken } from "../src/services/authStorage";
 
 export default function Index() {
   const [progress, setProgress] = useState(0);
@@ -24,254 +20,243 @@ export default function Index() {
 
         return previous + 2;
       });
-    }, 40);
+    }, 35);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Start every session through the existing sign-in/sign-up flow.
-  // The dashboard becomes available only after the OTP, KYC and wallet flow.
+  // Check auth and route appropriately
   useEffect(() => {
     if (progress >= 100) {
-      router.replace("/login");
+      getAuthToken()
+        .then((token) => {
+          if (token) {
+            router.replace("/(tabs)/events");
+          } else {
+            router.replace("/login");
+          }
+        })
+        .catch(() => {
+          router.replace("/login");
+        });
     }
   }, [progress]);
 
+
   return (
     <LinearGradient
-      colors={["#E8F9FA", "#F1F1FF", "#FFFFFF"]}
+      colors={["#FFFFFF", "#F8FAFC", "#F0FDF4"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
-      style={styles.container}
+      style={styles.gradient}
     >
-      {/* Logo */}
-      <BrandLogo size="large" />
+      <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.container}>
+        {/* Logo */}
+        <BrandLogo size="large" />
 
-      {/* Small Heading */}
-      <Text style={styles.smallHeading}>
-        INDIA'S #1 MARKET GAME
-      </Text>
-
-      {/* App Name */}
-      <Text style={styles.stockpe}>
-        STOCKPE
-      </Text>
-
-      {/* Tagline */}
-      <Text style={styles.tagline}>
-        P R E D I C T   •   C O M P E T E   •   W I N
-      </Text>
-
-      {/* Statistics */}
-      <View style={styles.statsContainer}>
-
-        {/* Pool */}
-        <View style={styles.stat}>
-          <Text style={[styles.statValue, styles.green]}>
-            ₹49.5L
-          </Text>
-
-          <Text style={styles.statLabel}>
-            Today's Pool
-          </Text>
+        {/* Small Heading */}
+        <View style={styles.badgePill}>
+          <Text style={styles.badgePillText}>CRYPTO INDEX PREDICTIONS</Text>
         </View>
 
-        {/* Traders */}
-        <View style={styles.stat}>
-          <Text style={[styles.statValue, styles.blue]}>
-            2.1M+
-          </Text>
+        {/* App Name */}
+        <Text style={styles.stockpe}>
+          STOCKPE
+        </Text>
 
-          <Text style={styles.statLabel}>
-            Traders
-          </Text>
+        {/* Tagline */}
+        <Text style={styles.tagline}>
+          PREDICT  •  COMPETE  •  WIN USDT
+        </Text>
+
+        {/* Statistics */}
+        <View style={styles.statsContainer}>
+
+          {/* Pool */}
+          <View style={styles.stat}>
+            <Text style={[styles.statValue, styles.green]}>
+              $50K
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Daily Pool (₮)
+            </Text>
+          </View>
+
+          {/* Traders */}
+          <View style={styles.stat}>
+            <Text style={[styles.statValue, styles.blue]}>
+              2.1M+
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Traders
+            </Text>
+          </View>
+
+          {/* Rating */}
+          <View style={styles.stat}>
+            <Text style={[styles.statValue, styles.yellow]}>
+              4.8★
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Rating
+            </Text>
+          </View>
+
         </View>
 
-        {/* Rating */}
-        <View style={styles.stat}>
-          <Text style={[styles.statValue, styles.yellow]}>
-            4.8★
-          </Text>
+        {/* Progress Bar */}
+        <View style={styles.progressWrapper}>
+          <View style={styles.progressBackground}>
 
-          <Text style={styles.statLabel}>
-            Rating
-          </Text>
+            <LinearGradient
+              colors={["#00C987", "#38BDF8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.progress,
+                {
+                  width: `${progress}%`,
+                },
+              ]}
+            />
+
+          </View>
         </View>
 
-      </View>
-
-      {/* Progress Bar */}
-      <View style={styles.progressWrapper}>
-        <View style={styles.progressBackground}>
-
-          <LinearGradient
-            colors={["#00C987", "#6366F1"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[
-              styles.progress,
-              {
-                width: `${progress}%`,
-              },
-            ]}
-          />
-
-        </View>
-      </View>
-
-      {/* Version */}
-      <Text style={styles.version}>
-        V 2 . 4 . 1   •   SEBI REGULATED
-      </Text>
-
+        {/* Version */}
+        <Text style={styles.version}>
+          V 2.4.1  •  100% USDT CRYPTO SETTLEMENTS
+        </Text>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-
     alignItems: "center",
     justifyContent: "center",
-
     paddingHorizontal: 30,
   },
 
-  /* Small Heading */
-
-  smallHeading: {
-    fontSize: 14,
-
-    letterSpacing: 5,
-
-    color: "#7D8190",
-
-    marginTop: 55,
-    marginBottom: 18,
-
-    textAlign: "center",
+  badgePill: {
+    backgroundColor: "#E6FBF3",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginTop: 36,
+    marginBottom: 12,
   },
 
-  /* STOCKPE */
+  badgePillText: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 2,
+    color: "#059669",
+    textAlign: "center",
+  },
 
   stockpe: {
-    fontSize: 58,
-
+    fontSize: 48,
     fontWeight: "900",
-
-    letterSpacing: 8,
-
-    color: "#071329",
-
-    marginBottom: 18,
-
+    letterSpacing: 6,
+    color: "#0F172A",
+    marginBottom: 8,
     textAlign: "center",
   },
-
-  /* Tagline */
 
   tagline: {
     fontSize: 12,
-
+    fontWeight: "700",
     letterSpacing: 3,
-
-    color: "#7D8190",
-
+    color: "#64748B",
     textAlign: "center",
-
     width: "100%",
   },
 
-  /* Statistics */
-
   statsContainer: {
     flexDirection: "row",
-
     width: "100%",
-
     justifyContent: "space-around",
-
-    marginTop: 55,
+    marginTop: 40,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
 
   stat: {
     alignItems: "center",
-
     minWidth: 85,
   },
 
   statValue: {
-    fontSize: 28,
-
-    fontWeight: "800",
+    fontSize: 26,
+    fontWeight: "900",
   },
 
   statLabel: {
-    fontSize: 13,
-
-    color: "#858895",
-
-    marginTop: 6,
-
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748B",
+    marginTop: 4,
     textAlign: "center",
   },
 
   green: {
-    color: "#00B978",
+    color: "#059669",
   },
 
   blue: {
-    color: "#5865D9",
+    color: "#0284C7",
   },
 
   yellow: {
-    color: "#F0B323",
+    color: "#D97706",
   },
-
-  /* Progress */
 
   progressWrapper: {
     position: "absolute",
-
     bottom: 75,
-
     width: "70%",
   },
 
   progressBackground: {
-    height: 4,
-
+    height: 6,
     width: "100%",
-
-    backgroundColor: "#E4E5EF",
-
+    backgroundColor: "#E2E8F0",
     borderRadius: 10,
-
     overflow: "hidden",
   },
 
   progress: {
     height: "100%",
-
     borderRadius: 10,
   },
 
-  /* Version */
-
   version: {
     position: "absolute",
-
     bottom: 38,
-
-    fontSize: 11,
-
-    letterSpacing: 4,
-
-    color: "#A5A7B0",
-
+    fontSize: 10.5,
+    fontWeight: "700",
+    letterSpacing: 2,
+    color: "#94A3B8",
     textAlign: "center",
   },
-
 });
