@@ -55,5 +55,3 @@ export function fetchContestSummary() {
     netPnl: "+₹44,752",
   };
 }
-
-
