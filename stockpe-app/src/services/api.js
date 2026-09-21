@@ -5,20 +5,16 @@ import { getAuthToken } from "./authStorage";
 function resolveApiBaseUrl() {
     const hostUri = Constants.expoConfig?.hostUri;
     const host = hostUri?.split(":")[0];
-    const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.replace(
-        /\/$/,
-        ""
-    );
+    const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
 
     if (configuredUrl) {
-        const usesLoopbackHost = /^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(
-            configuredUrl
-        );
+        const usesLoopbackHost =
+            /^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(configuredUrl);
 
         if (Platform.OS !== "web" && usesLoopbackHost && host) {
             return configuredUrl.replace(
                 /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
-                `$1${host}`
+                `$1${host}`,
             );
         }
 
@@ -42,7 +38,7 @@ class ApiError extends Error {}
 
 export function getUserFacingError(
     error,
-    fallback = "Something went wrong. Please try again."
+    fallback = "Something went wrong. Please try again.",
 ) {
     return error instanceof ApiError ? error.message : fallback;
 }
@@ -60,16 +56,14 @@ async function request(path, options = {}) {
         });
     } catch (_error) {
         throw new ApiError(
-            "Unable to connect. Check your internet connection and try again."
+            "Unable to connect. Check your internet connection and try again.",
         );
     }
 
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        throw new ApiError(
-            data.message || "Request failed. Please try again."
-        );
+        throw new ApiError(data.message || "Request failed. Please try again.");
     }
 
     return data;
@@ -145,6 +139,31 @@ export function verifyAadhaarSecureQr(payload, consent) {
 
 export function getAadhaarKycStatus() {
     return authenticatedRequest("/kyc/aadhaar/status");
+}
+
+export function getDemoDashboard(status = "ALL") {
+    return request(`/dashboard?status=${encodeURIComponent(status)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function getDemoContest(publicId) {
+    return request(`/dashboard/contests/${encodeURIComponent(publicId)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function getMyDemoContests(status = "ALL") {
+    return authenticatedRequest(`/demo-contests/mine?status=${encodeURIComponent(status)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function joinDemoContest(publicId, predictionValue) {
+    return authenticatedRequest(`/demo-contests/${encodeURIComponent(publicId)}/join`, {
+        method: "POST",
+        body: JSON.stringify(predictionValue === undefined ? {} : { predictionValue }),
+    });
 }
 
 export function getUsdtWallet() {

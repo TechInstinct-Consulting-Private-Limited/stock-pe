@@ -1,9 +1,8 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { getMyDemoContests, joinDemoContest } from "../../services/api";
 import {
   fetchContestById,
   fetchStockCatalog,
-  fetchJoinedContests,
-  joinContestWithTeam,
 } from "./contestsService";
 
 export function useContestDetail(contestId) {
@@ -30,6 +29,13 @@ export function useTeamBuilder(contestId) {
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
   const [joinedEntry, setJoinedEntry] = useState(null);
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState("");
+
+  const demoContestIds = {
+    "nifty-mega-pool": "nifty-50",
+    "bank-nifty-sprint": "bank-nifty",
+  };
 
   const totalCreditsAllowed = 100.0;
   const maxStocksCount = 6;
@@ -101,23 +107,30 @@ export function useTeamBuilder(contestId) {
     captain !== null &&
     viceCaptain !== null;
 
-  const handleJoinContest = () => {
+  const handleJoinContest = async () => {
     if (!isTeamValid) {
       alert("Please select 6 stocks, 1 Captain (2x), and 1 Vice-Captain (1.5x).");
       return;
     }
 
-    const entry = joinContestWithTeam({
-      contestId,
-      teamName: "My Alpha Team",
-      selectedStocks,
-      captain,
-      viceCaptain,
-    });
+    const demoContestId = demoContestIds[contestId];
+    if (!demoContestId) {
+      setJoinError("This contest is not available in demo mode yet.");
+      return;
+    }
 
-    setJoinedEntry(entry);
-    setIsPreviewVisible(false);
-    setIsSuccessModalVisible(true);
+    setIsJoining(true);
+    setJoinError("");
+    try {
+      const response = await joinDemoContest(demoContestId);
+      setJoinedEntry(response.entry);
+      setIsPreviewVisible(false);
+      setIsSuccessModalVisible(true);
+    } catch (error) {
+      setJoinError(error.message || "Unable to join this demo contest.");
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   return {
@@ -146,27 +159,49 @@ export function useTeamBuilder(contestId) {
     isSuccessModalVisible,
     setIsSuccessModalVisible,
     joinedEntry,
+    isJoining,
+    joinError,
     handleJoinContest,
   };
 }
 
 export function useMyContests() {
   const [activeFilter, setActiveFilter] = useState("ALL"); // "ALL" | "ACTIVE" | "WON" | "LOST"
-  const joinedList = useMemo(() => fetchJoinedContests(), []);
+  const [joinedList, setJoinedList] = useState([]);
 
-  const filteredContests = useMemo(() => {
-    return joinedList.filter((item) => {
-      if (activeFilter === "ALL") return true;
-      if (activeFilter === "ACTIVE") return item.status === "LIVE";
-      if (activeFilter === "WON") return item.status.includes("WON");
-      if (activeFilter === "LOST") return item.status === "LOST";
-      return true;
-    });
-  }, [joinedList, activeFilter]);
+  useEffect(() => {
+    let mounted = true;
+    getMyDemoContests(activeFilter)
+      .then((response) => {
+        if (!mounted) return;
+        setJoinedList((response.entries || []).map((entry) => ({
+          joinId: entry.id,
+          contestId: entry.public_id,
+          indexSymbol: entry.title,
+          contestTitle: entry.title,
+          status: entry.status,
+          timestamp: new Date(entry.joined_at).toLocaleString("en-IN"),
+          entryFeeInr: `${entry.entry_credits} Credits`,
+          entryFeeUsdt: "Demo credits",
+          predictionValue: entry.prediction_value === null ? null : Number(entry.prediction_value),
+          rewardCredits: Number(entry.reward_credits || 0),
+          prediction: entry.prediction_value === null
+            ? "Not submitted"
+            : Number(entry.prediction_value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+          prizeInr: Number(entry.reward_credits || 0) > 0 ? `${entry.reward_credits} Credits` : null,
+          prizeUsdt: Number(entry.reward_credits || 0) > 0 ? "Demo reward" : null,
+          accuracy: null,
+        })));
+      })
+      .catch(() => { if (mounted) setJoinedList([]); });
+    return () => { mounted = false; };
+  }, [activeFilter]);
+
+  const filteredContests = joinedList;
 
   const summary = useMemo(() => {
     const totalJoined = joinedList.length;
-    const active = joinedList.filter((i) => i.status === "LIVE").length;
+    const active = joinedList.filter((i) => i.status === "ACTIVE").length;
     const won = joinedList.filter((i) => i.status.includes("WON")).length;
     const lost = joinedList.filter((i) => i.status === "LOST").length;
 
@@ -175,9 +210,9 @@ export function useMyContests() {
       active,
       won,
       lost,
-      totalSpent: "₹248",
-      totalWon: "₹45,000",
-      netPnl: "+₹44,752",
+      totalSpent: `${joinedList.reduce((total, item) => total + Number(String(item.entryFeeInr).split(" ")[0]), 0)} Credits`,
+      totalWon: `${joinedList.reduce((total, item) => total + item.rewardCredits, 0)} Credits`,
+      netPnl: `${joinedList.reduce((total, item) => total + item.rewardCredits - Number(String(item.entryFeeInr).split(" ")[0]), 0)} Credits`,
     };
   }, [joinedList]);
 

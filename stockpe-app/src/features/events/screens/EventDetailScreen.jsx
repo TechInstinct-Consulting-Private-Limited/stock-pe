@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import { useEventDetail } from "../hooks/useEventDetail";
@@ -24,7 +25,7 @@ export default function EventDetailScreen({ eventId }) {
   const [activeTab, setActiveTab] = useState("prizes"); // "prizes" | "rules" | "board"
   const [isTradeSheetVisible, setIsTradeSheetVisible] = useState(false);
 
-  const { event } = useEventDetail(eventId);
+  const { event, isLoading, error } = useEventDetail(eventId);
 
   const {
     tradeMode,
@@ -42,6 +43,8 @@ export default function EventDetailScreen({ eventId }) {
     lastPlacedTrade,
     handlePlaceOrder,
     closeSuccessModal,
+    canJoin,
+    joinMessage,
   } = useTradeExecution(event);
 
   const tabs = [
@@ -50,10 +53,27 @@ export default function EventDetailScreen({ eventId }) {
     { id: "board", label: "BOARD", icon: "📊" },
   ];
 
-  const handleConfirmOrder = () => {
-    handlePlaceOrder();
-    setIsTradeSheetVisible(false);
+  const handleConfirmOrder = async () => {
+    const result = await handlePlaceOrder();
+    if (!result?.error) setIsTradeSheetVisible(false);
   };
+
+  if (isLoading || error || !event) {
+    return (
+      <SafeAreaView edges={["top"]} style={styles.safeArea}>
+        <View style={styles.detailState}>
+          <Text style={styles.detailStateText}>
+            {isLoading ? "Loading contest details…" : error}
+          </Text>
+          {!isLoading && (
+            <TouchableOpacity style={styles.backToEventsButton} onPress={() => router.back()}>
+              <Text style={styles.backToEventsText}>BACK TO EVENTS</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
@@ -105,34 +125,33 @@ export default function EventDetailScreen({ eventId }) {
         <View style={[styles.bottomStickyBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <View style={styles.stickyHeaderRow}>
             <View style={styles.stickyLeftCol}>
-              <Text style={styles.stickyFeeLabel}>ENTRY FEE</Text>
+                <Text style={styles.stickyFeeLabel}>DEMO ENTRY</Text>
               <View style={styles.stickyFeeRow}>
-                <Text style={styles.stickyFeeInr}>{event?.entryInr || "₹199"}</Text>
+                <Text style={styles.stickyFeeInr}>{Number(event?.entryCredits || 0).toLocaleString("en-IN")} Credits</Text>
                 <View style={styles.usdtPillSmall}>
                   <View style={styles.usdtDotSmall}>
                     <Text style={styles.usdtDotText}>₮</Text>
                   </View>
-                  <Text style={styles.usdtPillTextSmall}>
-                    {event?.entryUsdt || "2.71 USDT"}
-                  </Text>
+                  <Text style={styles.usdtPillTextSmall}>Non-withdrawable</Text>
                 </View>
               </View>
             </View>
 
             <View style={styles.stickyRightCol}>
-              <Text style={styles.stickyWinLabel}>WIN UP TO</Text>
-              <Text style={styles.stickyWinVal}>₹400K</Text>
+              <Text style={styles.stickyWinLabel}>DEMO PRIZE POOL</Text>
+              <Text style={styles.stickyWinVal}>{Number(event?.prizePoolCredits || 0).toLocaleString("en-IN")}</Text>
             </View>
           </View>
 
           {/* Full-width Emerald Green Join Button */}
           <TouchableOpacity
-            style={styles.joinCtaBtn}
-            onPress={() => setIsTradeSheetVisible(true)}
+            style={[styles.joinCtaBtn, !canJoin && styles.joinCtaBtnDisabled]}
+            onPress={() => canJoin && setIsTradeSheetVisible(true)}
+            disabled={!canJoin}
             activeOpacity={0.88}
           >
             <Ionicons name="play" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-            <Text style={styles.joinCtaText}>JOIN CONTEST</Text>
+            <Text style={styles.joinCtaText}>{joinMessage}</Text>
           </TouchableOpacity>
         </View>
 
@@ -326,6 +345,33 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     ...shadows.md,
+  },
+  detailState: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+  },
+  detailStateText: {
+    color: "#64748B",
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  backToEventsButton: {
+    backgroundColor: "#00C987",
+    borderRadius: 12,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backToEventsText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  joinCtaBtnDisabled: {
+    backgroundColor: "#94A3B8",
   },
   joinCtaText: {
     fontSize: 16,

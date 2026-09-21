@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -6,42 +6,60 @@ import {
   Text,
   View,
 } from "react-native";
+import { getDemoDashboard } from "../services/api";
+
+const FALLBACK_INDICES = [
+  {
+    symbol: "NIFTY 50",
+    value: "24,187.65",
+    change: "+0.84%",
+    isPositive: true,
+  },
+  {
+    symbol: "SENSEX",
+    value: "79,432.18",
+    change: "-0.31%",
+    isPositive: false,
+  },
+  {
+    symbol: "BANK NIFTY",
+    value: "51,843.25",
+    change: "+1.12%",
+    isPositive: true,
+  },
+];
 
 export default function MarketTicker() {
   const scrollAnim = useRef(new Animated.Value(0)).current;
+  const [baseIndices, setBaseIndices] = useState(FALLBACK_INDICES);
 
-  const baseIndices = [
-    {
-      symbol: "NIFTY 50",
-      value: "24,187.65",
-      change: "+0.84%",
-      isPositive: true,
-    },
-    {
-      symbol: "SENSEX",
-      value: "79,432.18",
-      change: "-0.31%",
-      isPositive: false,
-    },
-    {
-      symbol: "BANK NIFTY",
-      value: "51,843.25",
-      change: "+1.12%",
-      isPositive: true,
-    },
-    {
-      symbol: "MIDCAP",
-      value: "13,240.50",
-      change: "+0.45%",
-      isPositive: true,
-    },
-    {
-      symbol: "NIFTY IT",
-      value: "38,750.00",
-      change: "+1.65%",
-      isPositive: true,
-    },
-  ];
+  useEffect(() => {
+    let isMounted = true;
+
+    getDemoDashboard("ALL")
+      .then((dashboard) => {
+        if (!isMounted || !dashboard.ticker?.length) return;
+
+        setBaseIndices(
+          dashboard.ticker.map((item) => ({
+            symbol: item.label,
+            value: Number(item.value).toLocaleString("en-IN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }),
+            change: `${Number(item.changePercent).toFixed(2)}%`,
+            isPositive: Number(item.changePercent) >= 0,
+          }))
+        );
+      })
+      .catch(() => {
+        // Keep the in-app fallback during an offline or initial API failure.
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Repeat 8 times to form an endless ribbon
   const tickerItems = [

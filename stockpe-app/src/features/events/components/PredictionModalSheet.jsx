@@ -45,12 +45,9 @@ export default function PredictionModalSheet({
   const mins = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0");
   const secs = String(secondsLeft % 60).padStart(2, "0");
 
-  const entryFeeInr = 199;
-  const entryFeeUsdt = 2.71;
-  const balanceInr = walletBalance || 1283.0;
-  const balanceUsdt = (balanceInr / 73.42).toFixed(2);
-  const afterInr = Math.max(0, balanceInr - entryFeeInr);
-  const afterUsdt = (afterInr / 73.42).toFixed(2);
+  const entryCredits = Number(event?.entryCredits || 0);
+  const balanceCredits = Number(walletBalance || 0);
+  const afterCredits = Math.max(0, balanceCredits - entryCredits);
 
   const stepVal = event?.priceStep || 50;
 
@@ -108,7 +105,7 @@ export default function PredictionModalSheet({
                 <Text style={styles.usdtDotText}>₮</Text>
               </View>
               <Text style={styles.usdtBadgeText}>
-                {event?.entryUsdt || "2.71 USDT"}
+                Demo credits
               </Text>
             </View>
           </View>
@@ -196,14 +193,14 @@ export default function PredictionModalSheet({
       <View style={styles.breakdownCard}>
         {/* Row 1: Entry Fee */}
         <View style={styles.breakdownRow}>
-          <Text style={styles.breakdownLabel}>Entry Fee</Text>
+          <Text style={styles.breakdownLabel}>Demo Entry</Text>
           <View style={styles.breakdownRight}>
-            <Text style={styles.breakdownInr}>₹{entryFeeInr}</Text>
+            <Text style={styles.breakdownInr}>{entryCredits.toLocaleString("en-IN")} Credits</Text>
             <View style={styles.breakdownPill}>
               <View style={styles.usdtMiniDot}>
                 <Text style={styles.usdtMiniText}>₮</Text>
               </View>
-              <Text style={styles.breakdownUsdt}>{entryFeeUsdt}</Text>
+              <Text style={styles.breakdownUsdt}>Non-withdrawable</Text>
             </View>
           </View>
         </View>
@@ -212,16 +209,16 @@ export default function PredictionModalSheet({
 
         {/* Row 2: Balance */}
         <View style={styles.breakdownRow}>
-          <Text style={styles.breakdownLabel}>Balance</Text>
+          <Text style={styles.breakdownLabel}>Demo Balance</Text>
           <View style={styles.breakdownRight}>
             <Text style={styles.breakdownInr}>
-              ₹{Number(balanceInr).toLocaleString()}
+              {balanceCredits.toLocaleString("en-IN")} Credits
             </Text>
             <View style={styles.breakdownPill}>
               <View style={styles.usdtMiniDot}>
                 <Text style={styles.usdtMiniText}>₮</Text>
               </View>
-              <Text style={styles.breakdownUsdt}>{balanceUsdt}</Text>
+              <Text style={styles.breakdownUsdt}>Demo only</Text>
             </View>
           </View>
         </View>
@@ -230,16 +227,16 @@ export default function PredictionModalSheet({
 
         {/* Row 3: After */}
         <View style={styles.breakdownRow}>
-          <Text style={styles.breakdownLabel}>After</Text>
+          <Text style={styles.breakdownLabel}>After entry</Text>
           <View style={styles.breakdownRight}>
             <Text style={styles.breakdownInr}>
-              ₹{Number(afterInr).toLocaleString()}
+              {afterCredits.toLocaleString("en-IN")} Credits
             </Text>
             <View style={styles.breakdownPill}>
               <View style={styles.usdtMiniDot}>
                 <Text style={styles.usdtMiniText}>₮</Text>
               </View>
-              <Text style={styles.breakdownUsdt}>{afterUsdt}</Text>
+              <Text style={styles.breakdownUsdt}>Demo only</Text>
             </View>
           </View>
         </View>

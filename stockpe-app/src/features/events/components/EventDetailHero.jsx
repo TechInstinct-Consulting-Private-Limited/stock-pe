@@ -5,7 +5,12 @@ import { router } from "expo-router";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 
 export default function EventDetailHero({ event }) {
-  const [secondsLeft, setSecondsLeft] = useState(3 * 3600 + 16 * 60 + 56);
+  const [secondsLeft, setSecondsLeft] = useState(event?.secondsUntilClose || 0);
+
+  useEffect(() => {
+    const closesAt = new Date(event?.closesAt).getTime();
+    setSecondsLeft(Number.isFinite(closesAt) ? Math.max(0, Math.floor((closesAt - Date.now()) / 1000)) : 0);
+  }, [event?.closesAt]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -22,12 +27,11 @@ export default function EventDetailHero({ event }) {
   const status = event?.status || "OPEN";
   const spotPrice = event?.currentPrice || "24,187.65";
   const change = event?.change || "+0.84%";
-  const prizePoolInr = event?.prizePoolInr || "₹1.0L";
-  const prizePoolUsdt = event?.prizePoolUsdt || "13628.27";
-  const entryInr = event?.entryInr || "₹199";
-  const entryUsdt = event?.entryUsdt || "2.71 USDT";
+  const prizePool = `${Number(event?.prizePoolCredits || 0).toLocaleString("en-IN")} Credits`;
+  const entryCredits = `${Number(event?.entryCredits || 0).toLocaleString("en-IN")} Credits`;
   const players = event?.players ? Number(event?.players).toLocaleString() : "8,431";
   const fill = event?.fillPercent || 84;
+  const capacity = event?.playerCapacity ? Number(event.playerCapacity).toLocaleString("en-IN") : "--";
 
   return (
     <View style={styles.container}>
@@ -48,7 +52,7 @@ export default function EventDetailHero({ event }) {
               <Text style={styles.openPillText}>{status}</Text>
             </View>
           </View>
-          <Text style={styles.navSub}>Index • NSE India</Text>
+          <Text style={styles.navSub}>{event?.instrument?.category || "Index"} • {event?.instrument?.exchange || "Market"}</Text>
         </View>
 
         <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
@@ -66,15 +70,13 @@ export default function EventDetailHero({ event }) {
         </View>
 
         <View style={styles.prizeRight}>
-          <Text style={styles.prizePoolText}>{prizePoolInr}</Text>
-          <Text style={styles.prizePoolLabel}>PRIZE POOL</Text>
+          <Text style={styles.prizePoolText}>{prizePool}</Text>
+          <Text style={styles.prizePoolLabel}>DEMO PRIZE POOL</Text>
           <View style={styles.usdtCapsule}>
             <View style={styles.usdtIconCircle}>
               <Text style={styles.usdtIconText}>₮</Text>
             </View>
-            <Text style={styles.usdtAmountText}>
-              {prizePoolUsdt} {prizePoolUsdt.includes("USDT") ? "" : "USDT"}
-            </Text>
+            <Text style={styles.usdtAmountText}>Non-withdrawable</Text>
           </View>
         </View>
       </View>
@@ -108,11 +110,11 @@ export default function EventDetailHero({ event }) {
       <View style={styles.metricsGrid}>
         <View style={styles.metricItem}>
           <View style={styles.metricLabelRow}>
-            <Text style={styles.metricIcon}>₹</Text>
+            <Text style={styles.metricIcon}>◈</Text>
             <Text style={styles.metricTitle}>ENTRY</Text>
           </View>
-          <Text style={styles.metricVal}>{entryInr}</Text>
-          <Text style={styles.metricSub}>{entryUsdt}</Text>
+          <Text style={styles.metricVal}>{entryCredits}</Text>
+          <Text style={styles.metricSub}>Demo only</Text>
         </View>
 
         <View style={styles.metricDivider} />
@@ -123,7 +125,7 @@ export default function EventDetailHero({ event }) {
             <Text style={styles.metricTitle}>PLAYERS</Text>
           </View>
           <Text style={styles.metricVal}>{players}</Text>
-          <Text style={styles.metricSub}>of 10,000</Text>
+          <Text style={styles.metricSub}>of {capacity}</Text>
         </View>
 
         <View style={styles.metricDivider} />
@@ -144,8 +146,8 @@ export default function EventDetailHero({ event }) {
             <Ionicons name="trophy-outline" size={11} color="#00C987" />
             <Text style={styles.metricTitle}>MAX WIN</Text>
           </View>
-          <Text style={styles.metricVal}>₹400K</Text>
-          <Text style={styles.metricSub}>5448.11 USDT</Text>
+          <Text style={styles.metricVal}>{prizePool}</Text>
+          <Text style={styles.metricSub}>Demo credits</Text>
         </View>
       </View>
 

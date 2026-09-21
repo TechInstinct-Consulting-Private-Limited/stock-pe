@@ -8,6 +8,9 @@ const kycRoutes = require("./routes/kyc.routes");
 const walletRoutes = require("./routes/wallet.routes");
 const walletPaymentsRoutes = require("./routes/wallet-payments.routes");
 const onboardingRoutes = require("./routes/onboarding.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
+const demoContestRoutes = require("./routes/demo-contest.routes");
+const adminContestRoutes = require("./routes/admin-contest.routes");
 const {
     errorHandler,
     notFoundHandler,
@@ -31,6 +34,9 @@ app.use("/api/kyc", kycRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/wallet/payments", walletPaymentsRoutes);
 app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/demo-contests", demoContestRoutes);
+app.use("/api/admin", adminContestRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
