@@ -170,3 +170,9 @@ export function linkUsdtWallet(network, address) {
         body: JSON.stringify({ network, address }),
     });
 }
+
+export function getLiveIndices(refresh = false) {
+    const query = refresh ? "?refresh=true" : "";
+    return request(`/market/indices${query}`);
+}
+

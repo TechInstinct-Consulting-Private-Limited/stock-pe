@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -6,64 +6,84 @@ import {
   Text,
   View,
 } from "react-native";
+import { getLiveIndices } from "../services/api";
+
+const DEFAULT_INDICES = [
+  {
+    symbol: "NIFTY 50",
+    value: "24,187.65",
+    change: "+0.84%",
+    isPositive: true,
+  },
+  {
+    symbol: "SENSEX",
+    value: "79,432.18",
+    change: "-0.31%",
+    isPositive: false,
+  },
+  {
+    symbol: "BANK NIFTY",
+    value: "51,843.25",
+    change: "+1.12%",
+    isPositive: true,
+  },
+  {
+    symbol: "MIDCAP",
+    value: "13,240.50",
+    change: "+0.45%",
+    isPositive: true,
+  },
+  {
+    symbol: "NIFTY IT",
+    value: "38,750.00",
+    change: "+1.65%",
+    isPositive: true,
+  },
+];
 
 export default function MarketTicker() {
   const scrollAnim = useRef(new Animated.Value(0)).current;
+  const [indices, setIndices] = useState(DEFAULT_INDICES);
 
-  const baseIndices = [
-    {
-      symbol: "NIFTY 50",
-      value: "24,187.65",
-      change: "+0.84%",
-      isPositive: true,
-    },
-    {
-      symbol: "SENSEX",
-      value: "79,432.18",
-      change: "-0.31%",
-      isPositive: false,
-    },
-    {
-      symbol: "BANK NIFTY",
-      value: "51,843.25",
-      change: "+1.12%",
-      isPositive: true,
-    },
-    {
-      symbol: "MIDCAP",
-      value: "13,240.50",
-      change: "+0.45%",
-      isPositive: true,
-    },
-    {
-      symbol: "NIFTY IT",
-      value: "38,750.00",
-      change: "+1.65%",
-      isPositive: true,
-    },
-  ];
+  // Fetch real live indices from backend
+  useEffect(() => {
+    let isMounted = true;
 
-  // Repeat 8 times to form an endless ribbon
-  const tickerItems = [
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-  ];
+    async function fetchMarketData() {
+      try {
+        const res = await getLiveIndices();
+        if (isMounted && res?.data && Array.isArray(res.data) && res.data.length > 0) {
+          setIndices(res.data);
+        }
+      } catch (err) {
+        console.log("[MarketTicker] Live sync notice:", err?.message || err);
+      }
+    }
+
+    fetchMarketData();
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchMarketData, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Repeat items to create an uninterrupted continuous ribbon
+  const repeatCount = Math.max(6, Math.ceil(30 / (indices.length || 1)));
+  const tickerItems = Array(repeatCount).fill(indices).flat();
 
   useEffect(() => {
-    // Universal 100% reliable loop on Web, iOS, and Android
+    // Universal loop on Web, iOS, and Android
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(scrollAnim, {
-          toValue: -1200,
-          duration: 18000,
+          toValue: -1400,
+          duration: 20000,
           easing: Easing.linear,
-          useNativeDriver: false, // Ensures compatibility across React Native Web & Native
+          useNativeDriver: false,
         }),
         Animated.timing(scrollAnim, {
           toValue: 0,
@@ -76,7 +96,7 @@ export default function MarketTicker() {
     animation.start();
 
     return () => animation.stop();
-  }, [scrollAnim]);
+  }, [scrollAnim, indices.length]);
 
   return (
     <View style={styles.tickerWrapper}>
@@ -89,8 +109,8 @@ export default function MarketTicker() {
         ]}
       >
         {tickerItems.map((item, index) => (
-          <View key={`${item.symbol}-${index}`} style={styles.tickerItem}>
-            <Text style={styles.symbolText}>{item.symbol}</Text>
+          <View key={`${item.symbol || item.rawSymbol}-${index}`} style={styles.tickerItem}>
+            <Text style={styles.symbolText}>{item.symbol || item.name}</Text>
             <Text style={styles.valueText}>{item.value}</Text>
             <View
               style={[
@@ -132,7 +152,7 @@ const styles = StyleSheet.create({
   animatedRow: {
     flexDirection: "row",
     alignItems: "center",
-    width: 6000, // Wide track ensuring continuous strip
+    width: 8000, // Wide track ensuring continuous strip
   },
   tickerItem: {
     flexDirection: "row",
