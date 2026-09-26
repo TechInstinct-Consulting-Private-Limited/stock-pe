@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { getDemoDashboard } from "../services/api";
+import { getDemoDashboard, getLiveIndices } from "../services/api";
 
 const FALLBACK_INDICES = [
   {
@@ -27,61 +27,81 @@ const FALLBACK_INDICES = [
     change: "+1.12%",
     isPositive: true,
   },
+  {
+    symbol: "MIDCAP",
+    value: "13,240.50",
+    change: "+0.45%",
+    isPositive: true,
+  },
+  {
+    symbol: "NIFTY IT",
+    value: "38,750.00",
+    change: "+1.65%",
+    isPositive: true,
+  },
 ];
 
 export default function MarketTicker() {
   const scrollAnim = useRef(new Animated.Value(0)).current;
-  const [baseIndices, setBaseIndices] = useState(FALLBACK_INDICES);
+  const [indices, setIndices] = useState(FALLBACK_INDICES);
 
   useEffect(() => {
     let isMounted = true;
 
-    getDemoDashboard("ALL")
-      .then((dashboard) => {
-        if (!isMounted || !dashboard.ticker?.length) return;
+    async function fetchMarketData() {
+      try {
+        const res = await getLiveIndices();
+        if (isMounted && res?.data && Array.isArray(res.data) && res.data.length > 0) {
+          setIndices(res.data);
+        }
+      } catch (err) {
+        // Preserve the existing dashboard ticker as an offline/API fallback.
+        try {
+          const dashboard = await getDemoDashboard("ALL");
+          if (isMounted && dashboard.ticker?.length) {
+            setIndices(
+              dashboard.ticker.map((item) => ({
+                symbol: item.label,
+                value: Number(item.value).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                change: `${Number(item.changePercent).toFixed(2)}%`,
+                isPositive: Number(item.changePercent) >= 0,
+              })),
+            );
+          }
+        } catch (_fallbackError) {
+          // Keep the built-in values during an offline or initial API failure.
+        }
+        console.log("[MarketTicker] Live sync notice:", err?.message || err);
+      }
+    }
 
-        setBaseIndices(
-          dashboard.ticker.map((item) => ({
-            symbol: item.label,
-            value: Number(item.value).toLocaleString("en-IN", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }),
-            change: `${Number(item.changePercent).toFixed(2)}%`,
-            isPositive: Number(item.changePercent) >= 0,
-          }))
-        );
-      })
-      .catch(() => {
-        // Keep the in-app fallback during an offline or initial API failure.
-      });
+    fetchMarketData();
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchMarketData, 30000);
 
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 
-  // Repeat 8 times to form an endless ribbon
-  const tickerItems = [
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-    ...baseIndices,
-  ];
+  // Repeat items to create an uninterrupted continuous ribbon
+  const repeatCount = Math.max(6, Math.ceil(30 / (indices.length || 1)));
+  const tickerItems = Array(repeatCount).fill(indices).flat();
 
   useEffect(() => {
-    // Universal 100% reliable loop on Web, iOS, and Android
+    // Universal loop on Web, iOS, and Android
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(scrollAnim, {
-          toValue: -1200,
-          duration: 18000,
+          toValue: -1400,
+          duration: 20000,
           easing: Easing.linear,
-          useNativeDriver: false, // Ensures compatibility across React Native Web & Native
+          useNativeDriver: false,
         }),
         Animated.timing(scrollAnim, {
           toValue: 0,
@@ -94,7 +114,7 @@ export default function MarketTicker() {
     animation.start();
 
     return () => animation.stop();
-  }, [scrollAnim]);
+  }, [scrollAnim, indices.length]);
 
   return (
     <View style={styles.tickerWrapper}>
@@ -107,8 +127,8 @@ export default function MarketTicker() {
         ]}
       >
         {tickerItems.map((item, index) => (
-          <View key={`${item.symbol}-${index}`} style={styles.tickerItem}>
-            <Text style={styles.symbolText}>{item.symbol}</Text>
+          <View key={`${item.symbol || item.rawSymbol}-${index}`} style={styles.tickerItem}>
+            <Text style={styles.symbolText}>{item.symbol || item.name}</Text>
             <Text style={styles.valueText}>{item.value}</Text>
             <View
               style={[
@@ -150,7 +170,7 @@ const styles = StyleSheet.create({
   animatedRow: {
     flexDirection: "row",
     alignItems: "center",
-    width: 6000, // Wide track ensuring continuous strip
+    width: 8000, // Wide track ensuring continuous strip
   },
   tickerItem: {
     flexDirection: "row",

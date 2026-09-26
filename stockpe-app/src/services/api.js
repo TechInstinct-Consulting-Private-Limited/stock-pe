@@ -213,3 +213,8 @@ export function simulateMockWithdrawal(amountUsdt, idempotencyKey) {
         body: JSON.stringify({ amountUsdt, idempotencyKey }),
     });
 }
+
+export function getLiveIndices(refresh = false) {
+    const query = refresh ? "?refresh=true" : "";
+    return request(`/market/indices${query}`);
+}
