@@ -1,4 +1,5 @@
 const pool = require("../config/database");
+const { createNotification } = require("./profile-notification.service");
 
 const CONTEST_STATUSES = new Set(["DRAFT", "SOON", "OPEN", "LIVE", "CLOSED", "SETTLED", "CANCELLED"]);
 const TRANSITIONS = {
@@ -223,6 +224,7 @@ async function settleContest({ adminUserId, publicId, closingValue, settlementNo
                      VALUES ($1,$2,'CONTEST_REWARD',$3)`, [entry.user_id, entry.id, rewardCredits]
                 );
             }
+            await createNotification(client, { userId: entry.user_id, type: isWinner ? "CONTEST_WON" : "CONTEST_LOST", title: isWinner ? "Contest result: You won" : "Contest result: Not this time", message: isWinner ? `${contestResult.rows[0].prize_pool_credits} demo-credit pool was settled. Your reward is ${rewardCredits} credits.` : "Your contest prediction has been settled.", metadata: { publicId, rewardCredits, closingValue: finalValue } });
         }
         await client.query(
             `UPDATE demo_dashboard_contests SET status='SETTLED',settled_at=NOW(),settlement_value=$1,
@@ -266,6 +268,7 @@ async function changeContestStatus({ adminUserId, publicId, status, reason, sett
                      reserved_credits=reserved_credits-$1,updated_at=NOW() WHERE user_id=$2`,
                     [entry.entry_credits, entry.user_id]
                 );
+                await createNotification(client, { userId: entry.user_id, type: "CONTEST_CANCELLED", title: "Contest cancelled", message: `Your ${entry.entry_credits} demo credits were released.`, metadata: { publicId, entryId: entry.id } });
                 await client.query(
                     `INSERT INTO demo_credit_activity (user_id,entry_id,activity_type,amount_credits)
                      VALUES ($1,$2,'CONTEST_RELEASED',$3)`, [entry.user_id, entry.id, entry.entry_credits]

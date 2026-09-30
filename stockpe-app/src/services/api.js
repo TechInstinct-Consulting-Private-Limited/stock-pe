@@ -218,3 +218,27 @@ export function getLiveIndices(refresh = false) {
     const query = refresh ? "?refresh=true" : "";
     return request(`/market/indices${query}`);
 }
+
+export function getProfileMe() {
+    return authenticatedRequest("/profile/me", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function getProfilePredictions(status = "ALL") {
+    return authenticatedRequest(`/profile/predictions?status=${encodeURIComponent(status)}`, { headers: { "Cache-Control": "no-store" } });
+}
+
+export function getProfileWinnings() {
+    return authenticatedRequest("/profile/winnings", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function getProfileNotifications() {
+    return authenticatedRequest("/profile/notifications", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function markProfileNotificationRead(notificationId) {
+    return authenticatedRequest(`/profile/notifications/${encodeURIComponent(notificationId)}/read`, { method: "PATCH" });
+}
+
+export function markAllProfileNotificationsRead() {
+    return authenticatedRequest("/profile/notifications/read-all", { method: "PATCH" });
+}

@@ -1,4 +1,5 @@
 const pool = require("../config/database");
+const { createNotification } = require("./profile-notification.service");
 
 async function withTransaction(work) {
     const client = await pool.connect();
@@ -56,6 +57,7 @@ async function joinDemoContest({ userId, publicId, predictionValue }) {
             `INSERT INTO demo_credit_activity (user_id, entry_id, activity_type, amount_credits)
              VALUES ($1, $2, 'CONTEST_RESERVED', $3)`, [userId, entry.rows[0].id, row.entry_credits]
         );
+        await createNotification(client, { userId, type: "CONTEST_JOINED", title: "Prediction submitted", message: `Your prediction for ${row.title} is active.`, metadata: { contestId: publicId, entryId: entry.rows[0].id } });
         return { entry: { id: entry.rows[0].id, contestId: publicId, contestTitle: row.title, status: entry.rows[0].status, entryCredits: row.entry_credits, predictionValue: entry.rows[0].prediction_value, joinedAt: entry.rows[0].joined_at } };
     });
 }

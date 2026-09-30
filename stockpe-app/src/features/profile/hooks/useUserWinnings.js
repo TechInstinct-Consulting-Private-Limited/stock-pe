@@ -1,11 +1,8 @@
 import { useState, useEffect } from "react";
-import {
-  USER_WINNINGS_DATA,
-  fetchUserWinnings,
-} from "../services/profileService";
+import { fetchUserWinnings } from "../services/profileService";
 
 export function useUserWinnings() {
-  const [winningsData, setWinningsData] = useState(USER_WINNINGS_DATA);
+  const [winningsData, setWinningsData] = useState({ totalRewardCredits: 0, winCount: 0, topWins: [] });
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {

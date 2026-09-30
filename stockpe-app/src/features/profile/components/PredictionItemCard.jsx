@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function PredictionItemCard({ prediction }) {
-  const isLive = prediction.status === "LIVE";
+  const isLive = prediction.status === "ACTIVE";
   const isWon = prediction.status === "WON";
   const isLost = prediction.status === "LOST";
 
@@ -54,11 +54,11 @@ export default function PredictionItemCard({ prediction }) {
               prediction.choice === "YES" ? styles.yesText : styles.noText,
             ]}
           >
-            PREDICTION: {prediction.choice}
+            PREDICTION: {prediction.predictionValue ?? "—"}
           </Text>
         </View>
         <Text style={styles.qtyText}>
-          {prediction.quantity} Contracts @ ₹{prediction.avgPrice}
+          Joined {prediction.joinedAt}
         </Text>
       </View>
 
@@ -67,34 +67,34 @@ export default function PredictionItemCard({ prediction }) {
       {/* Financials Row */}
       <View style={styles.bottomRow}>
         <View>
-          <Text style={styles.metaLabel}>INVESTED</Text>
-          <Text style={styles.metaVal}>₹{prediction.investedInr}</Text>
+          <Text style={styles.metaLabel}>ENTRY</Text>
+          <Text style={styles.metaVal}>{prediction.entryCredits} credits</Text>
         </View>
 
         <View>
           <Text style={styles.metaLabel}>
-            {isLive ? "CURRENT VALUE" : "PAYOUT"}
+            {isLive ? "STATUS" : "CLOSING VALUE"}
           </Text>
           <Text style={styles.metaVal}>
-            ₹{isLive ? prediction.currentValueInr : prediction.payoutInr}
+            {isLive ? "Active" : prediction.settlementValue ?? "—"}
           </Text>
         </View>
 
         <View style={styles.pnlBox}>
-          <Text style={styles.metaLabel}>RETURNS (P&L)</Text>
+          <Text style={styles.metaLabel}>DEMO REWARD</Text>
           <View style={styles.pnlRow}>
             <Ionicons
-              name={prediction.isProfit ? "trending-up" : "trending-down"}
+              name={isWon ? "trophy-outline" : "remove-outline"}
               size={14}
-              color={prediction.isProfit ? "#00C987" : "#EF4444"}
+              color={isWon ? "#00C987" : "#64748B"}
             />
             <Text
               style={[
                 styles.pnlText,
-                { color: prediction.isProfit ? "#00C987" : "#EF4444" },
+                { color: isWon ? "#00C987" : "#64748B" },
               ]}
             >
-              {prediction.pnlInr >= 0 ? `+₹${prediction.pnlInr}` : `-₹${Math.abs(prediction.pnlInr)}`} ({prediction.pnlPercent})
+              +{prediction.rewardCredits} credits
             </Text>
           </View>
         </View>

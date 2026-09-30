@@ -12,6 +12,7 @@ const dashboardRoutes = require("./routes/dashboard.routes");
 const demoContestRoutes = require("./routes/demo-contest.routes");
 const adminContestRoutes = require("./routes/admin-contest.routes");
 const marketRoutes = require("./routes/market.routes");
+const profileRoutes = require("./routes/profile.routes");
 const {
     errorHandler,
     notFoundHandler,
@@ -39,6 +40,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/demo-contests", demoContestRoutes);
 app.use("/api/admin", adminContestRoutes);
 app.use("/api/market", marketRoutes);
+app.use("/api/profile", profileRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
