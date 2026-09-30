@@ -5,7 +5,8 @@ function toNumber(value) { return Number(value || 0); }
 async function getMe(userId) {
     const result = await pool.query(
         `SELECT u.mobile, u.mobile_verified, u.created_at,
-                EXISTS(SELECT 1 FROM aadhaar_kyc_verifications k WHERE k.user_id=u.id AND k.status='verified') AS kyc_verified,
+                k.full_name AS verified_name,
+                (k.id IS NOT NULL) AS kyc_verified,
                 EXISTS(SELECT 1 FROM usdt_wallets w WHERE w.user_id=u.id) AS wallet_linked,
                 COUNT(e.id)::int AS total_contests,
                 COUNT(e.id) FILTER (WHERE e.status='ACTIVE')::int AS active_contests,
@@ -13,6 +14,11 @@ async function getMe(userId) {
                 COUNT(e.id) FILTER (WHERE e.status='LOST')::int AS lost_contests,
                 COALESCE(SUM(e.reward_credits) FILTER (WHERE e.status='WON'), 0)::int AS total_reward_credits
          FROM users u
+         LEFT JOIN LATERAL (
+            SELECT id, full_name FROM aadhaar_kyc_verifications
+            WHERE user_id=u.id AND status='verified'
+            ORDER BY verified_at DESC LIMIT 1
+         ) k ON TRUE
          LEFT JOIN demo_contest_entries e ON e.user_id=u.id
          WHERE u.id=$1
          GROUP BY u.id`, [userId],
@@ -21,7 +27,7 @@ async function getMe(userId) {
     if (!row) throw Object.assign(new Error("User was not found"), { statusCode: 404, isOperational: true });
     const settled = toNumber(row.won_contests) + toNumber(row.lost_contests);
     return {
-        user: { displayName: "StockPe Member", mobile: row.mobile, joinedAt: row.created_at, mobileVerified: row.mobile_verified, kycVerified: row.kyc_verified, walletLinked: row.wallet_linked },
+        user: { displayName: row.verified_name || null, mobile: row.mobile, joinedAt: row.created_at, mobileVerified: row.mobile_verified, kycVerified: row.kyc_verified, walletLinked: row.wallet_linked },
         stats: { totalContests: toNumber(row.total_contests), activeContests: toNumber(row.active_contests), wonContests: toNumber(row.won_contests), lostContests: toNumber(row.lost_contests), winRate: settled ? Math.round((toNumber(row.won_contests) / settled) * 100) : 0, totalRewardCredits: toNumber(row.total_reward_credits) },
     };
 }

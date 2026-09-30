@@ -18,6 +18,12 @@ export default function ProfileScreen() {
   const user = profile?.user;
   const stats = profile?.stats;
   const initials = user?.displayName?.split(" ").map((part) => part[0]).join("").slice(0, 2) || "SP";
+  const setupPending = user && (!user.kycVerified || !user.walletLinked);
+  const setupMessage = !user?.kycVerified && !user?.walletLinked
+    ? "Complete Aadhaar KYC and link your demo wallet to finish setup."
+    : !user?.kycVerified
+      ? "Aadhaar KYC is pending. Complete verification to finish setup."
+      : "Demo wallet link is pending. Link your wallet to finish setup.";
 
   const handleLogout = async () => {
     await removeAuthToken();
@@ -89,7 +95,7 @@ export default function ProfileScreen() {
 
             {/* Name & Details */}
             <View style={styles.profileDetails}>
-              <Text style={styles.userName}>{user?.displayName || "StockPe Member"}</Text>
+              <Text style={styles.userName}>{user?.displayName || "Complete Aadhaar KYC"}</Text>
               <Text style={styles.userPhone}>{user?.mobile ? `+91-${user.mobile}` : "Loading profile…"}</Text>
 
               {/* Badges */}
@@ -219,6 +225,18 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {setupPending ? (
+          <TouchableOpacity
+            style={styles.setupWarning}
+            activeOpacity={0.8}
+            onPress={() => router.push(!user?.kycVerified ? "/profile/kyc" : "/usdt-wallet")}
+          >
+            <Ionicons name="alert-circle-outline" size={18} color="#B45309" />
+            <Text style={styles.setupWarningText}>{setupMessage}</Text>
+            <Ionicons name="chevron-forward" size={17} color="#B45309" />
+          </TouchableOpacity>
+        ) : null}
+
         {/* Menu Items */}
         <View style={styles.menuContainer}>
           {menuItems.map((item) => (
@@ -290,6 +308,25 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.06)",
+  },
+  setupWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    marginBottom: 14,
+  },
+  setupWarningText: {
+    flex: 1,
+    color: "#92400E",
+    fontSize: 11.5,
+    fontWeight: "700",
+    lineHeight: 16,
   },
   profileMainRow: {
     flexDirection: "row",
