@@ -3,6 +3,9 @@ const appConfig = require("./app.json");
 const config = appConfig.expo;
 const isReviewBuild = process.env.STOCKPE_REVIEW_BUILD === "true";
 const easProjectId = "6a8c5f98-6246-469a-9c78-c636426926c9";
+const reviewApiUrl = isReviewBuild
+  ? "http://ec2-13-126-195-235.ap-south-1.compute.amazonaws.com/api"
+  : undefined;
 
 module.exports = {
   expo: {
@@ -10,6 +13,7 @@ module.exports = {
     extra: {
       ...config.extra,
       eas: { projectId: easProjectId },
+      ...(reviewApiUrl ? { apiBaseUrl: reviewApiUrl } : {}),
     },
     updates: {
       ...config.updates,

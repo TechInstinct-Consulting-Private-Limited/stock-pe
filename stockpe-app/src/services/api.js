@@ -3,7 +3,10 @@ import { Platform } from "react-native";
 import { getAuthToken } from "./authStorage";
 
 function resolveApiBaseUrl() {
-    const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
+    const configuredUrl = (
+        process.env.EXPO_PUBLIC_API_URL ||
+        Constants.expoConfig?.extra?.apiBaseUrl
+    )?.replace(/\/$/, "");
 
     if (Platform.OS === "web") {
         return configuredUrl || "http://localhost:5000/api";
