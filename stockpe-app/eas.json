@@ -10,6 +10,11 @@
     },
     "preview": {
       "distribution": "internal",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://13.126.195.235.nip.io/api",
+        "STOCKPE_REVIEW_BUILD": "true"
+      },
       "android": {
         "buildType": "apk"
       },

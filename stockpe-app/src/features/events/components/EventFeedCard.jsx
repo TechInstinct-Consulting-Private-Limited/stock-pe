@@ -9,14 +9,27 @@ export default function EventFeedCard({ item }) {
   };
 
   const fill = item.fillPercent || 84;
-  const prizeInr = item.prizePoolInr || "₹1.0L";
-  const prizeUsdt = item.prizePoolUsdt || "13628.27";
-  const entryInr = item.entryInr || "₹199";
-  const entryUsdt = item.entryUsdt || "2.71 USDT";
+  const prizeInr = item.prizePool || item.prizePoolInr || "₹1.0L";
+  const prizeLabel = item.prizePoolLabel || "PRIZE POOL";
+  const entryInr = item.entry || item.entryInr || "₹199";
+  const entryLabel = item.entryLabel || "ENTRY";
+  const entrySubLabel = item.entrySubLabel || item.entryUsdt || "2.71 USDT";
   const players = item.players ? Number(item.players).toLocaleString() : "8,431";
   const closesIn = item.closesIn || "00:00:00";
   const changeStr = item.change ? item.change.replace(/[+-]/g, "") : "0.84%";
   const isPos = item.isPositive !== false;
+  const statusStyle =
+    item.status === "LIVE"
+      ? styles.statusPillLive
+      : item.status === "SOON"
+        ? styles.statusPillSoon
+        : styles.statusPill;
+  const statusTextStyle =
+    item.status === "LIVE"
+      ? styles.statusTextLive
+      : item.status === "SOON"
+        ? styles.statusTextSoon
+        : styles.statusText;
 
   return (
     <TouchableOpacity
@@ -31,8 +44,8 @@ export default function EventFeedCard({ item }) {
           <View style={styles.leftHeaderBlock}>
             <View style={styles.titleRow}>
               <Text style={styles.title}>{item.title || "NIFTY 50"}</Text>
-              <View style={styles.statusPill}>
-                <Text style={styles.statusText}>{item.status || "OPEN"}</Text>
+              <View style={statusStyle}>
+                <Text style={statusTextStyle}>{item.status || "OPEN"}</Text>
               </View>
             </View>
 
@@ -51,25 +64,16 @@ export default function EventFeedCard({ item }) {
           {/* Top Right: Prize Pool & USDT Badge */}
           <View style={styles.rightHeaderBlock}>
             <Text style={styles.prizePoolAmount}>{prizeInr}</Text>
-            <Text style={styles.prizePoolLabel}>PRIZE POOL</Text>
-
-            <View style={styles.usdtPill}>
-              <View style={styles.usdtIconCircle}>
-                <Text style={styles.usdtIconText}>₮</Text>
-              </View>
-              <Text style={styles.usdtAmountText}>
-                {prizeUsdt} {prizeUsdt.includes("USDT") ? "" : "USDT"}
-              </Text>
-            </View>
+            <Text style={styles.prizePoolLabel}>{prizeLabel}</Text>
           </View>
         </View>
 
         {/* 3 Metrics: ENTRY | PLAYERS | CLOSES */}
         <View style={styles.metricsRow}>
           <View style={styles.metricCol}>
-            <Text style={styles.metricLabel}>ENTRY</Text>
+            <Text style={styles.metricLabel}>{entryLabel}</Text>
             <Text style={styles.metricValue}>{entryInr}</Text>
-            <Text style={styles.metricSub}>{entryUsdt}</Text>
+            <Text style={styles.metricSub}>{entrySubLabel}</Text>
           </View>
 
           <View style={styles.metricCol}>
@@ -85,7 +89,12 @@ export default function EventFeedCard({ item }) {
 
         {/* Progress Bar */}
         <View style={styles.progressBarTrack}>
-          <View style={[styles.progressBarFill, { width: `${fill}%` }]} />
+          <View
+            style={[
+              styles.progressBarFill,
+              { width: `${fill}%`, backgroundColor: item.fillColor || "#00C987" },
+            ]}
+          />
         </View>
 
         {/* Footer: Fill percentage & View Contest Action */}
@@ -147,10 +156,36 @@ const styles = StyleSheet.create({
     paddingVertical: 2.5,
     borderRadius: 12,
   },
+  statusPillLive: {
+    backgroundColor: "#FFF1F2",
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 12,
+  },
+  statusPillSoon: {
+    backgroundColor: "#FFFBEB",
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 12,
+  },
   statusText: {
     fontSize: 10.5,
     fontWeight: "900",
     color: "#00C987",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  statusTextLive: {
+    fontSize: 10.5,
+    fontWeight: "900",
+    color: "#E11D48",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  statusTextSoon: {
+    fontSize: 10.5,
+    fontWeight: "900",
+    color: "#D97706",
     letterSpacing: 0.5,
     textTransform: "uppercase",
   },

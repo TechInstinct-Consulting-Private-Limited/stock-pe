@@ -268,7 +268,7 @@ export default function UsdtWallet() {
                     </TouchableOpacity>
 
                     <Text style={styles.footnote}>
-                        This wallet will receive your contest winnings instantly
+                        Demo wallet linking only. Deposits, withdrawals, and payouts are unavailable.
                     </Text>
                 </ScrollView>
             </KeyboardAvoidingView>

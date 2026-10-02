@@ -6,9 +6,9 @@ import {
   Text,
   View,
 } from "react-native";
-import { getLiveIndices } from "../services/api";
+import { getDemoDashboard, getLiveIndices } from "../services/api";
 
-const DEFAULT_INDICES = [
+const FALLBACK_INDICES = [
   {
     symbol: "NIFTY 50",
     value: "24,187.65",
@@ -43,9 +43,8 @@ const DEFAULT_INDICES = [
 
 export default function MarketTicker() {
   const scrollAnim = useRef(new Animated.Value(0)).current;
-  const [indices, setIndices] = useState(DEFAULT_INDICES);
+  const [indices, setIndices] = useState(FALLBACK_INDICES);
 
-  // Fetch real live indices from backend
   useEffect(() => {
     let isMounted = true;
 
@@ -56,6 +55,25 @@ export default function MarketTicker() {
           setIndices(res.data);
         }
       } catch (err) {
+        // Preserve the existing dashboard ticker as an offline/API fallback.
+        try {
+          const dashboard = await getDemoDashboard("ALL");
+          if (isMounted && dashboard.ticker?.length) {
+            setIndices(
+              dashboard.ticker.map((item) => ({
+                symbol: item.label,
+                value: Number(item.value).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                change: `${Number(item.changePercent).toFixed(2)}%`,
+                isPositive: Number(item.changePercent) >= 0,
+              })),
+            );
+          }
+        } catch (_fallbackError) {
+          // Keep the built-in values during an offline or initial API failure.
+        }
         console.log("[MarketTicker] Live sync notice:", err?.message || err);
       }
     }

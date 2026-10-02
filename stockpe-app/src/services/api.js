@@ -3,30 +3,34 @@ import { Platform } from "react-native";
 import { getAuthToken } from "./authStorage";
 
 function resolveApiBaseUrl() {
-    // 1. If running in Web browser
+    const configuredUrl = (
+        process.env.EXPO_PUBLIC_API_URL ||
+        Constants.expoConfig?.extra?.apiBaseUrl
+    )?.replace(/\/$/, "");
+
     if (Platform.OS === "web") {
-        if (typeof window !== "undefined" && window.location) {
-            const hostname = window.location.hostname;
-            if (hostname === "localhost" || hostname === "127.0.0.1") {
-                return "http://localhost:5000/api";
-            }
-        }
-        if (process.env.EXPO_PUBLIC_API_URL) {
-            return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, "");
-        }
-        return "http://localhost:5000/api";
+        return configuredUrl || "http://localhost:5000/api";
     }
 
-    // 2. If running on mobile via Expo Go, dynamically use the bundler host IP
-    const hostUri = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || Constants.manifest2?.extra?.expoClient?.hostUri;
+    const hostUri = Constants.expoConfig?.hostUri;
     const host = hostUri?.split(":")[0];
+
+    if (configuredUrl) {
+        const usesLoopbackHost =
+            /^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(configuredUrl);
+
+        if (Platform.OS !== "web" && usesLoopbackHost && host) {
+            return configuredUrl.replace(
+                /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
+                `$1${host}`,
+            );
+        }
+
+        return configuredUrl;
+    }
 
     if (host) {
         return `http://${host}:5000/api`;
-    }
-
-    if (process.env.EXPO_PUBLIC_API_URL) {
-        return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, "");
     }
 
     if (Platform.OS === "android") {
@@ -36,53 +40,38 @@ function resolveApiBaseUrl() {
     return "http://localhost:5000/api";
 }
 
-class ApiError extends Error { }
+const API_BASE_URL = resolveApiBaseUrl();
+
+class ApiError extends Error {}
 
 export function getUserFacingError(
     error,
-    fallback = "Something went wrong. Please try again."
+    fallback = "Something went wrong. Please try again.",
 ) {
-    if (!error) return fallback;
-    if (typeof error === "string") return error;
-    return error.message || fallback;
+    return error instanceof ApiError ? error.message : fallback;
 }
 
 async function request(path, options = {}) {
-    const baseUrl = resolveApiBaseUrl();
     let response;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
-
     try {
-        console.log(`[API Request] ${options.method || "GET"} ${baseUrl}${path}`);
-        response = await fetch(`${baseUrl}${path}`, {
+        response = await fetch(`${API_BASE_URL}${path}`, {
             ...options,
-            signal: controller.signal,
             headers: {
                 "Content-Type": "application/json",
                 ...options.headers,
             },
         });
-    } catch (error) {
-        if (error.name === "AbortError") {
-            throw new ApiError(
-                `Connection timed out connecting to ${baseUrl}. Check your server and network.`
-            );
-        }
+    } catch (_error) {
         throw new ApiError(
-            `Unable to connect to backend at ${baseUrl}. Ensure backend server is running.`
+            "Unable to connect. Check your internet connection and try again.",
         );
-    } finally {
-        clearTimeout(timeoutId);
     }
 
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        throw new ApiError(
-            data.message || "Request failed. Please try again."
-        );
+        throw new ApiError(data.message || "Request failed. Please try again.");
     }
 
     return data;
@@ -132,12 +121,13 @@ async function authenticatedRequest(path, options = {}) {
     });
 }
 
-export function requestAadhaarOtp(aadhaarNumber, consent = true) {
+export function requestAadhaarOtp(aadhaarNumber, consent, fullName) {
     return authenticatedRequest("/kyc/aadhaar/request-otp", {
         method: "POST",
         body: JSON.stringify({
             aadhaarNumber,
             consent,
+            ...(fullName ? { fullName } : {}),
         }),
     });
 }
@@ -149,7 +139,7 @@ export function verifyAadhaarOtp(verificationId, otp) {
     });
 }
 
-export function verifyAadhaarSecureQr(payload, consent = true) {
+export function verifyAadhaarSecureQr(payload, consent) {
     return authenticatedRequest("/kyc/aadhaar/verify-secure-qr", {
         method: "POST",
         body: JSON.stringify({ payload, consent }),
@@ -160,8 +150,39 @@ export function getAadhaarKycStatus() {
     return authenticatedRequest("/kyc/aadhaar/status");
 }
 
+export function getDemoDashboard(status = "ALL") {
+    return request(`/dashboard?status=${encodeURIComponent(status)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function getDemoContest(publicId) {
+    return request(`/dashboard/contests/${encodeURIComponent(publicId)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function getMyDemoContests(status = "ALL") {
+    return authenticatedRequest(`/demo-contests/mine?status=${encodeURIComponent(status)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function joinDemoContest(publicId, predictionValue) {
+    return authenticatedRequest(`/demo-contests/${encodeURIComponent(publicId)}/join`, {
+        method: "POST",
+        body: JSON.stringify(predictionValue === undefined ? {} : { predictionValue }),
+    });
+}
+
 export function getUsdtWallet() {
     return authenticatedRequest("/wallet/usdt");
+}
+
+export function getOnboardingStatus() {
+    return authenticatedRequest("/onboarding/status", {
+        headers: { "Cache-Control": "no-store" },
+    });
 }
 
 export function linkUsdtWallet(network, address) {
@@ -171,8 +192,57 @@ export function linkUsdtWallet(network, address) {
     });
 }
 
+export function getWalletPaymentSummary() {
+    return authenticatedRequest("/wallet/payments/summary", {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function createMockDepositAddress() {
+    return authenticatedRequest("/wallet/payments/mock/deposit-address", {
+        method: "POST",
+    });
+}
+
+export function simulateMockDeposit(amountUsdt) {
+    return authenticatedRequest("/wallet/payments/mock/deposits", {
+        method: "POST",
+        body: JSON.stringify({ amountUsdt }),
+    });
+}
+
+export function simulateMockWithdrawal(amountUsdt, idempotencyKey) {
+    return authenticatedRequest("/wallet/payments/mock/withdrawals", {
+        method: "POST",
+        body: JSON.stringify({ amountUsdt, idempotencyKey }),
+    });
+}
+
 export function getLiveIndices(refresh = false) {
     const query = refresh ? "?refresh=true" : "";
     return request(`/market/indices${query}`);
 }
 
+export function getProfileMe() {
+    return authenticatedRequest("/profile/me", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function getProfilePredictions(status = "ALL") {
+    return authenticatedRequest(`/profile/predictions?status=${encodeURIComponent(status)}`, { headers: { "Cache-Control": "no-store" } });
+}
+
+export function getProfileWinnings() {
+    return authenticatedRequest("/profile/winnings", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function getProfileNotifications() {
+    return authenticatedRequest("/profile/notifications", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function markProfileNotificationRead(notificationId) {
+    return authenticatedRequest(`/profile/notifications/${encodeURIComponent(notificationId)}/read`, { method: "PATCH" });
+}
+
+export function markAllProfileNotificationsRead() {
+    return authenticatedRequest("/profile/notifications/read-all", { method: "PATCH" });
+}

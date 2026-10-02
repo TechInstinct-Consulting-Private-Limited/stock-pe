@@ -30,6 +30,7 @@ export default function DepositScreen() {
     handleSelectQuickAmount,
     selectedNetwork,
     setSelectedNetwork,
+    depositAddress,
     txHash,
     setTxHash,
     promoCoupons,
@@ -127,6 +128,7 @@ export default function DepositScreen() {
           <PaymentMethodSelector
             selectedNetwork={selectedNetwork}
             onSelectNetwork={setSelectedNetwork}
+            depositAddress={depositAddress?.address || ""}
             txHash={txHash}
             setTxHash={setTxHash}
           />
@@ -135,7 +137,7 @@ export default function DepositScreen() {
           <View style={styles.securityBox}>
             <Ionicons name="shield-checkmark" size={18} color="#00C987" />
             <Text style={styles.securityText}>
-              Decentralized On-Chain Verification • Instant Crediting
+              Mock TRC20 verification • Demo balance crediting
             </Text>
           </View>
 

@@ -28,12 +28,6 @@ export default function WithdrawScreen() {
     accounts,
     selectedAccountId,
     setSelectedAccountId,
-    selectedNetwork,
-    setSelectedNetwork,
-    customAddress,
-    setCustomAddress,
-    activeNetwork,
-    gasFeeUsdt,
     netPayoutUsdt,
     tdsCalculation,
     isValidAmount,
@@ -44,7 +38,6 @@ export default function WithdrawScreen() {
     withdrawResult,
     showSuccessModal,
     setShowSuccessModal,
-    showAddAccountModal,
     setShowAddAccountModal,
   } = useWalletWithdraw();
 
@@ -164,7 +157,7 @@ export default function WithdrawScreen() {
           <View style={styles.complianceBox}>
             <Ionicons name="shield-checkmark-outline" size={18} color="#00C987" />
             <Text style={styles.complianceText}>
-              Crypto payouts are dispatched directly on-chain via smart contracts. Funds arrive after 1-3 network block confirmations.
+              Demo mode only: this payout is recorded in the mock ledger and no blockchain transaction is broadcast.
             </Text>
           </View>
         </ScrollView>

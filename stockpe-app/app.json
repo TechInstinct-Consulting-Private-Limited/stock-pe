@@ -62,16 +62,11 @@
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "9ec95941-e95e-4235-8eb1-bb015170967c"
-      }
+      "router": {}
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {
-      "url": "https://u.expo.dev/9ec95941-e95e-4235-8eb1-bb015170967c"
-    }
+    "updates": {}
   }
 }

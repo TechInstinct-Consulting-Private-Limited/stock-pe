@@ -32,9 +32,19 @@ function assertValidWallet({ network, address }) {
     }
 }
 
+function normalizeAddress(network, address) {
+    // Ethereum-compatible chains do not need checksum casing to identify an
+    // address. Storing them consistently avoids duplicate links caused only
+    // by upper/lower-case differences. TRC20 base58 addresses are case-sensitive.
+    return network === "ERC20" || network === "BEP20"
+        ? address.toLowerCase()
+        : address;
+}
+
 async function linkUsdtWallet({ userId, network, address }) {
-    const trimmedAddress = String(address || "").trim();
-    assertValidWallet({ network, address: trimmedAddress });
+    const suppliedAddress = String(address || "").trim();
+    assertValidWallet({ network, address: suppliedAddress });
+    const normalizedAddress = normalizeAddress(network, suppliedAddress);
 
     const kycResult = await pool.query(
         `SELECT id FROM aadhaar_kyc_verifications
@@ -46,18 +56,46 @@ async function linkUsdtWallet({ userId, network, address }) {
         throw publicError(409, "Complete Aadhaar KYC before linking a wallet");
     }
 
-    const result = await pool.query(
-        `INSERT INTO usdt_wallets (user_id, network, address)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (user_id) DO UPDATE
-            SET network = EXCLUDED.network,
-                address = EXCLUDED.address,
-                updated_at = NOW()
-         RETURNING id, network, address, updated_at`,
-        [userId, network, trimmedAddress]
+    const existingWalletResult = await pool.query(
+        `SELECT id, network, address, updated_at
+         FROM usdt_wallets WHERE user_id = $1 LIMIT 1`,
+        [userId]
     );
+    const existingWallet = existingWalletResult.rows[0];
 
-    return { wallet: result.rows[0] };
+    if (existingWallet) {
+        if (
+            existingWallet.network === network &&
+            normalizeAddress(existingWallet.network, existingWallet.address) ===
+                normalizedAddress
+        ) {
+            return { wallet: existingWallet, alreadyLinked: true };
+        }
+
+        throw publicError(
+            409,
+            "A wallet is already linked. Wallet replacement requires a verified support flow."
+        );
+    }
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO usdt_wallets (user_id, network, address)
+             VALUES ($1, $2, $3)
+             RETURNING id, network, address, updated_at`,
+            [userId, network, normalizedAddress]
+        );
+
+        return { wallet: result.rows[0], alreadyLinked: false };
+    } catch (error) {
+        if (error.code === "23505") {
+            throw publicError(
+                409,
+                "This wallet address is already linked to another account"
+            );
+        }
+        throw error;
+    }
 }
 
 async function getUsdtWallet({ userId }) {

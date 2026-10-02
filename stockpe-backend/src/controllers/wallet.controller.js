@@ -14,7 +14,7 @@ async function getWallet(req, res, next) {
 
 async function linkWallet(req, res, next) {
     try {
-        const { network, address } = req.body;
+        const { network, address } = req.body || {};
         const result = await linkUsdtWallet({
             userId: req.auth.sub,
             network,

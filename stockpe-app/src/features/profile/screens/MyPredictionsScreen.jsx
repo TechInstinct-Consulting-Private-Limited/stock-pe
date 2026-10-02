@@ -20,7 +20,7 @@ export default function MyPredictionsScreen() {
 
   const tabs = [
     { id: "ALL", label: "All Events" },
-    { id: "LIVE", label: `Live (${stats.activeCount})` },
+    { id: "ACTIVE", label: `Active (${stats.activeCount})` },
     { id: "SETTLED", label: "Settled" },
   ];
 
@@ -43,14 +43,14 @@ export default function MyPredictionsScreen() {
         {/* Top Performance Stats Grid */}
         <View style={styles.statsBanner}>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>TOTAL INVESTED</Text>
-            <Text style={styles.statVal}>₹{stats.totalInvested}</Text>
+            <Text style={styles.statLabel}>TOTAL ENTRY</Text>
+            <Text style={styles.statVal}>{stats.totalEntryCredits}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>LIVE PROFIT</Text>
+            <Text style={styles.statLabel}>DEMO REWARD</Text>
             <Text style={[styles.statVal, { color: "#00C987" }]}>
-              +₹{stats.liveProfits}
+              +{stats.totalRewardCredits}
             </Text>
           </View>
           <View style={styles.statDivider} />
@@ -104,7 +104,7 @@ export default function MyPredictionsScreen() {
               <Ionicons name="stats-chart-outline" size={48} color="#CBD5E1" />
               <Text style={styles.emptyTitle}>No Predictions Found</Text>
               <Text style={styles.emptySub}>
-                Join open opinion markets and trade YES/NO contracts to see your active positions here.
+                Join an available demo contest to see your prediction here.
               </Text>
             </View>
           ) : (

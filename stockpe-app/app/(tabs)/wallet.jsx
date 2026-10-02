@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -9,9 +9,17 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { fetchTransactionHistory, fetchWalletSummary, WALLET_SUMMARY_DATA } from "../../src/features/wallet/services/walletService";
 
 export default function WalletScreen() {
   const router = useRouter();
+  const [wallet, setWallet] = useState(WALLET_SUMMARY_DATA);
+  const [liveTransactions, setLiveTransactions] = useState([]);
+
+  useEffect(() => {
+    fetchWalletSummary().then((result) => result.success && setWallet(result.data));
+    fetchTransactionHistory().then((result) => result.success && setLiveTransactions(result.data));
+  }, []);
 
   const quickActions = [
     {
@@ -48,68 +56,18 @@ export default function WalletScreen() {
     },
   ];
 
-  const transactions = [
-    {
-      id: "tx-1",
-      title: "NIFTY IT Win",
-      date: "31 Aug, 11:21 pm",
-      status: "Won",
-      statusBg: "#FEF3C7",
-      statusColor: "#D97706",
-      amountInr: "+₹45,000",
-      amountUsdt: "+612.24 USDT",
-      isCredit: true,
-      icon: "arrow-down-outline",
-    },
-    {
-      id: "tx-2",
-      title: "SENSEX Event Entry",
-      date: "01 Sept, 08:21 pm",
-      status: "Success",
-      statusBg: "#F1F5F9",
-      statusColor: "#64748B",
-      amountInr: "-₹199",
-      amountUsdt: "-2.71 USDT",
-      isCredit: false,
-      icon: "arrow-up-outline",
-    },
-    {
-      id: "tx-3",
-      title: "USDT Deposit",
-      date: "01 Sept, 06:21 pm",
-      status: "Confirmed",
-      statusBg: "#F1F5F9",
-      statusColor: "#64748B",
-      amountInr: "+₹1,000",
-      amountUsdt: "+13.62 USDT",
-      isCredit: true,
-      icon: "arrow-down-outline",
-    },
-    {
-      id: "tx-4",
-      title: "BANK NIFTY Entry",
-      date: "30 Aug, 11:21 pm",
-      status: "Success",
-      statusBg: "#F1F5F9",
-      statusColor: "#64748B",
-      amountInr: "-₹299",
-      amountUsdt: "-4.07 USDT",
-      isCredit: false,
-      icon: "arrow-up-outline",
-    },
-    {
-      id: "tx-5",
-      title: "NIFTY 50 Win",
-      date: "29 Aug, 04:15 pm",
-      status: "Won",
-      statusBg: "#FEF3C7",
-      statusColor: "#D97706",
-      amountInr: "+₹12,500",
-      amountUsdt: "+170.25 USDT",
-      isCredit: true,
-      icon: "arrow-down-outline",
-    },
-  ];
+  const transactions = liveTransactions.map((item) => ({
+    id: item.id,
+    title: item.title,
+    date: item.date,
+    status: item.status,
+    statusBg: "#F1F5F9",
+    statusColor: "#64748B",
+    amountInr: `${item.type === "CREDIT" ? "+" : "-"}₹${item.amountInr.toLocaleString("en-IN")}`,
+    amountUsdt: `${item.type === "CREDIT" ? "+" : "-"}${item.amountUsdt.toFixed(2)} USDT`,
+    isCredit: item.type === "CREDIT",
+    icon: item.type === "CREDIT" ? "arrow-down-outline" : "arrow-up-outline",
+  }));
 
   return (
     <View style={styles.container}>
@@ -128,7 +86,7 @@ export default function WalletScreen() {
           <View style={styles.heroTopRow}>
             <View>
               <Text style={styles.balanceLabel}>TOTAL BALANCE</Text>
-              <Text style={styles.balanceAmount}>₹12,450.00</Text>
+              <Text style={styles.balanceAmount}>₹{wallet.totalBalanceInr.toLocaleString("en-IN")}</Text>
             </View>
 
             {/* USDT Card */}
@@ -136,7 +94,7 @@ export default function WalletScreen() {
               <View style={styles.usdtHeroIcon}>
                 <Text style={styles.usdtHeroIconText}>₮</Text>
               </View>
-              <Text style={styles.usdtHeroValue}>169.57</Text>
+              <Text style={styles.usdtHeroValue}>{wallet.totalBalanceUsdt.toFixed(2)}</Text>
               <Text style={styles.usdtHeroUnit}>USDT</Text>
             </View>
           </View>
@@ -205,7 +163,7 @@ export default function WalletScreen() {
         </View>
 
         <View style={styles.transactionsList}>
-          {transactions.map((tx) => (
+          {transactions.length === 0 ? <Text style={styles.emptyText}>No mock transactions yet. Use Add Funds to test the wallet flow.</Text> : transactions.map((tx) => (
             <TouchableOpacity
               key={tx.id}
               style={styles.txCard}
@@ -444,6 +402,12 @@ const styles = StyleSheet.create({
   },
   transactionsList: {
     gap: 10,
+  },
+  emptyText: {
+    color: "#64748B",
+    fontSize: 13,
+    textAlign: "center",
+    paddingVertical: 20,
   },
   txCard: {
     flexDirection: "row",

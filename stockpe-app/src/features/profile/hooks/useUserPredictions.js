@@ -1,12 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import {
-  USER_PREDICTIONS_DATA,
-  fetchUserPredictions,
-} from "../services/profileService";
+import { fetchUserPredictions } from "../services/profileService";
 
 export function useUserPredictions() {
-  const [activeTab, setActiveTab] = useState("ALL"); // "ALL" | "LIVE" | "SETTLED"
-  const [predictions, setPredictions] = useState(USER_PREDICTIONS_DATA);
+  const [activeTab, setActiveTab] = useState("ALL");
+  const [predictions, setPredictions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -20,19 +17,17 @@ export function useUserPredictions() {
   }, [activeTab]);
 
   const stats = useMemo(() => {
-    const totalInvested = predictions.reduce((acc, p) => acc + (p.investedInr || 0), 0);
-    const liveProfits = predictions
-      .filter((p) => p.status === "LIVE")
-      .reduce((acc, p) => acc + (p.pnlInr || 0), 0);
+    const totalEntryCredits = predictions.reduce((acc, p) => acc + (p.entryCredits || 0), 0);
+    const totalRewardCredits = predictions.reduce((acc, p) => acc + (p.rewardCredits || 0), 0);
     const wonCount = predictions.filter((p) => p.status === "WON").length;
-    const totalSettled = predictions.filter((p) => p.status !== "LIVE").length;
+    const totalSettled = predictions.filter((p) => p.status !== "ACTIVE").length;
     const winRate = totalSettled > 0 ? Math.round((wonCount / totalSettled) * 100) : 0;
 
     return {
-      totalInvested,
-      liveProfits,
+      totalEntryCredits,
+      totalRewardCredits,
       winRate,
-      activeCount: predictions.filter((p) => p.status === "LIVE").length,
+      activeCount: predictions.filter((p) => p.status === "ACTIVE").length,
     };
   }, [predictions]);
 

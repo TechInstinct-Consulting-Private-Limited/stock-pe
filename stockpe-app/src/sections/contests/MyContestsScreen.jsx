@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, radii, spacing, typography } from "../../theme";
+import { colors, radii, spacing } from "../../theme";
 import { useMyContests } from "./contestsHook";
 
 export default function MyContestsScreen() {
@@ -122,7 +122,7 @@ export default function MyContestsScreen() {
             ) : (
               filteredContests.map((item) => {
                 const isWon = item.status.includes("WON");
-                const isLive = item.status === "LIVE";
+                const isLive = item.status === "LIVE" || item.status === "ACTIVE";
                 const isLost = item.status === "LOST";
 
                 return (
@@ -154,7 +154,7 @@ export default function MyContestsScreen() {
                                   isLost && styles.statusBadgeTextLost,
                                 ]}
                               >
-                                {isWon ? "WON 🏆" : isLive ? "LIVE" : "LOST"}
+                                {isWon ? "WON 🏆" : isLive ? "ACTIVE" : "LOST"}
                               </Text>
                             </View>
                           </View>
@@ -185,7 +185,7 @@ export default function MyContestsScreen() {
                         <View style={styles.metricCol}>
                           <Text style={styles.metricHeader}>PREDICTION</Text>
                           <Text style={styles.metricValueBold}>
-                            {item.prediction || "24,850.00"}
+                            {item.prediction || "Not submitted"}
                           </Text>
                         </View>
 
@@ -209,7 +209,7 @@ export default function MyContestsScreen() {
                               { color: isWon ? colors.primary : colors.textPrimary },
                             ]}
                           >
-                            {item.accuracy ? `${item.accuracy.toFixed(2)}%` : "98.50%"}
+                            {item.accuracy === null ? "--" : `${item.accuracy.toFixed(2)}%`}
                           </Text>
                           {isWon && item.rank && (
                             <Text style={styles.rankBadgeText}>
@@ -229,7 +229,7 @@ export default function MyContestsScreen() {
                               { color: isWon ? colors.primary : colors.textMuted },
                             ]}
                           >
-                            {item.accuracy ? `${item.accuracy.toFixed(2)}%` : "98.50%"}
+                            {item.accuracy === null ? "--" : `${item.accuracy.toFixed(2)}%`}
                           </Text>
                         </View>
                         <View style={styles.progressBarTrack}>
@@ -237,7 +237,7 @@ export default function MyContestsScreen() {
                             style={[
                               styles.progressBarFill,
                               {
-                                width: `${Math.min(item.accuracy || 98.5, 100)}%`,
+                                width: `${Math.min(item.accuracy || 0, 100)}%`,
                                 backgroundColor: isWon ? colors.primary : "#94A3B8",
                               },
                             ]}

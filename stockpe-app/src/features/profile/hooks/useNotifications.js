@@ -1,11 +1,8 @@
 import { useState, useEffect } from "react";
-import {
-  NOTIFICATIONS_DATA,
-  fetchNotifications,
-} from "../services/profileService";
+import { fetchNotifications, readAllNotifications, readNotification } from "../services/profileService";
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState(NOTIFICATIONS_DATA);
+  const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -18,11 +15,15 @@ export function useNotifications() {
     });
   }, []);
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
+    const response = await readAllNotifications();
+    if (!response.success) return;
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const handleNotificationPress = (id) => {
+  const handleNotificationPress = async (id) => {
+    const response = await readNotification(id);
+    if (!response.success) return;
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );

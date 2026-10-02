@@ -271,7 +271,7 @@ export default function AadhaarVerification() {
         setFormError("");
 
         try {
-            const result = await requestAadhaarOtp(aadhaarNumber, consent);
+            const result = await requestAadhaarOtp(aadhaarNumber, consent, fullName);
             setVerificationId(result.verificationId);
             router.replace({
                 pathname: "/aadhaar-kyc",
@@ -280,6 +280,7 @@ export default function AadhaarVerification() {
                     mode: mode === "signin" ? "signin" : "signup",
                     verificationId: result.verificationId,
                     aadhaarLastFour: aadhaarNumber.slice(-4),
+                    fullName: fullName.trim(),
                 },
             });
         } catch (error) {

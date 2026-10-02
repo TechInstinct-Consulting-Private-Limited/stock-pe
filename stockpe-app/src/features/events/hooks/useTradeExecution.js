@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { submitTradeOrder } from "../services/eventsService";
 import { calculateOrderMetrics, calculatePricePredictionMetrics } from "../../../utils/calculations";
+import { getMyDemoContests, getUserFacingError, joinDemoContest } from "../../../services/api";
 
 export function useTradeExecution(event) {
   const [tradeMode, setTradeMode] = useState("PRICE_TARGET");
@@ -13,6 +13,7 @@ export function useTradeExecution(event) {
   const [walletBalance, setWalletBalance] = useState(1283.0);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
   const [lastPlacedTrade, setLastPlacedTrade] = useState(null);
+  const [hasJoined, setHasJoined] = useState(false);
 
   useEffect(() => {
     if (event?.spotNumeric) {
@@ -27,6 +28,25 @@ export function useTradeExecution(event) {
       setPricePerUnit(event?.noPrice || 3.8);
     }
   }, [selectedOption, event]);
+
+  useEffect(() => {
+    let mounted = true;
+    getMyDemoContests("ALL")
+      .then((response) => {
+        if (mounted) setHasJoined((response.entries || []).some((entry) => entry.public_id === event?.id));
+      })
+      .catch(() => { if (mounted) setHasJoined(false); });
+    return () => { mounted = false; };
+  }, [event?.id]);
+
+  const canJoin = event?.status === "OPEN" && !hasJoined;
+  const joinMessage = hasJoined
+    ? "ALREADY JOINED"
+    : event?.status === "SOON"
+      ? "OPENS SOON"
+      : event?.status === "OPEN"
+        ? "JOIN CONTEST"
+        : "ENTRY CLOSED";
 
   const metrics = useMemo(() => {
     if (tradeMode === "PRICE_TARGET") {
@@ -43,24 +63,26 @@ export function useTradeExecution(event) {
     setTargetPrice(String(next));
   };
 
-  const handlePlaceOrder = () => {
-    const trade = submitTradeOrder({
-      eventId: event?.id || "nifty-50",
-      tradeMode,
-      targetPrice: tradeMode === "PRICE_TARGET" ? Number(targetPrice) : null,
-      multiplier: metrics?.multiplier || 2.0,
-      delta: metrics?.delta || 0,
-      option: selectedOption,
-      quantity,
-      pricePerUnit: tradeMode === "PRICE_TARGET" ? 10 : pricePerUnit,
-      investedAmount: metrics?.investment || 199,
-      potentialPayout: metrics?.potentialPayout || 400000,
-    });
-
-    setLastPlacedTrade(trade);
-    setWalletBalance((prev) => Math.max(0, prev - (metrics?.investment || 199)));
-    setIsSuccessModalVisible(true);
-    return trade;
+  const handlePlaceOrder = async () => {
+    try {
+      const response = await joinDemoContest(event?.id || "nifty-50", Number(targetPrice));
+      const trade = {
+        tradeId: response.entry.id,
+        eventId: response.entry.contestId,
+        title: response.entry.contestTitle,
+        status: response.entry.status,
+        timestamp: response.entry.joinedAt,
+        targetPrice: Number(targetPrice),
+        option: selectedOption,
+      };
+      setLastPlacedTrade(trade);
+      setHasJoined(true);
+      setWalletBalance((prev) => Math.max(0, prev - response.entry.entryCredits));
+      setIsSuccessModalVisible(true);
+      return trade;
+    } catch (error) {
+      return { error: getUserFacingError(error, "Unable to submit this demo prediction.") };
+    }
   };
 
   const closeSuccessModal = () => {
@@ -85,5 +107,7 @@ export function useTradeExecution(event) {
     lastPlacedTrade,
     handlePlaceOrder,
     closeSuccessModal,
+    canJoin,
+    joinMessage,
   };
 }

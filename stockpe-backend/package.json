@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "test": "node --test",
     "db:check": "node src/scripts/checkDatabase.js",
-    "migrate": "node src/scripts/migrate.js"
+    "migrate": "node src/scripts/migrate.js",
+    "admin:grant": "node src/scripts/grantAdmin.js"
   },
   "keywords": [],
   "author": "",
