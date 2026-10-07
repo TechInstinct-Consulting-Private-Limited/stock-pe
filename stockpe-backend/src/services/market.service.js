@@ -1,7 +1,6 @@
 const YahooFinanceModule = require("yahoo-finance2");
 const YahooFinanceClass = YahooFinanceModule.default || YahooFinanceModule;
 
-// Support both v4 class instantiation and legacy singleton
 let yfInstance;
 try {
   if (typeof YahooFinanceClass === "function" && YahooFinanceClass.prototype) {
@@ -13,16 +12,45 @@ try {
   yfInstance = YahooFinanceClass;
 }
 
-// Map of index symbols to clean display names
-const INDICES_CONFIG = [
-  { symbol: "^NSEI", name: "NIFTY 50", shortName: "NIFTY 50", fallback: { value: "24,187.65", rawValue: 24187.65, change: "+0.84%", isPositive: true } },
-  { symbol: "^BSESN", name: "SENSEX", shortName: "SENSEX", fallback: { value: "79,432.18", rawValue: 79432.18, change: "-0.31%", isPositive: false } },
-  { symbol: "^NSEBANK", name: "BANK NIFTY", shortName: "BANK NIFTY", fallback: { value: "51,843.25", rawValue: 51843.25, change: "+1.12%", isPositive: true } },
-  { symbol: "^CNXIT", name: "NIFTY IT", shortName: "NIFTY IT", fallback: { value: "38,750.00", rawValue: 38750.00, change: "+1.65%", isPositive: true } },
-  { symbol: "NIFTY_MIDCAP_100.NS", name: "NIFTY MIDCAP", shortName: "MIDCAP 100", fallback: { value: "13,240.50", rawValue: 13240.50, change: "+0.45%", isPositive: true } },
-  { symbol: "^CNXAUTO", name: "NIFTY AUTO", shortName: "NIFTY AUTO", fallback: { value: "22,450.10", rawValue: 22450.10, change: "+0.62%", isPositive: true } },
-  { symbol: "^CNXFMCG", name: "NIFTY FMCG", shortName: "NIFTY FMCG", fallback: { value: "58,120.30", rawValue: 58120.30, change: "-0.18%", isPositive: false } },
-  { symbol: "^CNXPHARMA", name: "NIFTY PHARMA", shortName: "NIFTY PHARMA", fallback: { value: "21,680.00", rawValue: 21680.00, change: "+0.95%", isPositive: true } },
+// Popular Indian Market Indices & Stocks
+const DEFAULT_MARKET_SYMBOLS = [
+  // Indices
+  { symbol: "^NSEI", name: "NIFTY 50", type: "INDEX" },
+  { symbol: "^NSEBANK", name: "BANK NIFTY", type: "INDEX" },
+  { symbol: "^BSESN", name: "SENSEX", type: "INDEX" },
+  { symbol: "^CNXIT", name: "NIFTY IT", type: "INDEX" },
+  { symbol: "NIFTY_MIDCAP_100.NS", name: "NIFTY MIDCAP 100", type: "INDEX" },
+  { symbol: "^CNXAUTO", name: "NIFTY AUTO", type: "INDEX" },
+  { symbol: "^CNXFMCG", name: "NIFTY FMCG", type: "INDEX" },
+  { symbol: "^CNXPHARMA", name: "NIFTY PHARMA", type: "INDEX" },
+  { symbol: "^CNXMETAL", name: "NIFTY METAL", type: "INDEX" },
+  { symbol: "^CNXENERGY", name: "NIFTY ENERGY", type: "INDEX" },
+  { symbol: "^CNXPSUBANK", name: "NIFTY PSU BANK", type: "INDEX" },
+  { symbol: "^CNXFINANCE", name: "FIN NIFTY", type: "INDEX" },
+
+  // Top Stocks
+  { symbol: "RELIANCE.NS", name: "Reliance Industries", type: "STOCK" },
+  { symbol: "TCS.NS", name: "Tata Consultancy Services", type: "STOCK" },
+  { symbol: "HDFCBANK.NS", name: "HDFC Bank", type: "STOCK" },
+  { symbol: "INFY.NS", name: "Infosys", type: "STOCK" },
+  { symbol: "ICICIBANK.NS", name: "ICICI Bank", type: "STOCK" },
+  { symbol: "SBIN.NS", name: "State Bank of India", type: "STOCK" },
+  { symbol: "BHARTIARTL.NS", name: "Bharti Airtel", type: "STOCK" },
+  { symbol: "ITC.NS", name: "ITC Limited", type: "STOCK" },
+  { symbol: "LT.NS", name: "Larsen & Toubro", type: "STOCK" },
+  { symbol: "TATAMOTORS.NS", name: "Tata Motors", type: "STOCK" },
+  { symbol: "BAJFINANCE.NS", name: "Bajaj Finance", type: "STOCK" },
+  { symbol: "HINDUNILVR.NS", name: "Hindustan Unilever", type: "STOCK" },
+  { symbol: "WIPRO.NS", name: "Wipro", type: "STOCK" },
+  { symbol: "ADANIENT.NS", name: "Adani Enterprises", type: "STOCK" },
+  { symbol: "MARUTI.NS", name: "Maruti Suzuki", type: "STOCK" },
+  { symbol: "TATASTEEL.NS", name: "Tata Steel", type: "STOCK" },
+  { symbol: "TITAN.NS", name: "Titan Company", type: "STOCK" },
+  { symbol: "ZOMATO.NS", name: "Zomato", type: "STOCK" },
+  { symbol: "JIOFIN.NS", name: "Jio Financial Services", type: "STOCK" },
+  { symbol: "SUNPHARMA.NS", name: "Sun Pharma", type: "STOCK" },
+  { symbol: "KOTAKBANK.NS", name: "Kotak Mahindra Bank", type: "STOCK" },
+  { symbol: "AXISBANK.NS", name: "Axis Bank", type: "STOCK" },
 ];
 
 let cache = {
@@ -30,94 +58,73 @@ let cache = {
   lastUpdated: 0,
 };
 
-const CACHE_TTL_MS = 20 * 1000; // 20-second cache
+const CACHE_TTL_MS = 10 * 1000; // 10-second cache
 
-function formatQuote(quote, config) {
-  const currentPrice = quote?.regularMarketPrice ?? quote?.regularMarketPreviousClose ?? config.fallback.rawValue;
-  const change = quote?.regularMarketChange ?? 0;
-  const percentChange = quote?.regularMarketChangePercent ?? 0;
+// Suppress survey notices
+try {
+  if (yfInstance?.setGlobalConfig) {
+    yfInstance.setGlobalConfig({ suppressNotices: ["yahooSurvey"] });
+  }
+} catch {}
+
+function formatYahooQuote(quote, defaultName, type = "STOCK") {
+  if (!quote) return null;
+  const rawSym = quote.symbol || "";
+  const currentPrice = quote.regularMarketPrice ?? quote.regularMarketPreviousClose ?? 0;
+  const change = quote.regularMarketChange ?? 0;
+  const percentChange = quote.regularMarketChangePercent ?? 0;
   const isPositive = change >= 0;
 
   return {
-    symbol: config.shortName || quote.symbol,
-    rawSymbol: config.symbol,
-    name: config.name || config.symbol,
+    symbol: rawSym.replace(/\.NS|\.BO|\^/g, ""),
+    rawSymbol: rawSym,
+    name: quote.shortName || quote.longName || defaultName || rawSym,
+    type: type,
     value: Number(currentPrice).toLocaleString("en-IN", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }),
-    rawValue: currentPrice,
+    rawValue: Number(currentPrice),
     changeValue: (isPositive ? "+" : "") + Number(change).toFixed(2),
     change: (isPositive ? "+" : "") + Number(percentChange).toFixed(2) + "%",
-    percentChange: percentChange,
+    percentChange: Number(percentChange),
     isPositive: isPositive,
-    marketState: quote?.marketState || "REGULAR",
-    currency: quote?.currency || "INR",
+    marketState: quote.marketState || "REGULAR",
+    currency: quote.currency || "INR",
+    provider: "yahoo",
   };
 }
 
-function getFallbackList() {
-  return INDICES_CONFIG.map((config) => ({
-    symbol: config.shortName,
-    rawSymbol: config.symbol,
-    name: config.name,
-    value: config.fallback.value,
-    rawValue: config.fallback.rawValue,
-    changeValue: "+0.00",
-    change: config.fallback.change,
-    percentChange: 0,
-    isPositive: config.fallback.isPositive,
-    marketState: "CLOSED",
-    currency: "INR",
-  }));
-}
-
 /**
- * Fetch real live stock indices
+ * Fetch all live stock indices and popular stocks via Yahoo Finance
  */
 async function getLiveIndices(forceRefresh = false) {
   const now = Date.now();
-  if (!forceRefresh && cache.data && (now - cache.lastUpdated) < CACHE_TTL_MS) {
+  if (!forceRefresh && cache.data && now - cache.lastUpdated < CACHE_TTL_MS) {
     return {
       indices: cache.data,
       cached: true,
+      provider: "yahoo",
       lastUpdated: new Date(cache.lastUpdated).toISOString(),
     };
   }
 
   try {
-    const symbols = INDICES_CONFIG.map(i => i.symbol);
-
-    // Fetch quotes in parallel
     const quotes = await Promise.allSettled(
-      symbols.map(sym => yfInstance.quote(sym))
+      DEFAULT_MARKET_SYMBOLS.map((item) => yfInstance.quote(item.symbol))
     );
 
     const formattedList = [];
 
     quotes.forEach((result, idx) => {
-      const config = INDICES_CONFIG[idx];
+      const config = DEFAULT_MARKET_SYMBOLS[idx];
       if (result.status === "fulfilled" && result.value) {
-        formattedList.push(formatQuote(result.value, config));
+        const item = formatYahooQuote(result.value, config.name, config.type);
+        if (item) formattedList.push(item);
       } else {
-        const prev = cache.data?.find(d => d.rawSymbol === config.symbol);
+        const prev = cache.data?.find((d) => d.rawSymbol === config.symbol);
         if (prev) {
           formattedList.push(prev);
-        } else {
-          // Use config fallback for this particular index
-          formattedList.push({
-            symbol: config.shortName,
-            rawSymbol: config.symbol,
-            name: config.name,
-            value: config.fallback.value,
-            rawValue: config.fallback.rawValue,
-            changeValue: "+0.00",
-            change: config.fallback.change,
-            percentChange: 0,
-            isPositive: config.fallback.isPositive,
-            marketState: "CLOSED",
-            currency: "INR",
-          });
         }
       }
     });
@@ -130,21 +137,86 @@ async function getLiveIndices(forceRefresh = false) {
     return {
       indices: cache.data || formattedList,
       cached: false,
+      provider: "yahoo",
       lastUpdated: new Date(cache.lastUpdated || now).toISOString(),
     };
   } catch (error) {
-    console.error("[MarketService] Live quote fetch fallback:", error.message);
-    const fallbackData = cache.data || getFallbackList();
+    console.error("[MarketService] Quote fetch error:", error.message);
     return {
-      indices: fallbackData,
+      indices: cache.data || [],
       cached: true,
       stale: true,
+      provider: "yahoo",
       lastUpdated: new Date(cache.lastUpdated || now).toISOString(),
     };
   }
 }
 
+/**
+ * Dynamic search for ANY Indian stock or index using Yahoo Finance
+ */
+async function searchMarket(query) {
+  if (!query || query.trim().length < 1) {
+    return [];
+  }
+
+  const cleanQuery = query.trim();
+
+  try {
+    const searchResults = await yfInstance.search(cleanQuery, {
+      newsCount: 0,
+      quotesCount: 15,
+    });
+
+    const quotes = (searchResults?.quotes || []).filter(
+      (q) => q && typeof q.symbol === "string"
+    );
+
+    // Prioritize Indian symbols (.NS, .BO, ^NSE, ^BSE)
+    const indianQuotes = quotes.filter(
+      (q) =>
+        q.symbol.endsWith(".NS") ||
+        q.symbol.endsWith(".BO") ||
+        q.symbol.startsWith("^") ||
+        q.exchange === "NSI" ||
+        q.exchange === "BSE"
+    );
+
+    const targets = indianQuotes.length > 0 ? indianQuotes : quotes.slice(0, 8);
+
+    // Fetch live quotes for top matches
+    const liveQuotes = await Promise.allSettled(
+      targets.slice(0, 8).map((q) => yfInstance.quote(q.symbol))
+    );
+
+    const formatted = [];
+    liveQuotes.forEach((res, i) => {
+      if (res.status === "fulfilled" && res.value) {
+        const original = targets[i];
+        const item = formatYahooQuote(
+          res.value,
+          original.shortname || original.longname || original.symbol,
+          original.quoteType === "INDEX" ? "INDEX" : "STOCK"
+        );
+        if (item) formatted.push(item);
+      }
+    });
+
+    return formatted;
+  } catch (err) {
+    console.error("[MarketService] Search error:", err.message);
+    const local = cache.data || [];
+    return local.filter(
+      (item) =>
+        item.symbol.toLowerCase().includes(cleanQuery.toLowerCase()) ||
+        item.name.toLowerCase().includes(cleanQuery.toLowerCase())
+    );
+  }
+}
+
 module.exports = {
   getLiveIndices,
-  INDICES_CONFIG,
+  searchMarket,
+  DEFAULT_MARKET_SYMBOLS,
 };
+

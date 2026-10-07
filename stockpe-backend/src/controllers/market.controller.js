@@ -18,6 +18,21 @@ async function getIndices(req, res, next) {
   }
 }
 
+async function searchMarket(req, res, next) {
+  try {
+    const { q } = req.query;
+    const results = await marketService.searchMarket(q);
+    return res.status(200).json({
+      success: true,
+      data: results,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getIndices,
+  searchMarket,
 };
+
