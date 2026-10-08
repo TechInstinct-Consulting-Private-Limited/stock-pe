@@ -25,6 +25,25 @@ const INDICES_CONFIG = [
   { symbol: "^CNXPHARMA", name: "NIFTY PHARMA", shortName: "NIFTY PHARMA", fallback: { value: "21,680.00", rawValue: 21680.00, change: "+0.95%", isPositive: true } },
 ];
 
+// These codes intentionally match the existing `market_instruments` records
+// used by demo_dashboard_contests. Keep this registry small and explicit: a
+// search result must not introduce a second contest/instrument data model.
+const CONTEST_INSTRUMENT_CODES = {
+  "NIFTY 50": "NIFTY50",
+  SENSEX: "SENSEX",
+  "BANK NIFTY": "BANKNIFTY",
+  "NIFTY MIDCAP": "NIFTYMIDCAP100",
+};
+
+const CONTEST_INSTRUMENTS = INDICES_CONFIG
+  .filter((config) => CONTEST_INSTRUMENT_CODES[config.name])
+  .map((config) => ({
+    instrumentCode: CONTEST_INSTRUMENT_CODES[config.name],
+    rawSymbol: config.symbol,
+    name: config.name,
+    aliases: [config.name, config.shortName, config.symbol],
+  }));
+
 let cache = {
   data: null,
   lastUpdated: 0,
@@ -70,6 +89,69 @@ function getFallbackList() {
     marketState: "CLOSED",
     currency: "INR",
   }));
+}
+
+function normalizeSearchQuery(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getContestInstrumentMatches(query) {
+  const normalized = normalizeSearchQuery(query);
+  if (normalized === "all") return CONTEST_INSTRUMENTS;
+  if (!normalized) return [];
+
+  return CONTEST_INSTRUMENTS.filter((instrument) =>
+    instrument.aliases.some((alias) => alias.toLowerCase().includes(normalized))
+  );
+}
+
+function findExistingQuote(instrument) {
+  const config = INDICES_CONFIG.find((item) => item.symbol === instrument.rawSymbol);
+  if (!config) return null;
+
+  const cached = cache.data?.find((item) => item.rawSymbol === instrument.rawSymbol);
+  return cached || {
+    symbol: config.shortName,
+    rawSymbol: config.symbol,
+    name: config.name,
+    value: config.fallback.value,
+    rawValue: config.fallback.rawValue,
+    changeValue: "+0.00",
+    change: config.fallback.change,
+    percentChange: 0,
+    isPositive: config.fallback.isPositive,
+    marketState: "CLOSED",
+    currency: "INR",
+  };
+}
+
+/**
+ * Search only the instruments that the current demo contest schema supports.
+ * The returned instrumentCode can be passed directly to the existing admin
+ * contest-create endpoint. Yahoo is used for the current value; the existing
+ * safe dashboard fallback remains available if a quote lookup fails.
+ */
+async function searchContestInstruments(query) {
+  const matches = getContestInstrumentMatches(query);
+  if (!matches.length) return [];
+
+  const quotes = await Promise.allSettled(matches.map((instrument) => yfInstance.quote(instrument.rawSymbol)));
+
+  return matches.map((instrument, index) => {
+    const config = INDICES_CONFIG.find((item) => item.symbol === instrument.rawSymbol);
+    const quote = quotes[index].status === "fulfilled" ? quotes[index].value : null;
+    const formatted = quote && config ? formatQuote(quote, config) : findExistingQuote(instrument);
+
+    return {
+      instrumentCode: instrument.instrumentCode,
+      name: instrument.name,
+      rawSymbol: instrument.rawSymbol,
+      exchange: instrument.name === "SENSEX" ? "BSE" : "NSE",
+      category: "INDEX",
+      supportsDemoContest: true,
+      quote: formatted,
+    };
+  });
 }
 
 /**
@@ -147,4 +229,6 @@ async function getLiveIndices(forceRefresh = false) {
 module.exports = {
   getLiveIndices,
   INDICES_CONFIG,
+  getContestInstrumentMatches,
+  searchContestInstruments,
 };
