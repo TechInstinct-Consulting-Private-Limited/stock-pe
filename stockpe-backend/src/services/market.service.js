@@ -163,6 +163,8 @@ async function getLiveIndices(forceRefresh = false) {
     return {
       indices: cache.data,
       cached: true,
+      sourceUpdated: false,
+      freshRawSymbols: [],
       lastUpdated: new Date(cache.lastUpdated).toISOString(),
     };
   }
@@ -176,11 +178,13 @@ async function getLiveIndices(forceRefresh = false) {
     );
 
     const formattedList = [];
+    const freshRawSymbols = [];
 
     quotes.forEach((result, idx) => {
       const config = INDICES_CONFIG[idx];
       if (result.status === "fulfilled" && result.value) {
         formattedList.push(formatQuote(result.value, config));
+        freshRawSymbols.push(config.symbol);
       } else {
         const prev = cache.data?.find(d => d.rawSymbol === config.symbol);
         if (prev) {
@@ -212,6 +216,8 @@ async function getLiveIndices(forceRefresh = false) {
     return {
       indices: cache.data || formattedList,
       cached: false,
+      sourceUpdated: freshRawSymbols.length > 0,
+      freshRawSymbols,
       lastUpdated: new Date(cache.lastUpdated || now).toISOString(),
     };
   } catch (error) {
@@ -221,6 +227,8 @@ async function getLiveIndices(forceRefresh = false) {
       indices: fallbackData,
       cached: true,
       stale: true,
+      sourceUpdated: false,
+      freshRawSymbols: [],
       lastUpdated: new Date(cache.lastUpdated || now).toISOString(),
     };
   }
