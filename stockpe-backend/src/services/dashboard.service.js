@@ -1,4 +1,5 @@
 const pool = require("../config/database");
+const { syncDashboardMarketPrices } = require("./market-snapshot.service");
 
 const DASHBOARD_FILTERS = new Set(["ALL", "LIVE", "OPEN", "SOON"]);
 
@@ -32,6 +33,7 @@ function serializeContest(row) {
 }
 
 async function getContestByPublicId(publicId) {
+    await syncDashboardMarketPrices();
     const result = await pool.query(
         `SELECT contest.public_id, contest.title, contest.question, contest.status,
                 contest.entry_credits, contest.prize_pool_credits, contest.player_capacity,
@@ -83,6 +85,8 @@ async function getDashboard({ filter }) {
         error.isOperational = true;
         throw error;
     }
+
+    await syncDashboardMarketPrices();
 
     const whereClause = status === "ALL"
         ? "WHERE contest.status IN ('SOON', 'OPEN', 'LIVE')"
