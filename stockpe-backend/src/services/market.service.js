@@ -97,6 +97,7 @@ function normalizeSearchQuery(value) {
 
 function getContestInstrumentMatches(query) {
   const normalized = normalizeSearchQuery(query);
+  if (normalized === "all") return CONTEST_INSTRUMENTS;
   if (!normalized) return [];
 
   return CONTEST_INSTRUMENTS.filter((instrument) =>

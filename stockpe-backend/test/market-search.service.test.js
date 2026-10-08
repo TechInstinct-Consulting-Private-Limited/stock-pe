@@ -17,6 +17,10 @@ test("market search accepts a known raw provider symbol", () => {
   assert.equal(results[0].instrumentCode, "SENSEX");
 });
 
+test("market search can return the complete supported contest instrument catalog", () => {
+  assert.equal(getContestInstrumentMatches("all").length, 4);
+});
+
 test("market search does not offer unsupported stocks for contest creation", () => {
   assert.deepEqual(getContestInstrumentMatches("reliance"), []);
 });
