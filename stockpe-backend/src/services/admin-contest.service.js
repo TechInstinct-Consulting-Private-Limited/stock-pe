@@ -35,6 +35,8 @@ function validateContestInput(input) {
     const playerCapacity = Number(input.playerCapacity);
     const opensAt = asDate(input.opensAt, "opensAt");
     const closesAt = asDate(input.closesAt, "closesAt");
+    const lifecycleMode = String(input.lifecycleMode || "MANUAL").trim().toUpperCase();
+    const liveAt = lifecycleMode === "SCHEDULED" ? asDate(input.liveAt, "liveAt") : null;
 
     if (!title || !question || !instrumentCode || !/^[a-z0-9-]{3,80}$/.test(publicId)) {
         throw operationalError(400, "title, question, instrumentCode, and a valid publicId are required");
@@ -42,9 +44,11 @@ function validateContestInput(input) {
     if (![entryCredits, prizePoolCredits, playerCapacity].every(Number.isInteger) || entryCredits <= 0 || prizePoolCredits <= 0 || playerCapacity <= 0) {
         throw operationalError(400, "entryCredits, prizePoolCredits, and playerCapacity must be positive integers");
     }
+    if (!["MANUAL", "SCHEDULED"].includes(lifecycleMode)) throw operationalError(400, "lifecycleMode must be MANUAL or SCHEDULED");
     if (closesAt <= opensAt) throw operationalError(400, "closesAt must be after opensAt");
+    if (lifecycleMode === "SCHEDULED" && (liveAt <= opensAt || liveAt >= closesAt)) throw operationalError(400, "liveAt must be after opensAt and before closesAt");
 
-    return { title, question, publicId, instrumentCode, entryCredits, prizePoolCredits, playerCapacity, opensAt, closesAt };
+    return { title, question, publicId, instrumentCode, entryCredits, prizePoolCredits, playerCapacity, opensAt, liveAt, closesAt, lifecycleMode };
 }
 
 async function audit(client, adminUserId, action, contestId, metadata = {}) {
@@ -63,7 +67,7 @@ async function listContests({ status = "ALL" }) {
     const result = await pool.query(
         `SELECT contest.public_id, contest.title, contest.question, contest.status, contest.entry_credits,
                 contest.prize_pool_credits, contest.player_capacity, contest.player_count, contest.opens_at,
-                contest.closes_at, contest.settlement_source, contest.cancelled_at, contest.cancelled_reason,
+                contest.live_at, contest.closes_at, contest.lifecycle_mode, contest.settlement_source, contest.cancelled_at, contest.cancelled_reason,
                 contest.settled_at, contest.settlement_value, instrument.code AS instrument_code, instrument.display_name AS instrument_name
          FROM demo_dashboard_contests contest
          JOIN market_instruments instrument ON instrument.id = contest.instrument_id
@@ -88,11 +92,11 @@ async function createContest({ adminUserId, input }) {
         const result = await client.query(
             `INSERT INTO demo_dashboard_contests (
                 public_id, instrument_id, title, question, status, entry_credits, prize_pool_credits,
-                player_capacity, opens_at, closes_at, settlement_source, display_order
-             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+                player_capacity, opens_at, live_at, closes_at, lifecycle_mode, settlement_source, display_order
+             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
              RETURNING id, public_id, status`,
             [contest.publicId, instrument.rows[0].id, contest.title, contest.question, status, contest.entryCredits,
-                contest.prizePoolCredits, contest.playerCapacity, contest.opensAt, contest.closesAt, settlementSource,
+                contest.prizePoolCredits, contest.playerCapacity, contest.opensAt, contest.liveAt, contest.closesAt, contest.lifecycleMode, settlementSource,
                 Number.isInteger(input.displayOrder) ? input.displayOrder : 0]
         );
         await audit(client, adminUserId, "CONTEST_CREATED", result.rows[0].id, { publicId: contest.publicId, status });
@@ -111,18 +115,18 @@ async function updateContest({ adminUserId, publicId, input }) {
     const client = await pool.connect();
     try {
         await client.query("BEGIN");
-        const existing = await client.query("SELECT id, status FROM demo_dashboard_contests WHERE public_id = $1 FOR UPDATE", [publicId]);
+        const existing = await client.query("SELECT id, status, lifecycle_mode, live_at FROM demo_dashboard_contests WHERE public_id = $1 FOR UPDATE", [publicId]);
         if (!existing.rowCount) throw operationalError(404, "Demo contest was not found");
         if (!["DRAFT", "SOON"].includes(existing.rows[0].status)) throw operationalError(409, "Only DRAFT or SOON contests can be edited");
-        const contest = validateContestInput({ ...input, publicId });
+        const contest = validateContestInput({ ...input, publicId, lifecycleMode: input.lifecycleMode || existing.rows[0].lifecycle_mode, liveAt: input.liveAt || existing.rows[0].live_at });
         const instrument = await client.query("SELECT id FROM market_instruments WHERE code = $1 AND is_active = TRUE", [contest.instrumentCode]);
         if (!instrument.rowCount) throw operationalError(400, "Active instrument was not found");
         await client.query(
             `UPDATE demo_dashboard_contests SET instrument_id=$1,title=$2,question=$3,entry_credits=$4,
-             prize_pool_credits=$5,player_capacity=$6,opens_at=$7,closes_at=$8,settlement_source=$9,
-             display_order=$10,updated_at=NOW() WHERE id=$11`,
+             prize_pool_credits=$5,player_capacity=$6,opens_at=$7,live_at=$8,closes_at=$9,lifecycle_mode=$10,settlement_source=$11,
+             display_order=$12,updated_at=NOW() WHERE id=$13`,
             [instrument.rows[0].id, contest.title, contest.question, contest.entryCredits, contest.prizePoolCredits,
-                contest.playerCapacity, contest.opensAt, contest.closesAt,
+                contest.playerCapacity, contest.opensAt, contest.liveAt, contest.closesAt, contest.lifecycleMode,
                 String(input.settlementSource || "Demo market reference").trim(), Number.isInteger(input.displayOrder) ? input.displayOrder : 0,
                 existing.rows[0].id]
         );
