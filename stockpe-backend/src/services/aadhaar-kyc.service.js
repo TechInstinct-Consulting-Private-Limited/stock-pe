@@ -105,7 +105,7 @@ async function verifyAadhaarOtp({ userId, verificationId, otp }) {
              WHERE id = $1`,
             [verification.id]
         );
-        throw publicError(400, "Aadhaar OTP is invalid");
+        throw publicError(400, providerResult.reason || "Aadhaar OTP is invalid");
     }
 
     await pool.query(
