@@ -20,6 +20,7 @@ export default function EventFeedCard({ item }) {
     ? Number(item.players).toLocaleString("en-IN")
     : "—";
   const closesIn = item.closesIn || "00:00:00";
+  const timeLabel = item.timeLabel || "CLOSES IN";
   const changeStr = item.change ? item.change.replace(/[+-]/g, "") : "0.84%";
   const isPos = item.isPositive !== false;
   const statusStyle =
@@ -92,7 +93,7 @@ export default function EventFeedCard({ item }) {
           </View>
 
           <View style={[styles.metricCol, { alignItems: "flex-end" }]}>
-            <Text style={styles.metricLabel}>CLOSES</Text>
+            <Text style={styles.metricLabel}>{timeLabel}</Text>
             <Text style={styles.closesValue}>{closesIn}</Text>
           </View>
         </View>
