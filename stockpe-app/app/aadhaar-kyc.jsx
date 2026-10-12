@@ -88,6 +88,12 @@ export default function AadhaarKyc() {
         });
     };
 
+    const handleSkipForNow = () => {
+        Keyboard.dismiss();
+        clearPendingAadhaarNumber();
+        goToWallet();
+    };
+
     const handleResend = async () => {
         if (secondsLeft > 0 || isLoading) return;
 
@@ -400,6 +406,23 @@ export default function AadhaarKyc() {
                             </TouchableOpacity>
                         ) : null}
 
+                        {!isVerified ? (
+                            <>
+                                <TouchableOpacity
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Skip Aadhaar verification for now"
+                                    disabled={isLoading}
+                                    onPress={handleSkipForNow}
+                                    style={styles.skipButton}
+                                >
+                                    <Text style={styles.skipButtonText}>Skip for now →</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.skipHint}>
+                                    KYC will remain pending. Wallet linking and other restricted features stay unavailable until verification is completed.
+                                </Text>
+                            </>
+                        ) : null}
+
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -537,4 +560,7 @@ const styles = StyleSheet.create({
     },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800", letterSpacing: 1.2, marginRight: 10 },
+    skipButton: { alignSelf: "center", marginTop: 14, paddingHorizontal: 12, paddingVertical: 8 },
+    skipButtonText: { color: "#657189", fontSize: 14, fontWeight: "700" },
+    skipHint: { color: "#8A91A3", fontSize: 12, lineHeight: 18, marginTop: 2, textAlign: "center" },
 });
