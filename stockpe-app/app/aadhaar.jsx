@@ -53,28 +53,12 @@ function groupAadhaar(digits) {
     return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
 }
 
-function formatDate(value) {
-    const digits = value.replace(/\D/g, "").slice(0, 8);
-
-    if (digits.length <= 2) {
-        return digits;
-    }
-
-    if (digits.length <= 4) {
-        return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    }
-
-    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-}
-
 export default function AadhaarVerification() {
     const { mobile, mode } = useLocalSearchParams();
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
 
     const [aadhaarNumber, setAadhaarNumber] = useState("");
-    const [fullName, setFullName] = useState("");
-    const [dateOfBirth, setDateOfBirth] = useState("");
     const [consent, setConsent] = useState(false);
     const [verificationId, setVerificationId] = useState("");
     const [aadhaarOtp, setAadhaarOtp] = useState("");
@@ -194,20 +178,14 @@ export default function AadhaarVerification() {
                 await textExtractor.extractTextFromImage(photo.uri)
             );
 
-            if (!fields.aadhaarNumber && !fields.fullName && !fields.dateOfBirth) {
+            if (!fields.aadhaarNumber) {
                 setScanError("We could not read the card. Keep the front flat inside the frame, avoid glare, and try again.");
                 return;
             }
 
-            if (fields.aadhaarNumber) setAadhaarNumber(fields.aadhaarNumber);
-            if (fields.fullName) setFullName(fields.fullName);
-            if (fields.dateOfBirth) setDateOfBirth(fields.dateOfBirth);
+            setAadhaarNumber(fields.aadhaarNumber);
             setScannerOpen(false);
-            setFormError(
-                fields.aadhaarNumber && fields.fullName && fields.dateOfBirth
-                    ? ""
-                    : "We filled the details we could read. Check and complete the remaining fields."
-            );
+            setFormError("");
         } catch (_error) {
             setScanError("The photo could not be read. Please try again or enter the details manually.");
         } finally {
@@ -251,16 +229,6 @@ export default function AadhaarVerification() {
             return;
         }
 
-        if (!fullName.trim()) {
-            setFormError("Enter your full name as shown on Aadhaar.");
-            return;
-        }
-
-        if (dateOfBirth.length !== 10) {
-            setFormError("Enter your date of birth in DD/MM/YYYY format.");
-            return;
-        }
-
         if (!consent) {
             setFormError("Consent is required to continue with Aadhaar e-KYC.");
             return;
@@ -271,7 +239,7 @@ export default function AadhaarVerification() {
         setFormError("");
 
         try {
-            const result = await requestAadhaarOtp(aadhaarNumber, consent, fullName);
+            const result = await requestAadhaarOtp(aadhaarNumber, consent);
             setVerificationId(result.verificationId);
             router.replace({
                 pathname: "/aadhaar-kyc",
@@ -280,7 +248,6 @@ export default function AadhaarVerification() {
                     mode: mode === "signin" ? "signin" : "signup",
                     verificationId: result.verificationId,
                     aadhaarLastFour: aadhaarNumber.slice(-4),
-                    fullName: fullName.trim(),
                 },
             });
         } catch (error) {
@@ -502,7 +469,7 @@ export default function AadhaarVerification() {
                                 >
                                     <Ionicons name="card-outline" size={26} color="#8C86FF" />
                                     <Text style={styles.scanText}>
-                                        Scan the card front to fill the fields below
+                                        Scan the card front to capture your Aadhaar number
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -521,38 +488,6 @@ export default function AadhaarVerification() {
                                 maxLength={14}
                             />
 
-                            <Text style={styles.label}>FULL NAME (AS ON AADHAAR)</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={fullName}
-                                onChangeText={(value) => {
-                                    setFullName(value.toUpperCase());
-                                    setFormError("");
-                                }}
-                                placeholder="ARJUN KUMAR"
-                                placeholderTextColor="#C2C8D6"
-                                autoCapitalize="characters"
-                                autoCorrect={false}
-                                autoComplete="off"
-                                spellCheck={false}
-                                textContentType="none"
-                                importantForAutofill="no"
-                                keyboardType={Platform.OS === "android" ? "visible-password" : "default"}
-                            />
-
-                            <Text style={styles.label}>DATE OF BIRTH</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={dateOfBirth}
-                                onChangeText={(value) => {
-                                    setDateOfBirth(formatDate(value));
-                                    setFormError("");
-                                }}
-                                placeholder="dd/mm/yyyy"
-                                placeholderTextColor="#172033"
-                                keyboardType="number-pad"
-                                maxLength={10}
-                            />
                             <TouchableOpacity
                                 style={styles.consentRow}
                                 onPress={() => {
@@ -577,7 +512,7 @@ export default function AadhaarVerification() {
                                     ) : null}
                                 </View>
                                 <Text style={styles.consentText}>
-                                    I consent to Aadhaar authentication for this KYC verification.
+                                    I consent to OTP-based Aadhaar verification for KYC.
                                 </Text>
                             </TouchableOpacity>
                         </>

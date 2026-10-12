@@ -121,13 +121,12 @@ async function authenticatedRequest(path, options = {}) {
     });
 }
 
-export function requestAadhaarOtp(aadhaarNumber, consent, fullName) {
+export function requestAadhaarOtp(aadhaarNumber, consent) {
     return authenticatedRequest("/kyc/aadhaar/request-otp", {
         method: "POST",
         body: JSON.stringify({
             aadhaarNumber,
             consent,
-            ...(fullName ? { fullName } : {}),
         }),
     });
 }
