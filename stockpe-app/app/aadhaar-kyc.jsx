@@ -21,6 +21,11 @@ import {
     requestAadhaarOtp,
     verifyAadhaarOtp,
 } from "../src/services/api";
+import {
+    clearPendingAadhaarNumber,
+    getPendingAadhaarNumber,
+    setPendingAadhaarNumber,
+} from "../src/services/aadhaarKycSession";
 
 const EMPTY_OTP = ["", "", "", "", "", ""];
 
@@ -84,13 +89,26 @@ export default function AadhaarKyc() {
     };
 
     const handleResend = async () => {
-        if (secondsLeft > 0 || isLoading || !aadhaarLastFour) return;
+        if (secondsLeft > 0 || isLoading) return;
+
+        const pendingAadhaarNumber = getPendingAadhaarNumber();
+        if (pendingAadhaarNumber.length !== 12) {
+            router.replace({
+                pathname: "/aadhaar",
+                params: {
+                    mobile: String(mobile || ""),
+                    mode: mode === "signin" ? "signin" : "signup",
+                    retry: "1",
+                },
+            });
+            return;
+        }
 
         setIsLoading(true);
         setError("");
 
         try {
-            const result = await requestAadhaarOtp(aadhaarNumber || String(incomingLastFour || ""), true);
+            const result = await requestAadhaarOtp(pendingAadhaarNumber, true);
             setVerificationId(result.verificationId);
             setOtp(EMPTY_OTP);
             setSecondsLeft(RESEND_SECONDS);
@@ -108,6 +126,8 @@ export default function AadhaarKyc() {
         // Aadhaar KYC is one-time, so once verified there is nothing to go
         // back and change on step 2.
         if (isVerified) return;
+
+        clearPendingAadhaarNumber();
 
         router.replace({
             pathname: "/aadhaar",
@@ -140,6 +160,7 @@ export default function AadhaarKyc() {
 
         try {
             const result = await requestAadhaarOtp(aadhaarNumber, true);
+            setPendingAadhaarNumber(aadhaarNumber);
             setVerificationId(result.verificationId);
             setOtp(EMPTY_OTP);
             setSecondsLeft(RESEND_SECONDS);
@@ -191,6 +212,7 @@ export default function AadhaarKyc() {
 
         try {
             await verifyAadhaarOtp(verificationId, enteredOtp);
+            clearPendingAadhaarNumber();
             setAadhaarNumber("");
             setOtp(EMPTY_OTP);
             setIsVerified(true);
@@ -378,11 +400,6 @@ export default function AadhaarKyc() {
                             </TouchableOpacity>
                         ) : null}
 
-                        {__DEV__ && !isVerified ? (
-                            <Text style={styles.devHint}>
-                                Development: use any 12-digit Aadhaar number and OTP 123456.
-                            </Text>
-                        ) : null}
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -520,5 +537,4 @@ const styles = StyleSheet.create({
     },
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800", letterSpacing: 1.2, marginRight: 10 },
-    devHint: { color: "#8A91A3", fontSize: 12, marginTop: 18, textAlign: "center" },
 });

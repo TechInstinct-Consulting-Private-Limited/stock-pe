@@ -29,6 +29,10 @@ import {
     verifyAadhaarOtp,
 } from "../src/services/api";
 import { parseAadhaarCardText } from "../src/services/aadhaarCardText";
+import {
+    clearPendingAadhaarNumber,
+    setPendingAadhaarNumber,
+} from "../src/services/aadhaarKycSession";
 
 function getTextExtractor() {
     if (
@@ -54,7 +58,7 @@ function groupAadhaar(digits) {
 }
 
 export default function AadhaarVerification() {
-    const { mobile, mode } = useLocalSearchParams();
+    const { mobile, mode, retry } = useLocalSearchParams();
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
 
@@ -75,6 +79,12 @@ export default function AadhaarVerification() {
     const scanErrorRef = useRef(null);
     const [isCapturing, setIsCapturing] = useState(false);
     const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
+    useEffect(() => {
+        if (retry === "1") {
+            setFormError("For your security, enter your Aadhaar number again to request a new OTP.");
+        }
+    }, [retry]);
 
     // Aadhaar KYC is one-time. If it is already verified for this account there
     // is nothing to collect here, so skip straight past this step.
@@ -195,6 +205,7 @@ export default function AadhaarVerification() {
 
     const handleContinue = () => {
         Keyboard.dismiss();
+        clearPendingAadhaarNumber();
         router.replace({
             pathname: "/aadhaar-kyc",
             params: {
@@ -241,6 +252,7 @@ export default function AadhaarVerification() {
         try {
             const result = await requestAadhaarOtp(aadhaarNumber, consent);
             setVerificationId(result.verificationId);
+            setPendingAadhaarNumber(aadhaarNumber);
             router.replace({
                 pathname: "/aadhaar-kyc",
                 params: {
@@ -269,6 +281,7 @@ export default function AadhaarVerification() {
 
         try {
             await verifyAadhaarOtp(verificationId, aadhaarOtp);
+            clearPendingAadhaarNumber();
             setIsVerified(true);
         } catch (error) {
             setFormError(getUserFacingError(error));
