@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchDashboardContest } from "../services/dashboardService";
 
 export function useEventDetail(eventId) {
@@ -7,6 +7,16 @@ export function useEventDetail(eventId) {
   const [event, setEvent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const refreshEvent = useCallback(async () => {
+    try {
+      const nextEvent = await fetchDashboardContest(eventId);
+      setEvent(nextEvent);
+      setError("");
+    } catch (_error) {
+      // Preserve loaded contest details if a manual refresh cannot complete.
+    }
+  }, [eventId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -33,6 +43,7 @@ export function useEventDetail(eventId) {
     event,
     isLoading,
     error,
+    refreshEvent,
     activeTab,
     setActiveTab,
     activeTimeframe,

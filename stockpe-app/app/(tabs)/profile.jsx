@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,10 +12,12 @@ import { useRouter } from "expo-router";
 
 import { removeAuthToken } from "../../src/services/authStorage";
 import { useProfileSummary } from "../../src/features/profile/hooks/useProfileSummary";
+import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const profile = useProfileSummary();
+  const { profile, refreshProfile } = useProfileSummary();
+  const { refreshing, onRefresh } = usePullToRefresh(refreshProfile);
   const user = profile?.user;
   const stats = profile?.stats;
   const initials = user?.displayName?.split(" ").map((part) => part[0]).join("").slice(0, 2) || "SP";
@@ -78,6 +81,7 @@ export default function ProfileScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Dark Profile Header Card */}

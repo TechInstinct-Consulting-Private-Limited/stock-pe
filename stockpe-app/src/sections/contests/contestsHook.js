@@ -169,33 +169,31 @@ export function useMyContests() {
   const [activeFilter, setActiveFilter] = useState("ALL"); // "ALL" | "ACTIVE" | "WON" | "LOST"
   const [joinedList, setJoinedList] = useState([]);
 
-  useEffect(() => {
-    let mounted = true;
-    getMyDemoContests(activeFilter)
-      .then((response) => {
-        if (!mounted) return;
-        setJoinedList((response.entries || []).map((entry) => ({
-          joinId: entry.id,
-          contestId: entry.public_id,
-          indexSymbol: entry.title,
-          contestTitle: entry.title,
-          status: entry.status,
-          timestamp: new Date(entry.joined_at).toLocaleString("en-IN"),
-          entryFeeInr: `${entry.entry_credits} Credits`,
-          entryFeeUsdt: "Demo credits",
-          predictionValue: entry.prediction_value === null ? null : Number(entry.prediction_value),
-          rewardCredits: Number(entry.reward_credits || 0),
-          prediction: entry.prediction_value === null
-            ? "Not submitted"
-            : Number(entry.prediction_value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-          prizeInr: Number(entry.reward_credits || 0) > 0 ? `${entry.reward_credits} Credits` : null,
-          prizeUsdt: Number(entry.reward_credits || 0) > 0 ? "Demo reward" : null,
-          accuracy: null,
-        })));
-      })
-      .catch(() => { if (mounted) setJoinedList([]); });
-    return () => { mounted = false; };
+  const refreshContests = useCallback(async () => {
+    const response = await getMyDemoContests(activeFilter);
+    setJoinedList((response.entries || []).map((entry) => ({
+      joinId: entry.id,
+      contestId: entry.public_id,
+      indexSymbol: entry.title,
+      contestTitle: entry.title,
+      status: entry.status,
+      timestamp: new Date(entry.joined_at).toLocaleString("en-IN"),
+      entryFeeInr: `${entry.entry_credits} Credits`,
+      entryFeeUsdt: "Demo credits",
+      predictionValue: entry.prediction_value === null ? null : Number(entry.prediction_value),
+      rewardCredits: Number(entry.reward_credits || 0),
+      prediction: entry.prediction_value === null
+        ? "Not submitted"
+        : Number(entry.prediction_value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      prizeInr: Number(entry.reward_credits || 0) > 0 ? `${entry.reward_credits} Credits` : null,
+      prizeUsdt: Number(entry.reward_credits || 0) > 0 ? "Demo reward" : null,
+      accuracy: null,
+    })));
   }, [activeFilter]);
+
+  useEffect(() => {
+    refreshContests().catch(() => {});
+  }, [refreshContests]);
 
   const filteredContests = joinedList;
 
@@ -221,5 +219,6 @@ export function useMyContests() {
     setActiveFilter,
     filteredContests,
     summary,
+    refreshContests,
   };
 }

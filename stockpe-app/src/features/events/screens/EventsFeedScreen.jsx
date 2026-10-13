@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +16,7 @@ import AppCard from "../../../components/ui/AppCard";
 import EventFeedCard from "../components/EventFeedCard";
 import { fetchUserTrades } from "../services/eventsService";
 import { DASHBOARD_TABS, fetchDashboard, toFeedCard } from "../services/dashboardService";
+import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 
 export default function EventsFeedScreen() {
   const [activeFilter, setActiveFilter] = useState("ALL");
@@ -26,8 +28,8 @@ export default function EventsFeedScreen() {
   const userTrades = fetchUserTrades();
   const activeCount = userTrades.filter((t) => t.status === "ACTIVE").length;
 
-  const loadDashboard = useCallback(async () => {
-    setIsLoading(true);
+  const loadDashboard = useCallback(async ({ showLoading = true } = {}) => {
+    if (showLoading) setIsLoading(true);
     setError("");
 
     try {
@@ -36,9 +38,23 @@ export default function EventsFeedScreen() {
     } catch (_error) {
       setError("Dashboard data is unavailable. Please try again.");
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   }, [activeFilter]);
+
+  const refreshDashboard = useCallback(async () => {
+    try {
+      const response = await fetchDashboard(activeFilter);
+      setDashboard(response);
+      setError("");
+    } catch (_error) {
+      // Preserve the visible dashboard if a manual refresh cannot complete.
+    }
+  }, [activeFilter]);
+
+  const { refreshing, onRefresh } = usePullToRefresh(
+    refreshDashboard
+  );
 
   useEffect(() => {
     loadDashboard();
@@ -61,6 +77,7 @@ export default function EventsFeedScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Quick Nav Bar */}
