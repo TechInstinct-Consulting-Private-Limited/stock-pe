@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,16 +11,27 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { fetchTransactionHistory, fetchWalletSummary, WALLET_SUMMARY_DATA } from "../../src/features/wallet/services/walletService";
+import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 
 export default function WalletScreen() {
   const router = useRouter();
   const [wallet, setWallet] = useState(WALLET_SUMMARY_DATA);
   const [liveTransactions, setLiveTransactions] = useState([]);
 
-  useEffect(() => {
-    fetchWalletSummary().then((result) => result.success && setWallet(result.data));
-    fetchTransactionHistory().then((result) => result.success && setLiveTransactions(result.data));
+  const refreshWallet = useCallback(async () => {
+    const [summaryResult, transactionsResult] = await Promise.all([
+      fetchWalletSummary(),
+      fetchTransactionHistory(),
+    ]);
+    if (summaryResult.success) setWallet(summaryResult.data);
+    if (transactionsResult.success) setLiveTransactions(transactionsResult.data);
   }, []);
+
+  useEffect(() => {
+    refreshWallet();
+  }, [refreshWallet]);
+
+  const { refreshing, onRefresh } = usePullToRefresh(refreshWallet);
 
   const quickActions = [
     {
@@ -74,6 +86,7 @@ export default function WalletScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Emerald Gradient Hero Card */}

@@ -3,6 +3,30 @@ const { createAadhaarKycProvider } = require("./aadhaar-kyc");
 
 const MAX_OTP_ATTEMPTS = 5;
 
+function normalizedDateOfBirth(value) {
+    if (typeof value !== "string") return null;
+
+    const trimmed = value.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+    const match = trimmed.match(/^(\d{2})[/-](\d{2})[/-](\d{4})$/);
+    if (!match) return null;
+
+    return `${match[3]}-${match[2]}-${match[1]}`;
+}
+
+function safeKycData(kycData) {
+    const fullName = typeof kycData?.fullName === "string"
+        ? kycData.fullName.trim().slice(0, 120)
+        : null;
+
+    return {
+        fullName,
+        dateOfBirth: normalizedDateOfBirth(kycData?.dateOfBirth),
+        isMock: Boolean(kycData?.isMock),
+    };
+}
+
 function publicError(statusCode, message) {
     const error = new Error(message);
     error.statusCode = statusCode;
@@ -107,18 +131,16 @@ async function verifyAadhaarOtp({ userId, verificationId, otp }) {
              WHERE id = $1`,
             [verification.id]
         );
-        throw publicError(400, "Aadhaar OTP is invalid");
+        throw publicError(400, providerResult.reason || "Aadhaar OTP is invalid");
     }
 
-    const providerName = typeof providerResult.kycData?.fullName === "string"
-        ? providerResult.kycData.fullName.trim().slice(0, 120)
-        : null;
+    const verifiedKycData = safeKycData(providerResult.kycData);
     // Development KYC has no official identity lookup. Preserve the name the
     // user supplied in the Aadhaar form; production providers take precedence.
     const verifiedName = verification.provider === "mock"
-        ? verification.full_name || providerName
-        : providerName || verification.full_name;
-    const verifiedDob = providerResult.kycData?.dateOfBirth || null;
+        ? verification.full_name || verifiedKycData.fullName
+        : verifiedKycData.fullName || verification.full_name;
+    const verifiedDob = verifiedKycData.dateOfBirth;
 
     await pool.query(
         `UPDATE aadhaar_kyc_verifications
@@ -131,7 +153,7 @@ async function verifyAadhaarOtp({ userId, verificationId, otp }) {
     return {
         verificationId: verification.id,
         status: "verified",
-        kycData: providerResult.kycData,
+        kycData: verifiedKycData,
     };
 }
 

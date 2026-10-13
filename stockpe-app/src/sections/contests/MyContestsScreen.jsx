@@ -1,13 +1,15 @@
 import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, radii, spacing } from "../../theme";
 import { useMyContests } from "./contestsHook";
+import { usePullToRefresh } from "../../hooks/usePullToRefresh";
 
 export default function MyContestsScreen() {
-  const { activeFilter, setActiveFilter, filteredContests, summary } = useMyContests();
+  const { activeFilter, setActiveFilter, filteredContests, summary, refreshContests } = useMyContests();
+  const { refreshing, onRefresh } = usePullToRefresh(refreshContests);
 
   const filterTabs = [
     { id: "ALL", label: "ALL" },
@@ -21,6 +23,7 @@ export default function MyContestsScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
           {/* Top Dark Summary Card */}

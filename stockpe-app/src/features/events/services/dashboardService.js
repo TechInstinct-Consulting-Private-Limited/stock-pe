@@ -23,10 +23,21 @@ export function formatCountdown(seconds) {
 }
 
 export function toFeedCard(contest, now = Date.now()) {
+  const opensAt = new Date(contest.opensAt).getTime();
   const closesAt = new Date(contest.closesAt).getTime();
-  const closesIn = Number.isFinite(closesAt)
-    ? formatCountdown((closesAt - now) / 1000)
-    : formatCountdown(contest.secondsUntilClose);
+  const isSoon = contest.status === "SOON";
+  const targetTime = isSoon ? opensAt : closesAt;
+  const fallbackSeconds = isSoon
+    ? contest.secondsUntilOpen
+    : contest.secondsUntilClose;
+  const countdown = Number.isFinite(targetTime)
+    ? formatCountdown((targetTime - now) / 1000)
+    : formatCountdown(fallbackSeconds);
+  const timeLabel = isSoon
+    ? "OPENS IN"
+    : contest.status === "LIVE"
+      ? "CONTEST ENDS IN"
+      : "ENTRY CLOSES IN";
 
   return {
     id: contest.id,
@@ -45,7 +56,8 @@ export function toFeedCard(contest, now = Date.now()) {
     entryLabel: "DEMO ENTRY",
     entrySubLabel: "Non-withdrawable credits",
     players: contest.players,
-    closesIn,
+    closesIn: countdown,
+    timeLabel,
     fillPercent: contest.fillPercent,
     fillColor:
       contest.status === "LIVE"

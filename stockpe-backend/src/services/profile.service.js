@@ -21,7 +21,7 @@ async function getMe(userId) {
          ) k ON TRUE
          LEFT JOIN demo_contest_entries e ON e.user_id=u.id
          WHERE u.id=$1
-         GROUP BY u.id`, [userId],
+         GROUP BY u.id, k.id, k.full_name`, [userId],
     );
     const row = result.rows[0];
     if (!row) throw Object.assign(new Error("User was not found"), { statusCode: 404, isOperational: true });

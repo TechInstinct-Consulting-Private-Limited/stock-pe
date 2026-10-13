@@ -8,14 +8,19 @@ export default function EventFeedCard({ item }) {
     router.push(`/event/${item.id}`);
   };
 
-  const fill = item.fillPercent || 84;
+  const fill = Math.max(0, Math.min(100, Number.isFinite(Number(item.fillPercent)) ? Number(item.fillPercent) : 0));
   const prizeInr = item.prizePool || item.prizePoolInr || "₹1.0L";
-  const prizeLabel = item.prizePoolLabel || "PRIZE POOL";
+  const prizeLabel = item.prizePoolLabel === "DEMO POOL"
+    ? "DEMO PRIZE POOL"
+    : item.prizePoolLabel || "PRIZE POOL";
   const entryInr = item.entry || item.entryInr || "₹199";
   const entryLabel = item.entryLabel || "ENTRY";
   const entrySubLabel = item.entrySubLabel || item.entryUsdt || "2.71 USDT";
-  const players = item.players ? Number(item.players).toLocaleString() : "8,431";
+  const players = Number.isFinite(Number(item.players))
+    ? Number(item.players).toLocaleString("en-IN")
+    : "—";
   const closesIn = item.closesIn || "00:00:00";
+  const timeLabel = item.timeLabel || "CLOSES IN";
   const changeStr = item.change ? item.change.replace(/[+-]/g, "") : "0.84%";
   const isPos = item.isPositive !== false;
   const statusStyle =
@@ -30,6 +35,11 @@ export default function EventFeedCard({ item }) {
       : item.status === "SOON"
         ? styles.statusTextSoon
         : styles.statusText;
+  const accentColor = item.fillColor || (item.status === "LIVE"
+    ? "#EF4444"
+    : item.status === "SOON"
+      ? "#F59E0B"
+      : "#00C987");
 
   return (
     <TouchableOpacity
@@ -37,16 +47,17 @@ export default function EventFeedCard({ item }) {
       onPress={handleOpenDetail}
       style={styles.cardWrapper}
     >
-      <View style={styles.card}>
+      <View style={[styles.card, { borderTopColor: accentColor }]}>
         {/* Top Header Row */}
         <View style={styles.headerRow}>
           {/* Top Left: Title, Status, Spot Price & Change */}
           <View style={styles.leftHeaderBlock}>
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{item.title || "NIFTY 50"}</Text>
-              <View style={statusStyle}>
-                <Text style={statusTextStyle}>{item.status || "OPEN"}</Text>
-              </View>
+              <Text numberOfLines={2} style={styles.title}>{item.title || "NIFTY 50"}</Text>
+            </View>
+
+            <View style={statusStyle}>
+              <Text style={statusTextStyle}>{item.status || "OPEN"}</Text>
             </View>
 
             <View style={styles.priceRow}>
@@ -63,7 +74,7 @@ export default function EventFeedCard({ item }) {
 
           {/* Top Right: Prize Pool & USDT Badge */}
           <View style={styles.rightHeaderBlock}>
-            <Text style={styles.prizePoolAmount}>{prizeInr}</Text>
+            <Text numberOfLines={2} style={styles.prizePoolAmount}>{prizeInr}</Text>
             <Text style={styles.prizePoolLabel}>{prizeLabel}</Text>
           </View>
         </View>
@@ -82,7 +93,7 @@ export default function EventFeedCard({ item }) {
           </View>
 
           <View style={[styles.metricCol, { alignItems: "flex-end" }]}>
-            <Text style={styles.metricLabel}>CLOSES</Text>
+            <Text style={styles.metricLabel}>{timeLabel}</Text>
             <Text style={styles.closesValue}>{closesIn}</Text>
           </View>
         </View>
@@ -138,32 +149,40 @@ const styles = StyleSheet.create({
   },
   leftHeaderBlock: {
     flex: 1,
+    minWidth: 0,
+    paddingRight: 12,
   },
   titleRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    alignItems: "flex-start",
   },
   title: {
+    flexShrink: 1,
     fontSize: 22,
     fontWeight: "900",
     color: "#071329",
     letterSpacing: -0.4,
   },
   statusPill: {
+    alignSelf: "flex-start",
     backgroundColor: "#E6FBF3",
+    marginTop: 8,
     paddingHorizontal: 8,
     paddingVertical: 2.5,
     borderRadius: 12,
   },
   statusPillLive: {
+    alignSelf: "flex-start",
     backgroundColor: "#FFF1F2",
+    marginTop: 8,
     paddingHorizontal: 8,
     paddingVertical: 2.5,
     borderRadius: 12,
   },
   statusPillSoon: {
+    alignSelf: "flex-start",
     backgroundColor: "#FFFBEB",
+    marginTop: 8,
     paddingHorizontal: 8,
     paddingVertical: 2.5,
     borderRadius: 12,
@@ -192,7 +211,7 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
+    marginTop: 8,
     gap: 8,
   },
   spotPrice: {
@@ -214,9 +233,10 @@ const styles = StyleSheet.create({
   },
   rightHeaderBlock: {
     alignItems: "flex-end",
+    width: 142,
   },
   prizePoolAmount: {
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: "900",
     color: "#F59E0B",
     letterSpacing: -0.5,
@@ -226,7 +246,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#94A3B8",
     letterSpacing: 0.8,
-    marginTop: 1,
+    marginTop: 3,
+    textAlign: "right",
   },
   usdtPill: {
     flexDirection: "row",
@@ -263,7 +284,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginTop: 22,
+    borderTopColor: "#EEF2F7",
+    borderTopWidth: 1,
+    marginTop: 18,
+    paddingTop: 16,
     marginBottom: 16,
   },
   metricCol: {

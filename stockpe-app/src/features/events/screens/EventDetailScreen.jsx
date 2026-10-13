@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,13 +20,15 @@ import ContestRulesView from "../components/ContestRulesView";
 import LiveLeaderboardView from "../components/LiveLeaderboardView";
 import PredictionModalSheet from "../components/PredictionModalSheet";
 import OrderSuccessModal from "../components/OrderSuccessModal";
+import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 
 export default function EventDetailScreen({ eventId }) {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState("prizes"); // "prizes" | "rules" | "board"
   const [isTradeSheetVisible, setIsTradeSheetVisible] = useState(false);
 
-  const { event, isLoading, error } = useEventDetail(eventId);
+  const { event, isLoading, error, refreshEvent } = useEventDetail(eventId);
+  const { refreshing, onRefresh } = usePullToRefresh(refreshEvent);
 
   const {
     tradeMode,
@@ -81,6 +84,7 @@ export default function EventDetailScreen({ eventId }) {
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           showsVerticalScrollIndicator={false}
         >
           {/* Top Hero: Spot price, Digital Timer & 4-col metrics */}
