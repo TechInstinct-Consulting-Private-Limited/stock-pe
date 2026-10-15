@@ -1,14 +1,25 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radii, shadows, spacing, typography } from "../../../theme";
+import { shadows } from "../../../theme";
 
 export default function ContestRulesView({ event }) {
+  const entryCredits = Number(event?.entryCredits || 0).toLocaleString("en-IN");
+  const entryCutoff = new Date(event?.liveAt || event?.closesAt);
+  const entryCutoffLabel = Number.isFinite(entryCutoff.getTime())
+    ? entryCutoff.toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    })
+    : "the scheduled entry-close time";
   const steps = [
     {
       num: "01",
-      title: "Pay Entry Fee",
-      desc: `Pay ${event?.entryInr || "₹199"} (${event?.entryUsdt || "2.71 USDT"}) from your wallet.`,
+      title: "Reserve Demo Credits",
+      desc: `${entryCredits} non-withdrawable demo credits are reserved when you submit.`,
       icon: "wallet-outline",
       iconColor: "#00C987",
       iconBg: "#E6FBF3",
@@ -16,15 +27,15 @@ export default function ContestRulesView({ event }) {
     {
       num: "02",
       title: "Submit Prediction",
-      desc: "Enter your closing value: 23,000.00 – 26,000.00.",
+      desc: "Enter one predicted closing value for this contest.",
       icon: "locate-outline",
       iconColor: "#6366F1",
       iconBg: "#EEF2FF",
     },
     {
       num: "03",
-      title: "Wait for Close",
-      desc: "Market closes 3:30 PM IST. Prediction locked on submit.",
+      title: "Entry Closes",
+      desc: `Your prediction is locked when submitted. Entry closes at ${entryCutoffLabel}.`,
       icon: "time-outline",
       iconColor: "#F59E0B",
       iconBg: "#FEF3C7",
@@ -32,15 +43,15 @@ export default function ContestRulesView({ event }) {
     {
       num: "04",
       title: "Results",
-      desc: "Closest prediction wins. Ties by earliest submission.",
+      desc: "The official closing value is recorded and the closest prediction wins.",
       icon: "stats-chart-outline",
       iconColor: "#8B5CF6",
       iconBg: "#F3E8FF",
     },
     {
       num: "05",
-      title: "Win Prizes",
-      desc: "Top 100 win. USDT auto-credited to your wallet.",
+      title: "Demo Results",
+      desc: "After admin settlement, demo-credit rewards are credited to eligible winners.",
       icon: "trophy-outline",
       iconColor: "#D97706",
       iconBg: "#FEF3C7",
@@ -50,9 +61,9 @@ export default function ContestRulesView({ event }) {
   const contestRules = [
     "One prediction per user — no edits after submission",
     "Ties broken by earliest submission timestamp",
-    "20% platform commission on gross winnings",
-    "Min withdrawal: 10 USDT",
-    "Must complete Aadhaar KYC to withdraw",
+    "Equal closest predictions share the demo prize pool; the earlier entry receives any remainder",
+    "Demo credits are non-withdrawable and have no cash or USDT value",
+    "Results are available after the contest is settled by an administrator",
   ];
 
   return (
@@ -61,18 +72,18 @@ export default function ContestRulesView({ event }) {
       <View style={styles.aboutCard}>
         <Text style={styles.aboutTitle}>About This Contest</Text>
         <Text style={styles.aboutDesc}>
-          India's benchmark large-cap index tracking 50 stocks across key sectors of the economy.
+          {event?.question || "Submit one closing-value prediction before entries close."}
         </Text>
 
         <View style={styles.tagsRow}>
           <View style={[styles.tagPill, { backgroundColor: "#E6FBF3" }]}>
-            <Text style={[styles.tagPillText, { color: "#00C987" }]}>Index</Text>
+            <Text style={[styles.tagPillText, { color: "#00C987" }]}>{event?.status || "CONTEST"}</Text>
           </View>
           <View style={[styles.tagPill, { backgroundColor: "#EEF2FF" }]}>
-            <Text style={[styles.tagPillText, { color: "#6366F1" }]}>NSE • BSE</Text>
+            <Text style={[styles.tagPillText, { color: "#6366F1" }]}>{event?.instrument?.exchange || "Market"}</Text>
           </View>
           <View style={[styles.tagPill, { backgroundColor: "#FEF3C7" }]}>
-            <Text style={[styles.tagPillText, { color: "#D97706" }]}>Closes 3:30 PM IST</Text>
+            <Text style={[styles.tagPillText, { color: "#D97706" }]}>Demo credits only</Text>
           </View>
         </View>
       </View>

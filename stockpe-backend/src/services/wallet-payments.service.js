@@ -397,6 +397,14 @@ async function getPaymentSummary({ userId }) {
              FROM withdrawals WHERE user_id = $1 ORDER BY requested_at DESC LIMIT 10`,
             [userId]
         );
+        const demoPayouts = await client.query(
+            `SELECT payout.id, payout.amount_usdt::TEXT AS amount_usdt, payout.status,
+                    payout.simulated_tx_hash AS tx_hash, payout.created_at, payout.completed_at, contest.title
+             FROM demo_contest_test_payouts payout
+             JOIN demo_dashboard_contests contest ON contest.id = payout.contest_id
+             WHERE payout.user_id = $1 ORDER BY payout.created_at DESC LIMIT 10`,
+            [userId]
+        );
         return {
             environment: "mock",
             network: NETWORK,
@@ -405,6 +413,7 @@ async function getPaymentSummary({ userId }) {
             depositAddress: address.rows[0] || null,
             deposits: deposits.rows,
             withdrawals: withdrawals.rows,
+            demoPayouts: demoPayouts.rows,
         };
     });
 }

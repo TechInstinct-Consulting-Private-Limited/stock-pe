@@ -27,6 +27,8 @@ function serializeContest(row) {
         fillPercent: Math.round((playerCount / playerCapacity) * 100),
         opensAt: row.opens_at,
         secondsUntilOpen: Math.max(0, Number(row.seconds_until_open) || 0),
+        liveAt: row.live_at,
+        secondsUntilLive: Math.max(0, Number(row.seconds_until_live) || 0),
         closesAt: row.closes_at,
         secondsUntilClose: Math.max(0, Number(row.seconds_until_close)),
         settlementSource: row.settlement_source,
@@ -39,12 +41,16 @@ async function getContestByPublicId(publicId) {
     const result = await pool.query(
         `SELECT contest.public_id, contest.title, contest.question, contest.status,
                 contest.entry_credits, contest.prize_pool_credits, contest.player_capacity,
-                contest.player_count, contest.opens_at, contest.closes_at, contest.settlement_source,
+                contest.player_count, contest.opens_at, contest.live_at, contest.closes_at, contest.settlement_source,
                 instrument.code AS instrument_code, instrument.display_name AS instrument_name,
                 instrument.exchange, instrument.category,
                 quote.value::TEXT AS current_price, quote.change_percent::TEXT AS change_percent,
                 GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (contest.closes_at - NOW()))))::INTEGER
-                    AS seconds_until_close
+                    AS seconds_until_close,
+                GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (contest.live_at - NOW()))))::INTEGER
+                    AS seconds_until_live,
+                GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (contest.opens_at - NOW()))))::INTEGER
+                    AS seconds_until_open
          FROM demo_dashboard_contests contest
          JOIN market_instruments instrument ON instrument.id = contest.instrument_id
          JOIN LATERAL (
@@ -103,10 +109,12 @@ async function getDashboard({ filter }) {
         pool.query(
             `SELECT contest.public_id, contest.title, contest.question, contest.status,
                     contest.entry_credits, contest.prize_pool_credits, contest.player_capacity,
-                    contest.player_count, contest.opens_at, contest.closes_at, contest.settlement_source,
+                    contest.player_count, contest.opens_at, contest.live_at, contest.closes_at, contest.settlement_source,
                     quote.value::TEXT AS current_price, quote.change_percent::TEXT AS change_percent,
                     GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (contest.opens_at - NOW()))))::INTEGER
                         AS seconds_until_open,
+                    GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (contest.live_at - NOW()))))::INTEGER
+                        AS seconds_until_live,
                     GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (contest.closes_at - NOW()))))::INTEGER
                         AS seconds_until_close
              FROM demo_dashboard_contests contest

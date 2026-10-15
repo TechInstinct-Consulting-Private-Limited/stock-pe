@@ -124,18 +124,19 @@ export async function initiateWithdrawal({ amount }) {
 
 function mapTransaction(item, type) {
   const amountUsdt = Number(item.amount_usdt || 0);
-  const isDeposit = type === "DEPOSITS";
+  const isDeposit = type === "DEPOSITS" || type === "DEMO_PAYOUTS";
+  const isDemoPayout = type === "DEMO_PAYOUTS";
   return {
     id: item.id,
-    title: isDeposit ? "USDT Mock Deposit" : "USDT Mock Withdrawal",
+    title: isDemoPayout ? `${item.title || "Contest"} · Demo payout` : isDeposit ? "USDT Mock Deposit" : "USDT Mock Withdrawal",
     category: type,
     type: isDeposit ? "CREDIT" : "DEBIT",
     status: item.status,
     amountInr: Math.round(amountUsdt * USDT_INR_RATE),
     amountUsdt,
-    date: new Date(item.detected_at || item.requested_at || Date.now()).toLocaleString("en-IN"),
+    date: new Date(item.detected_at || item.requested_at || item.created_at || Date.now()).toLocaleString("en-IN"),
     refId: item.id,
-    description: `${isDeposit ? "Demo deposit" : "Demo payout"} · TRC20`,
+    description: isDemoPayout ? "Test-only contest payout · no blockchain transfer" : `${isDeposit ? "Demo deposit" : "Demo payout"} · TRC20`,
     paymentMethod: "USDT (TRC-20) · Demo",
     txHash: item.tx_hash,
   };
@@ -146,7 +147,8 @@ export async function fetchTransactionHistory({ category = "ALL" } = {}) {
     const summary = await getWalletPaymentSummary();
     const deposits = (summary.deposits || []).map((item) => mapTransaction(item, "DEPOSITS"));
     const withdrawals = (summary.withdrawals || []).map((item) => mapTransaction(item, "WITHDRAWALS"));
-    const transactions = [...deposits, ...withdrawals];
+    const demoPayouts = (summary.demoPayouts || []).map((item) => mapTransaction(item, "DEMO_PAYOUTS"));
+    const transactions = [...demoPayouts, ...deposits, ...withdrawals];
     return { success: true, data: category === "ALL" ? transactions : transactions.filter((item) => item.category === category) };
   } catch (error) {
     return { success: false, error: error.message || "Transaction history is unavailable" };

@@ -6,6 +6,7 @@ router.use(requireAuth);
 router.get("/me", controller.me);
 router.get("/predictions", controller.predictions);
 router.get("/winnings", controller.winnings);
+router.get("/demo-payouts", controller.demoPayouts);
 router.get("/notifications", controller.notifications);
 router.patch("/notifications/read-all", controller.markAllRead);
 router.patch("/notifications/:notificationId/read", controller.markRead);

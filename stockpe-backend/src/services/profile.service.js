@@ -1,4 +1,5 @@
 const pool = require("../config/database");
+const { getUserTestPayouts } = require("./demo-contest-test-payout.service");
 
 function toNumber(value) { return Number(value || 0); }
 
@@ -52,6 +53,10 @@ async function getWinnings(userId) {
     return { totalRewardCredits: wins.reduce((sum, entry) => sum + toNumber(entry.reward_credits), 0), winCount: wins.length, rewards: wins };
 }
 
+async function getDemoPayouts(userId) {
+    return { payouts: await getUserTestPayouts(userId) };
+}
+
 async function listNotifications(userId) {
     const result = await pool.query(`SELECT id, type, title, message, metadata, read_at, created_at FROM profile_notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100`, [userId]);
     return result.rows;
@@ -64,4 +69,4 @@ async function markNotificationRead(userId, notificationId) {
 
 async function markAllNotificationsRead(userId) { await pool.query("UPDATE profile_notifications SET read_at=NOW() WHERE user_id=$1 AND read_at IS NULL", [userId]); }
 
-module.exports = { getMe, getPredictions, getWinnings, listNotifications, markNotificationRead, markAllNotificationsRead };
+module.exports = { getDemoPayouts, getMe, getPredictions, getWinnings, listNotifications, markNotificationRead, markAllNotificationsRead };

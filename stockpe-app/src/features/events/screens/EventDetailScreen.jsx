@@ -11,36 +11,27 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, radii, shadows, spacing, typography } from "../../../theme";
+import { shadows } from "../../../theme";
 import { useEventDetail } from "../hooks/useEventDetail";
 import { useTradeExecution } from "../hooks/useTradeExecution";
 import EventDetailHero from "../components/EventDetailHero";
-import PrizeDistributionView from "../components/PrizeDistributionView";
 import ContestRulesView from "../components/ContestRulesView";
-import LiveLeaderboardView from "../components/LiveLeaderboardView";
 import PredictionModalSheet from "../components/PredictionModalSheet";
 import OrderSuccessModal from "../components/OrderSuccessModal";
 import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 
 export default function EventDetailScreen({ eventId }) {
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState("prizes"); // "prizes" | "rules" | "board"
   const [isTradeSheetVisible, setIsTradeSheetVisible] = useState(false);
+  const [isContestInfoVisible, setIsContestInfoVisible] = useState(false);
 
   const { event, isLoading, error, refreshEvent } = useEventDetail(eventId);
   const { refreshing, onRefresh } = usePullToRefresh(refreshEvent);
 
   const {
-    tradeMode,
-    setTradeMode,
     targetPrice,
     setTargetPrice,
     handleIncrementTarget,
-    selectedOption,
-    setSelectedOption,
-    quantity,
-    setQuantity,
-    metrics,
     walletBalance,
     isSuccessModalVisible,
     lastPlacedTrade,
@@ -50,15 +41,10 @@ export default function EventDetailScreen({ eventId }) {
     joinMessage,
   } = useTradeExecution(event);
 
-  const tabs = [
-    { id: "prizes", label: "PRIZES", icon: "🏆" },
-    { id: "rules", label: "RULES", icon: "📋" },
-    { id: "board", label: "BOARD", icon: "📊" },
-  ];
-
   const handleConfirmOrder = async () => {
     const result = await handlePlaceOrder();
     if (!result?.error) setIsTradeSheetVisible(false);
+    return result;
   };
 
   if (isLoading || error || !event) {
@@ -90,36 +76,22 @@ export default function EventDetailScreen({ eventId }) {
           {/* Top Hero: Spot price, Digital Timer & 4-col metrics */}
           <EventDetailHero event={event} />
 
-          {/* 3 Main Tabs: PRIZES | RULES | BOARD */}
-          <View style={styles.tabBar}>
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  style={[styles.tabBtn, isActive && styles.tabBtnActive]}
-                  onPress={() => setActiveTab(tab.id)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.tabIcon}>{tab.icon}</Text>
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      isActive && styles.tabLabelActive,
-                    ]}
-                  >
-                    {tab.label}
-                  </Text>
-                  {isActive && <View style={styles.tabIndicator} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Tab Views */}
-          {activeTab === "prizes" && <PrizeDistributionView event={event} />}
-          {activeTab === "rules" && <ContestRulesView event={event} />}
-          {activeTab === "board" && <LiveLeaderboardView event={event} />}
+          <TouchableOpacity
+            style={styles.contestInfoToggle}
+            onPress={() => setIsContestInfoVisible((visible) => !visible)}
+            activeOpacity={0.75}
+          >
+            <View>
+              <Text style={styles.contestInfoTitle}>CONTEST DETAILS</Text>
+              <Text style={styles.contestInfoSub}>How demo prediction and settlement work</Text>
+            </View>
+            <Ionicons
+              name={isContestInfoVisible ? "chevron-up" : "chevron-down"}
+              size={20}
+              color="#64748B"
+            />
+          </TouchableOpacity>
+          {isContestInfoVisible && <ContestRulesView event={event} />}
 
           {/* Spacer for bottom sticky bar */}
           <View style={{ height: 140 }} />
@@ -216,50 +188,32 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  tabBar: {
+  contestInfoToggle: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#EEF2F6",
     marginHorizontal: 16,
     borderRadius: 16,
-    paddingHorizontal: 8,
-    marginTop: 8,
-    marginBottom: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 12,
+    marginBottom: 2,
+    alignItems: "center",
+    justifyContent: "space-between",
     ...shadows.sm,
   },
-  tabBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 14,
-    position: "relative",
-  },
-  tabBtnActive: {},
-  tabIcon: {
-    fontSize: 13,
-  },
-  tabLabel: {
+  contestInfoTitle: {
     fontSize: 12,
-    fontWeight: "800",
-    color: "#64748B",
+    fontWeight: "900",
+    color: "#071329",
     letterSpacing: 0.5,
   },
-  tabLabelActive: {
-    color: "#00C987",
-    fontWeight: "900",
-  },
-  tabIndicator: {
-    position: "absolute",
-    bottom: 0,
-    left: 12,
-    right: 12,
-    height: 3,
-    backgroundColor: "#00C987",
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
+  contestInfoSub: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748B",
+    marginTop: 3,
   },
   bottomStickyBar: {
     position: "absolute",

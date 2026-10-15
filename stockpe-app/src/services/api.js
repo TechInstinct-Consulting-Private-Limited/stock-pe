@@ -167,6 +167,12 @@ export function getMyDemoContests(status = "ALL") {
     });
 }
 
+export function getDemoCreditBalance() {
+    return authenticatedRequest("/demo-contests/balance", {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
 export function joinDemoContest(publicId, predictionValue) {
     return authenticatedRequest(`/demo-contests/${encodeURIComponent(publicId)}/join`, {
         method: "POST",
@@ -232,6 +238,10 @@ export function getProfilePredictions(status = "ALL") {
 
 export function getProfileWinnings() {
     return authenticatedRequest("/profile/winnings", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function getProfileDemoPayouts() {
+    return authenticatedRequest("/profile/demo-payouts", { headers: { "Cache-Control": "no-store" } });
 }
 
 export function getProfileNotifications() {

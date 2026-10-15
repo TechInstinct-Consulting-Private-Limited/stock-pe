@@ -21,6 +21,22 @@ async function ensureAccount(client, userId) {
     return result.rows[0];
 }
 
+async function getDemoCreditBalance({ userId }) {
+    await pool.query(
+        "INSERT INTO demo_credit_accounts (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING",
+        [userId]
+    );
+    const result = await pool.query(
+        "SELECT available_credits, reserved_credits FROM demo_credit_accounts WHERE user_id = $1",
+        [userId]
+    );
+    const account = result.rows[0];
+    return {
+        availableCredits: Number(account.available_credits),
+        reservedCredits: Number(account.reserved_credits),
+    };
+}
+
 function normalizePredictionValue(value) {
     if (value === undefined || value === null || value === "") return null;
     const predictionValue = Number(value);
@@ -76,4 +92,4 @@ async function getMyDemoContests({ userId, status = "ALL" }) {
     return { status: requested, entries: result.rows };
 }
 
-module.exports = { getMyDemoContests, joinDemoContest };
+module.exports = { getDemoCreditBalance, getMyDemoContests, joinDemoContest };

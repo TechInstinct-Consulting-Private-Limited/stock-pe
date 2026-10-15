@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { calculateOrderMetrics, calculatePricePredictionMetrics } from "../../../utils/calculations";
-import { getMyDemoContests, getUserFacingError, joinDemoContest } from "../../../services/api";
+import { getDemoCreditBalance, getMyDemoContests, getUserFacingError, joinDemoContest } from "../../../services/api";
 
 export function useTradeExecution(event) {
   const [tradeMode, setTradeMode] = useState("PRICE_TARGET");
   const [selectedOption, setSelectedOption] = useState("YES");
   const [pricePerUnit, setPricePerUnit] = useState(event?.yesPrice || 6.2);
   const [targetPrice, setTargetPrice] = useState(
-    event?.spotNumeric ? String(event.spotNumeric) : "24187.65"
+    event?.spotNumeric ? String(event.spotNumeric) : ""
   );
   const [quantity, setQuantity] = useState(25);
-  const [walletBalance, setWalletBalance] = useState(1283.0);
+  const [walletBalance, setWalletBalance] = useState(null);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
   const [lastPlacedTrade, setLastPlacedTrade] = useState(null);
   const [hasJoined, setHasJoined] = useState(false);
@@ -39,6 +39,18 @@ export function useTradeExecution(event) {
     return () => { mounted = false; };
   }, [event?.id]);
 
+  useEffect(() => {
+    let mounted = true;
+    getDemoCreditBalance()
+      .then((response) => {
+        if (mounted) setWalletBalance(Number(response.availableCredits));
+      })
+      .catch(() => {
+        if (mounted) setWalletBalance(null);
+      });
+    return () => { mounted = false; };
+  }, [event?.id]);
+
   const canJoin = event?.status === "OPEN" && !hasJoined;
   const joinMessage = hasJoined
     ? "ALREADY JOINED"
@@ -50,14 +62,14 @@ export function useTradeExecution(event) {
 
   const metrics = useMemo(() => {
     if (tradeMode === "PRICE_TARGET") {
-      const spot = event?.spotNumeric || 24187.65;
+      const spot = event?.spotNumeric || 0;
       return calculatePricePredictionMetrics(quantity, spot, targetPrice, 10);
     }
     return calculateOrderMetrics(quantity, pricePerUnit);
   }, [tradeMode, quantity, pricePerUnit, targetPrice, event?.spotNumeric]);
 
   const handleIncrementTarget = (delta = 50) => {
-    const spot = event?.spotNumeric || 24187.65;
+    const spot = event?.spotNumeric || 0;
     const current = parseFloat(targetPrice) || spot;
     const next = Math.round((current + delta) * 100) / 100;
     setTargetPrice(String(next));
@@ -77,7 +89,7 @@ export function useTradeExecution(event) {
       };
       setLastPlacedTrade(trade);
       setHasJoined(true);
-      setWalletBalance((prev) => Math.max(0, prev - response.entry.entryCredits));
+      setWalletBalance((prev) => prev === null ? prev : Math.max(0, prev - response.entry.entryCredits));
       setIsSuccessModalVisible(true);
       return trade;
     } catch (error) {

@@ -2,15 +2,14 @@ import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { colors, radii, shadows, spacing, typography } from "../../../theme";
+import { colors, shadows } from "../../../theme";
 
 export default function EventDetailHero({ event }) {
-  const [secondsLeft, setSecondsLeft] = useState(event?.secondsUntilClose || 0);
-
-  useEffect(() => {
-    const closesAt = new Date(event?.closesAt).getTime();
-    setSecondsLeft(Number.isFinite(closesAt) ? Math.max(0, Math.floor((closesAt - Date.now()) / 1000)) : 0);
-  }, [event?.closesAt]);
+  const isEntryOpen = event?.status === "OPEN";
+  const deadlineAt = isEntryOpen ? (event?.liveAt || event?.closesAt) : event?.closesAt;
+  const [secondsLeft, setSecondsLeft] = useState(
+    isEntryOpen ? Number(event?.secondsUntilLive || event?.secondsUntilClose || 0) : Number(event?.secondsUntilClose || 0)
+  );
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -25,12 +24,12 @@ export default function EventDetailHero({ event }) {
 
   const title = event?.title || "NIFTY 50";
   const status = event?.status || "OPEN";
-  const spotPrice = event?.currentPrice || "24,187.65";
-  const change = event?.change || "+0.84%";
+  const spotPrice = event?.currentPrice || "—";
+  const change = event?.change || "—";
   const prizePool = `${Number(event?.prizePoolCredits || 0).toLocaleString("en-IN")} Credits`;
   const entryCredits = `${Number(event?.entryCredits || 0).toLocaleString("en-IN")} Credits`;
-  const players = event?.players ? Number(event?.players).toLocaleString() : "8,431";
-  const fill = event?.fillPercent || 84;
+  const players = Number(event?.players || 0).toLocaleString();
+  const fill = Number(event?.fillPercent || 0);
   const capacity = event?.playerCapacity ? Number(event.playerCapacity).toLocaleString("en-IN") : "--";
 
   return (
@@ -85,7 +84,7 @@ export default function EventDetailHero({ event }) {
       <View style={styles.timerCard}>
         <View style={styles.timerHeader}>
           <Ionicons name="time-outline" size={14} color="#D97706" />
-          <Text style={styles.timerLabel}>CLOSES IN</Text>
+          <Text style={styles.timerLabel}>{isEntryOpen ? "ENTRY CLOSES IN" : "CONTEST ENDS IN"}</Text>
         </View>
 
         <View style={styles.timerDigitsRow}>

@@ -8,22 +8,26 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { colors, radii, shadows, spacing, typography } from "../../../theme";
+import { shadows } from "../../../theme";
 
 export default function PredictionModalSheet({
   event,
   targetPrice,
   onSetTargetPrice,
   onIncrementTarget,
-  walletBalance = 1283.0,
+  walletBalance,
   onPlaceOrder,
   onClose,
   bottomInset = 16,
 }) {
-  const [secondsLeft, setSecondsLeft] = useState(3 * 3600 + 3 * 60 + 53);
+  const [secondsLeft, setSecondsLeft] = useState(
+    Number(event?.secondsUntilLive || event?.secondsUntilClose || 0)
+  );
+  const [submitError, setSubmitError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Robust local state fallback if parent does not provide state
-  const spotNumeric = event?.spotNumeric || 24187.65;
+  const spotNumeric = Number(event?.spotNumeric || 0);
   const [localPrice, setLocalPrice] = useState(
     targetPrice ? String(targetPrice) : String(spotNumeric)
   );
@@ -35,21 +39,25 @@ export default function PredictionModalSheet({
   }, [targetPrice]);
 
   useEffect(() => {
+    const deadline = new Date(event?.liveAt || event?.closesAt).getTime();
     const timer = setInterval(() => {
-      setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setSecondsLeft(
+        Number.isFinite(deadline) ? Math.max(0, Math.floor((deadline - Date.now()) / 1000)) : 0
+      );
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [event?.liveAt, event?.closesAt]);
 
   const hrs = String(Math.floor(secondsLeft / 3600)).padStart(2, "0");
   const mins = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0");
   const secs = String(secondsLeft % 60).padStart(2, "0");
 
   const entryCredits = Number(event?.entryCredits || 0);
-  const balanceCredits = Number(walletBalance || 0);
+  const hasWalletBalance = Number.isFinite(Number(walletBalance));
+  const balanceCredits = hasWalletBalance ? Number(walletBalance) : 0;
   const afterCredits = Math.max(0, balanceCredits - entryCredits);
 
-  const stepVal = event?.priceStep || 50;
+  const stepVal = Number(event?.priceStep || 1);
 
   const handlePriceChange = (val) => {
     const sanitized = val.replace(/[^0-9.]/g, "");
@@ -71,11 +79,27 @@ export default function PredictionModalSheet({
     }
   };
 
-  const handleConfirm = () => {
-    if (typeof onPlaceOrder === "function") {
-      onPlaceOrder();
+  const handleConfirm = async () => {
+    const predictionValue = Number(localPrice);
+    if (!(predictionValue > 0)) {
+      setSubmitError("Enter a valid positive closing value.");
+      return;
+    }
+    setSubmitError("");
+    setIsSubmitting(true);
+    try {
+      const result = await onPlaceOrder?.();
+      if (result?.error) setSubmitError(result.error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const cutoffLabel = event?.status === "OPEN" ? "ENTRY CLOSES IN" : "CONTEST ENDS IN";
+  const cutoffDate = new Date(event?.liveAt || event?.closesAt);
+  const cutoffTime = Number.isFinite(cutoffDate.getTime())
+    ? cutoffDate.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZoneName: "short" })
+    : "Schedule unavailable";
 
   return (
     <View
@@ -124,13 +148,14 @@ export default function PredictionModalSheet({
       <View style={styles.benchmarkCard}>
         <View style={styles.benchmarkHeaderRow}>
           <Text style={styles.benchmarkLabel}>CURRENT VALUE</Text>
-          <Text style={styles.benchmarkTime}>12:47 PM IST</Text>
+          <Text style={styles.benchmarkTime}>{cutoffTime}</Text>
         </View>
 
         <Text style={styles.benchmarkPrice}>
-          {event?.currentPrice || "24,187.65"}
+          {event?.currentPrice || "—"}
         </Text>
 
+        <Text style={styles.countdownLabel}>{cutoffLabel}</Text>
         <View style={styles.timerRow}>
           <View style={styles.timerPill}>
             <Text style={styles.timerNum}>{hrs}</Text>
@@ -161,7 +186,7 @@ export default function PredictionModalSheet({
             value={localPrice}
             onChangeText={handlePriceChange}
             keyboardType="numeric"
-            placeholder="24187.65"
+            placeholder="Enter value"
             placeholderTextColor="#94A3B8"
             selectTextOnFocus
           />
@@ -186,7 +211,7 @@ export default function PredictionModalSheet({
           </View>
         </View>
 
-        <Text style={styles.rangeSubtext}>Range: 23,000.00 – 26,000.00</Text>
+        <Text style={styles.rangeSubtext}>Enter your own estimated closing value.</Text>
       </View>
 
       {/* Financial & Balance Breakdown Box */}
@@ -212,7 +237,7 @@ export default function PredictionModalSheet({
           <Text style={styles.breakdownLabel}>Demo Balance</Text>
           <View style={styles.breakdownRight}>
             <Text style={styles.breakdownInr}>
-              {balanceCredits.toLocaleString("en-IN")} Credits
+              {hasWalletBalance ? `${balanceCredits.toLocaleString("en-IN")} Credits` : "Loading…"}
             </Text>
             <View style={styles.breakdownPill}>
               <View style={styles.usdtMiniDot}>
@@ -230,7 +255,7 @@ export default function PredictionModalSheet({
           <Text style={styles.breakdownLabel}>After entry</Text>
           <View style={styles.breakdownRight}>
             <Text style={styles.breakdownInr}>
-              {afterCredits.toLocaleString("en-IN")} Credits
+              {hasWalletBalance ? `${afterCredits.toLocaleString("en-IN")} Credits` : "—"}
             </Text>
             <View style={styles.breakdownPill}>
               <View style={styles.usdtMiniDot}>
@@ -243,12 +268,15 @@ export default function PredictionModalSheet({
       </View>
 
       {/* Primary Submit CTA Button */}
+      {submitError ? <Text style={styles.submitError}>{submitError}</Text> : null}
+      <Text style={styles.submitHint}>One prediction per user. It is locked after submission.</Text>
       <TouchableOpacity
-        style={styles.submitCtaBtn}
+        style={[styles.submitCtaBtn, isSubmitting && styles.submitCtaBtnDisabled]}
         onPress={handleConfirm}
+        disabled={isSubmitting}
         activeOpacity={0.88}
       >
-        <Text style={styles.submitCtaText}>SUBMIT PREDICTION</Text>
+        <Text style={styles.submitCtaText}>{isSubmitting ? "SUBMITTING…" : "SUBMIT PREDICTION"}</Text>
         <Ionicons name="flash" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
       </TouchableOpacity>
     </View>
@@ -371,6 +399,14 @@ const styles = StyleSheet.create({
     color: "#071329",
     letterSpacing: -0.5,
     marginBottom: 10,
+  },
+  countdownLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#64748B",
+    letterSpacing: 0.7,
+    marginTop: 10,
+    marginBottom: 6,
   },
   timerRow: {
     flexDirection: "row",
@@ -532,10 +568,27 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     ...shadows.md,
   },
+  submitCtaBtnDisabled: {
+    opacity: 0.65,
+  },
   submitCtaText: {
     fontSize: 16,
     fontWeight: "900",
     color: "#FFFFFF",
     letterSpacing: 0.5,
+  },
+  submitHint: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  submitError: {
+    color: "#DC2626",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 8,
   },
 });
