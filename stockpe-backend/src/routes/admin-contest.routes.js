@@ -4,6 +4,7 @@ const { requireAdmin } = require("../middleware/adminAuth");
 const controller = require("../controllers/admin-contest.controller");
 
 router.use(requireAuth, requireAdmin());
+router.get("/users", controller.listUsers);
 router.get("/contests", controller.list);
 router.post("/contests", controller.create);
 router.put("/contests/:publicId", controller.update);
