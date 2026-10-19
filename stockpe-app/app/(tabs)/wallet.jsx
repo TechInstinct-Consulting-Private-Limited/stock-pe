@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,10 +9,47 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import {
+  fetchWalletSummary,
+  fetchTransactionHistory,
+  WALLET_SUMMARY_DATA,
+} from "../../src/features/wallet/services/walletService";
 
 export default function WalletScreen() {
   const router = useRouter();
+  const [wallet, setWallet] = useState(WALLET_SUMMARY_DATA);
+  const [transactions, setTransactions] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [walletRes, txRes] = await Promise.all([
+        fetchWalletSummary(),
+        fetchTransactionHistory({ category: "ALL" }),
+      ]);
+      if (walletRes && walletRes.success && walletRes.data) {
+        setWallet(walletRes.data);
+      }
+      if (txRes && txRes.success && txRes.data) {
+        setTransactions(txRes.data.slice(0, 5));
+      }
+    } catch (e) {
+      console.log("[WalletScreen] Error loading wallet data:", e);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
 
   const quickActions = [
     {
@@ -48,75 +86,20 @@ export default function WalletScreen() {
     },
   ];
 
-  const transactions = [
-    {
-      id: "tx-1",
-      title: "NIFTY IT Win",
-      date: "31 Aug, 11:21 pm",
-      status: "Won",
-      statusBg: "#FEF3C7",
-      statusColor: "#D97706",
-      amountInr: "+₹45,000",
-      amountUsdt: "+612.24 USDT",
-      isCredit: true,
-      icon: "arrow-down-outline",
-    },
-    {
-      id: "tx-2",
-      title: "SENSEX Event Entry",
-      date: "01 Sept, 08:21 pm",
-      status: "Success",
-      statusBg: "#F1F5F9",
-      statusColor: "#64748B",
-      amountInr: "-₹199",
-      amountUsdt: "-2.71 USDT",
-      isCredit: false,
-      icon: "arrow-up-outline",
-    },
-    {
-      id: "tx-3",
-      title: "USDT Deposit",
-      date: "01 Sept, 06:21 pm",
-      status: "Confirmed",
-      statusBg: "#F1F5F9",
-      statusColor: "#64748B",
-      amountInr: "+₹1,000",
-      amountUsdt: "+13.62 USDT",
-      isCredit: true,
-      icon: "arrow-down-outline",
-    },
-    {
-      id: "tx-4",
-      title: "BANK NIFTY Entry",
-      date: "30 Aug, 11:21 pm",
-      status: "Success",
-      statusBg: "#F1F5F9",
-      statusColor: "#64748B",
-      amountInr: "-₹299",
-      amountUsdt: "-4.07 USDT",
-      isCredit: false,
-      icon: "arrow-up-outline",
-    },
-    {
-      id: "tx-5",
-      title: "NIFTY 50 Win",
-      date: "29 Aug, 04:15 pm",
-      status: "Won",
-      statusBg: "#FEF3C7",
-      statusColor: "#D97706",
-      amountInr: "+₹12,500",
-      amountUsdt: "+170.25 USDT",
-      isCredit: true,
-      icon: "arrow-down-outline",
-    },
-  ];
-
   return (
     <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#00C987"]}
+            tintColor="#00C987"
+          />
+        }
       >
         {/* Emerald Gradient Hero Card */}
         <LinearGradient
@@ -128,7 +111,9 @@ export default function WalletScreen() {
           <View style={styles.heroTopRow}>
             <View>
               <Text style={styles.balanceLabel}>TOTAL BALANCE</Text>
-              <Text style={styles.balanceAmount}>₹12,450.00</Text>
+              <Text style={styles.balanceAmount}>
+                ₹{Math.round(wallet.totalBalanceInr || 0).toLocaleString("en-IN")}
+              </Text>
             </View>
 
             {/* USDT Card */}
@@ -136,7 +121,9 @@ export default function WalletScreen() {
               <View style={styles.usdtHeroIcon}>
                 <Text style={styles.usdtHeroIconText}>₮</Text>
               </View>
-              <Text style={styles.usdtHeroValue}>169.57</Text>
+              <Text style={styles.usdtHeroValue}>
+                {Number(wallet.totalBalanceUsdt || 0).toFixed(2)}
+              </Text>
               <Text style={styles.usdtHeroUnit}>USDT</Text>
             </View>
           </View>
@@ -220,7 +207,7 @@ export default function WalletScreen() {
                 ]}
               >
                 <Ionicons
-                  name={tx.icon}
+                  name={tx.icon || (tx.isCredit ? "arrow-down-outline" : "arrow-up-outline")}
                   size={18}
                   color={tx.isCredit ? "#00C987" : "#EF4444"}
                 />
@@ -234,13 +221,13 @@ export default function WalletScreen() {
                   <View
                     style={[
                       styles.txStatusBadge,
-                      { backgroundColor: tx.statusBg },
+                      { backgroundColor: tx.statusBg || (tx.isCredit ? "#E6FBF3" : "#F1F5F9") },
                     ]}
                   >
                     <Text
                       style={[
                         styles.txStatusText,
-                        { color: tx.statusColor },
+                        { color: tx.statusColor || (tx.isCredit ? "#059669" : "#64748B") },
                       ]}
                     >
                       {tx.status}
@@ -257,9 +244,15 @@ export default function WalletScreen() {
                     tx.isCredit ? styles.creditText : styles.debitText,
                   ]}
                 >
-                  {tx.amountInr}
+                  {typeof tx.amountInr === "number"
+                    ? `${tx.isCredit ? "+" : "-"}₹${Math.round(tx.amountInr).toLocaleString("en-IN")}`
+                    : tx.amountInr}
                 </Text>
-                <Text style={styles.txAmountUsdt}>{tx.amountUsdt}</Text>
+                <Text style={styles.txAmountUsdt}>
+                  {typeof tx.amountUsdt === "number"
+                    ? `${tx.isCredit ? "+" : "-"}${tx.amountUsdt.toFixed(2)} USDT`
+                    : tx.amountUsdt}
+                </Text>
               </View>
             </TouchableOpacity>
           ))}

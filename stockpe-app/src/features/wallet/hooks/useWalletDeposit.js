@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   PAYMENT_METHODS,
   PROMO_COUPONS,
@@ -8,6 +8,8 @@ import {
   fetchWalletSummary,
   initiateDeposit,
   validateCouponCode,
+  checkPaymentStatus,
+  simulateSandboxWebhook,
 } from "../services/walletService";
 
 export function useWalletDeposit() {
@@ -21,8 +23,12 @@ export function useWalletDeposit() {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [depositResult, setDepositResult] = useState(null);
+  const [orderStatus, setOrderStatus] = useState("idle");
+  const [isSimulating, setIsSimulating] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const pollerRef = useRef(null);
 
   const quickAmounts = [
     { label: "+10 USDT", value: "734", usdt: "10" },
@@ -32,68 +38,58 @@ export function useWalletDeposit() {
     { label: "+250 USDT", value: "18355", usdt: "250" },
   ];
 
-  useEffect(() => {
-    fetchWalletSummary().then((res) => {
-      if (res.success) setWallet(res.data);
-    });
+  const refreshBalance = useCallback(async () => {
+    const res = await fetchWalletSummary();
+    if (res.success && res.data) setWallet(res.data);
   }, []);
 
+  useEffect(() => {
+    refreshBalance();
+    return () => {
+      if (pollerRef.current) clearInterval(pollerRef.current);
+    };
+  }, [refreshBalance]);
+
   const numAmount = useMemo(() => {
-    const parsed = parseFloat(amount);
-    return isNaN(parsed) ? 0 : parsed;
+    const val = parseFloat(amount);
+    return isNaN(val) ? 0 : val;
   }, [amount]);
 
-  const usdtEquivalent = useMemo(() => {
-    return (numAmount / USDT_INR_RATE).toFixed(2);
-  }, [numAmount]);
+  const usdtEquivalent = useMemo(
+    () => (numAmount / USDT_INR_RATE).toFixed(2),
+    [numAmount]
+  );
 
   const calculatedBonus = useMemo(() => {
-    if (!appliedCoupon) return 0;
-    if (appliedCoupon.calculatedBonus) return appliedCoupon.calculatedBonus;
-    if (appliedCoupon.discountPercent) {
-      return Math.min(
-        (numAmount * appliedCoupon.discountPercent) / 100,
-        appliedCoupon.maxBonusInr || 3670
-      );
-    }
-    return 0;
+    if (!appliedCoupon?.discountPercent) return 0;
+    return Math.min(
+      (numAmount * appliedCoupon.discountPercent) / 100,
+      appliedCoupon.maxBonusInr || 3670
+    );
   }, [appliedCoupon, numAmount]);
 
-  const calculatedBonusUsdt = useMemo(() => {
-    return +(calculatedBonus / USDT_INR_RATE).toFixed(2);
-  }, [calculatedBonus]);
+  const totalEffectiveCredit = useMemo(
+    () => numAmount + calculatedBonus,
+    [numAmount, calculatedBonus]
+  );
 
-  const totalEffectiveCredit = useMemo(() => {
-    return numAmount + calculatedBonus;
-  }, [numAmount, calculatedBonus]);
+  const totalEffectiveCreditUsdt = useMemo(
+    () => +(totalEffectiveCredit / USDT_INR_RATE).toFixed(2),
+    [totalEffectiveCredit]
+  );
 
-  const totalEffectiveCreditUsdt = useMemo(() => {
-    return +(totalEffectiveCredit / USDT_INR_RATE).toFixed(2);
-  }, [totalEffectiveCredit]);
-
-  const handleSelectQuickAmount = (val) => {
-    setAmount(val);
-    setErrorMessage("");
-  };
-
-  const handleApplyCoupon = async (codeToApply) => {
-    const code = codeToApply || couponCode;
-    if (!code.trim()) {
-      setCouponError("Please enter a coupon code");
-      return;
-    }
+  const handleApplyCoupon = async (code) => {
+    const c = (code || couponCode).trim();
+    if (!c) return setCouponError("Please enter a coupon code");
     setIsApplyingCoupon(true);
     setCouponError("");
-
-    const res = await validateCouponCode(code, numAmount);
+    const res = await validateCouponCode(c, numAmount);
     setIsApplyingCoupon(false);
-
     if (res.success) {
       setAppliedCoupon(res.data);
       setCouponCode(res.data.code);
-      setCouponError("");
     } else {
-      setCouponError(res.error || "Failed to apply coupon");
+      setCouponError(res.error || "Invalid coupon");
       setAppliedCoupon(null);
     }
   };
@@ -104,30 +100,91 @@ export function useWalletDeposit() {
     setCouponError("");
   };
 
+  const onFinished = useCallback(
+    async (finalOrder) => {
+      if (pollerRef.current) clearInterval(pollerRef.current);
+      setOrderStatus("finished");
+      setDepositResult(finalOrder);
+      await refreshBalance();
+      setShowSuccessModal(true);
+    },
+    [refreshBalance]
+  );
+
+  // Poll active payment status
+  useEffect(() => {
+    if (!depositResult?.paymentId || orderStatus === "finished") return;
+
+    pollerRef.current = setInterval(async () => {
+      try {
+        const res = await checkPaymentStatus(depositResult.paymentId);
+        if (res.success) {
+          setOrderStatus(res.status);
+          if (res.status === "finished" || res.isCompleted) {
+            onFinished({ ...depositResult, status: "finished" });
+          }
+        }
+      } catch (e) {
+        console.log("[useWalletDeposit] Poll error:", e.message);
+      }
+    }, 4000);
+
+    return () => {
+      if (pollerRef.current) clearInterval(pollerRef.current);
+    };
+  }, [depositResult, orderStatus, onFinished]);
+
+  // Initiate deposit
   const handleDepositSubmit = async () => {
     if (numAmount < (wallet.minDepositInr || 367)) {
-      setErrorMessage(`Minimum deposit is $${wallet.minDepositUsdt || 5} USDT (₹${wallet.minDepositInr || 367})`);
+      setErrorMessage(`Minimum deposit is $${wallet.minDepositUsdt || 5} USDT`);
       return;
     }
-
     setErrorMessage("");
     setIsProcessing(true);
 
     const res = await initiateDeposit({
       amount: numAmount,
       networkId: selectedNetwork,
-      couponCode: appliedCoupon ? appliedCoupon.code : null,
+      couponCode: appliedCoupon?.code || null,
       txHash: txHash.trim() || null,
     });
-
     setIsProcessing(false);
 
-    if (res.success) {
+    if (res.success && res.data) {
       setDepositResult(res.data);
-      setShowSuccessModal(true);
+      setOrderStatus(res.data.status || "waiting");
     } else {
-      setErrorMessage(res.error || "Deposit confirmation failed. Please try again.");
+      setErrorMessage(res.error || "Deposit failed. Please try again.");
     }
+  };
+
+  // Instant sandbox confirmation test
+  const handleSimulateConfirm = async () => {
+    if (!depositResult?.paymentId) return;
+    setIsSimulating(true);
+    try {
+      await simulateSandboxWebhook(
+        depositResult.paymentId,
+        depositResult.amountUsdt,
+        depositResult.payCurrency || "usdttrc20"
+      );
+      setTimeout(async () => {
+        const res = await checkPaymentStatus(depositResult.paymentId);
+        if (res.status === "finished" || res.isCompleted) {
+          onFinished({ ...depositResult, status: "finished" });
+        }
+        setIsSimulating(false);
+      }, 1000);
+    } catch {
+      setIsSimulating(false);
+    }
+  };
+
+  const handleResetOrder = () => {
+    if (pollerRef.current) clearInterval(pollerRef.current);
+    setDepositResult(null);
+    setOrderStatus("idle");
   };
 
   return {
@@ -137,7 +194,7 @@ export function useWalletDeposit() {
     numAmount,
     usdtEquivalent,
     quickAmounts,
-    handleSelectQuickAmount,
+    handleSelectQuickAmount: (val) => { setAmount(val); setErrorMessage(""); },
     paymentMethods: PAYMENT_METHODS,
     selectedNetwork,
     setSelectedNetwork,
@@ -150,7 +207,7 @@ export function useWalletDeposit() {
     couponError,
     isApplyingCoupon,
     calculatedBonus,
-    calculatedBonusUsdt,
+    calculatedBonusUsdt: +(calculatedBonus / USDT_INR_RATE).toFixed(2),
     totalEffectiveCredit,
     totalEffectiveCreditUsdt,
     handleApplyCoupon,
@@ -161,6 +218,9 @@ export function useWalletDeposit() {
     showSuccessModal,
     setShowSuccessModal,
     depositResult,
+    orderStatus,
+    isSimulating,
+    handleSimulateConfirm,
+    handleResetOrder,
   };
 }
-

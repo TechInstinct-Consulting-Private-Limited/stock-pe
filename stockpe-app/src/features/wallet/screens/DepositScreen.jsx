@@ -20,6 +20,7 @@ import WalletSuccessModal from "../components/WalletSuccessModal";
 
 export default function DepositScreen() {
   const router = useRouter();
+
   const {
     wallet,
     amount,
@@ -50,10 +51,15 @@ export default function DepositScreen() {
     showSuccessModal,
     setShowSuccessModal,
     depositResult,
+    orderStatus,
+    isSimulating,
+    handleSimulateConfirm,
+    handleResetOrder,
   } = useWalletDeposit();
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
+    handleResetOrder();
     router.back();
   };
 
@@ -63,7 +69,7 @@ export default function DepositScreen() {
         style={styles.screen}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* Top App Header */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -87,7 +93,7 @@ export default function DepositScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Current Balance Card */}
+          {/* Balance Card */}
           <View style={styles.balanceCard}>
             <View>
               <Text style={styles.balanceLabel}>CURRENT WALLET BALANCE</Text>
@@ -97,12 +103,57 @@ export default function DepositScreen() {
             </View>
             <View style={styles.balanceUsdtPill}>
               <Text style={styles.balanceUsdtText}>
-                ≈ ₹{wallet.totalBalanceInr.toLocaleString("en-IN")}
+                ≈ ₹{Math.round(wallet.totalBalanceInr).toLocaleString("en-IN")}
               </Text>
             </View>
           </View>
 
-          {/* 1. Deposit Amount Input & Chips */}
+          {/* Active Deposit Order Banner (When payment is in progress) */}
+          {depositResult && (
+            <View style={styles.activeBanner}>
+              <View style={styles.activeBannerTop}>
+                <View style={styles.statusPulse}>
+                  {orderStatus === "finished" ? (
+                    <Ionicons name="checkmark-circle" size={16} color="#00C987" />
+                  ) : (
+                    <ActivityIndicator size="small" color="#F59E0B" />
+                  )}
+                  <Text
+                    style={[
+                      styles.statusTitle,
+                      orderStatus === "finished" && { color: "#00C987" },
+                    ]}
+                  >
+                    {orderStatus === "finished"
+                      ? "DEPOSIT CONFIRMED"
+                      : "AWAITING ON-CHAIN TRANSFER..."}
+                  </Text>
+                </View>
+                <Text style={styles.orderId}>#{depositResult.paymentId}</Text>
+              </View>
+
+              <Text style={styles.sandboxHint}>
+                ⚡ NOWPayments Sandbox: Auto-simulating in ~40s.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.instantBtn}
+                onPress={handleSimulateConfirm}
+                disabled={isSimulating}
+                activeOpacity={0.8}
+              >
+                {isSimulating ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.instantBtnText}>
+                    ⚡ INSTANT CONFIRM (SKIP 40s WAIT)
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* 1. Deposit Amount Input */}
           <DepositAmountInput
             amount={amount}
             setAmount={setAmount}
@@ -111,7 +162,7 @@ export default function DepositScreen() {
             onSelectQuickAmount={handleSelectQuickAmount}
           />
 
-          {/* 2. Promo / Offers Card */}
+          {/* 2. Promo Coupons */}
           <PromoCouponCard
             couponCode={couponCode}
             setCouponCode={setCouponCode}
@@ -123,21 +174,15 @@ export default function DepositScreen() {
             promoCoupons={promoCoupons}
           />
 
-          {/* 3. USDT Crypto Deposit Hub */}
+          {/* 3. DRY USDT Payment Hub (Reuses existing QR, Network & Copy components) */}
           <PaymentMethodSelector
             selectedNetwork={selectedNetwork}
             onSelectNetwork={setSelectedNetwork}
             txHash={txHash}
             setTxHash={setTxHash}
+            liveDepositAddress={depositResult?.depositAddress}
+            isSandbox={true}
           />
-
-          {/* 4. Security & Instant Badge */}
-          <View style={styles.securityBox}>
-            <Ionicons name="shield-checkmark" size={18} color="#00C987" />
-            <Text style={styles.securityText}>
-              Decentralized On-Chain Verification • Instant Crediting
-            </Text>
-          </View>
 
           {errorMessage ? (
             <View style={styles.errorBox}>
@@ -147,7 +192,7 @@ export default function DepositScreen() {
           ) : null}
         </ScrollView>
 
-        {/* Sticky Bottom Summary & CTA */}
+        {/* Sticky Bottom Bar */}
         <View style={styles.bottomBar}>
           <View style={styles.summaryLeft}>
             <Text style={styles.summaryLabel}>TOTAL DEPOSIT CREDIT</Text>
@@ -155,7 +200,8 @@ export default function DepositScreen() {
               ${totalEffectiveCreditUsdt} USDT
             </Text>
             <Text style={styles.summaryBonusText}>
-              ≈ ₹{totalEffectiveCredit.toLocaleString("en-IN")} {calculatedBonus > 0 ? `(+${calculatedBonusUsdt} USDT Bonus)` : ""}
+              ≈ ₹{totalEffectiveCredit.toLocaleString("en-IN")}{" "}
+              {calculatedBonus > 0 ? `(+${calculatedBonusUsdt} USDT Bonus)` : ""}
             </Text>
           </View>
 
@@ -172,7 +218,9 @@ export default function DepositScreen() {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <View style={styles.payBtnContent}>
-                <Text style={styles.payBtnText}>CONFIRM DEPOSIT</Text>
+                <Text style={styles.payBtnText}>
+                  {depositResult ? "REFRESH DEPOSIT" : "PROCEED TO DEPOSIT"}
+                </Text>
                 <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
               </View>
             )}
@@ -191,16 +239,9 @@ export default function DepositScreen() {
   );
 }
 
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  screen: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
+  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
+  screen: { flex: 1, backgroundColor: "#F8FAFC" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -209,145 +250,103 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#EDF2F7",
+    borderBottomColor: "#F1F5F9",
   },
   backBtn: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#0F172A",
-  },
+  headerTitle: { fontSize: 16, fontWeight: "800", color: "#0F172A" },
   historyBtn: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 30,
-  },
+  scroll: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 30 },
   balanceCard: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#0F172A",
-    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
     padding: 16,
     marginBottom: 16,
-  },
-  balanceLabel: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#94A3B8",
-    letterSpacing: 0.6,
-  },
-  balanceAmount: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: "#FFFFFF",
-    marginTop: 2,
-  },
-  balanceUsdtPill: {
-    backgroundColor: "#1E293B",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#EDF2F7",
   },
-  balanceUsdtText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#00C987",
+  balanceLabel: { fontSize: 9.5, fontWeight: "800", color: "#64748B" },
+  balanceAmount: { fontSize: 22, fontWeight: "900", color: "#0F172A" },
+  balanceUsdtPill: {
+    backgroundColor: "#E6FBF3",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
-  securityBox: {
+  balanceUsdtText: { fontSize: 12, fontWeight: "800", color: "#059669" },
+  activeBanner: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  activeBannerTop: {
     flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statusPulse: { flexDirection: "row", alignItems: "center", gap: 6 },
+  statusTitle: { fontSize: 11, fontWeight: "900", color: "#D97706" },
+  orderId: { fontSize: 10, fontWeight: "700", color: "#64748B" },
+  sandboxHint: { fontSize: 11, color: "#92400E", marginVertical: 8 },
+  instantBtn: {
+    backgroundColor: "#00C987",
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#E6FBF3",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    marginBottom: 16,
   },
-  securityText: {
-    fontSize: 11.5,
-    fontWeight: "700",
-    color: "#059669",
-  },
+  instantBtnText: { fontSize: 11.5, fontWeight: "900", color: "#FFFFFF" },
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: "#FEF2F2",
     padding: 12,
     borderRadius: 12,
     marginBottom: 16,
   },
-  errorBoxText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#EF4444",
-  },
+  errorBoxText: { fontSize: 12, color: "#DC2626", fontWeight: "600", flex: 1 },
   bottomBar: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderTopWidth: 1,
     borderTopColor: "#EDF2F7",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  summaryLeft: {
-    flex: 1,
-  },
-  summaryLabel: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#64748B",
-    letterSpacing: 0.6,
-  },
-  summaryAmount: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: "#0F172A",
-  },
-  summaryBonusText: {
-    fontSize: 10.5,
-    fontWeight: "800",
-    color: "#00C987",
-  },
+  summaryLeft: { flex: 1 },
+  summaryLabel: { fontSize: 9, fontWeight: "800", color: "#64748B" },
+  summaryAmount: { fontSize: 20, fontWeight: "900", color: "#0F172A" },
+  summaryBonusText: { fontSize: 11, color: "#059669", fontWeight: "700" },
   payBtn: {
     backgroundColor: "#00C987",
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 160,
   },
-  payBtnDisabled: {
-    backgroundColor: "#CBD5E1",
-  },
-  payBtnContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  payBtnText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 0.6,
-  },
+  payBtnDisabled: { backgroundColor: "#CBD5E1" },
+  payBtnContent: { flexDirection: "row", alignItems: "center", gap: 6 },
+  payBtnText: { fontSize: 13, fontWeight: "900", color: "#FFFFFF" },
 });

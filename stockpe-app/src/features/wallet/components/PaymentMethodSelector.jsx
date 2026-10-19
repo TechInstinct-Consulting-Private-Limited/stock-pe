@@ -14,12 +14,16 @@ export default function PaymentMethodSelector({
   onSelectNetwork,
   txHash,
   setTxHash,
+  liveDepositAddress,
+  isSandbox = true,
 }) {
   const [copied, setCopied] = useState(false);
 
   const activeNetwork =
     SUPPORTED_USDT_NETWORKS.find((n) => n.id === selectedNetwork) ||
     SUPPORTED_USDT_NETWORKS[0];
+
+  const displayAddress = liveDepositAddress || activeNetwork.depositAddress;
 
   const handleCopy = () => {
     setCopied(true);
@@ -33,10 +37,13 @@ export default function PaymentMethodSelector({
         <View style={styles.titleWithBadge}>
           <Text style={styles.sectionTitle}>USDT CRYPTO DEPOSIT HUB</Text>
           <View style={styles.cryptoBadge}>
-            <Text style={styles.cryptoBadgeText}>TRC20 • BEP20 • POLYGON</Text>
+            <Text style={styles.cryptoBadgeText}>
+              {isSandbox ? "⚡ NOWPAYMENTS SANDBOX" : "TRC20 • BEP20 • POLYGON"}
+            </Text>
           </View>
         </View>
       </View>
+
 
       {/* Network Selectors */}
       <Text style={styles.subLabel}>1. SELECT TRANSFER NETWORK</Text>
@@ -119,11 +126,14 @@ export default function PaymentMethodSelector({
         {/* Copyable Address Box */}
         <View style={styles.addressBox}>
           <View style={styles.addressTextWrapper}>
-            <Text style={styles.addressLabel}>OFFICIAL DEPOSIT ADDRESS</Text>
+            <Text style={styles.addressLabel}>
+              {liveDepositAddress ? "LIVE NOWPAYMENTS DEPOSIT ADDRESS" : "OFFICIAL DEPOSIT ADDRESS"}
+            </Text>
             <Text style={styles.addressString} numberOfLines={1} ellipsizeMode="middle">
-              {activeNetwork.depositAddress}
+              {displayAddress}
             </Text>
           </View>
+
 
           <TouchableOpacity
             style={[styles.copyBtn, copied && styles.copyBtnSuccess]}

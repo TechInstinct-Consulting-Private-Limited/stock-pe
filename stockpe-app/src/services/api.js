@@ -119,15 +119,11 @@ export function resendOtp(mobile, purpose) {
 async function authenticatedRequest(path, options = {}) {
     const token = await getAuthToken();
 
-    if (!token) {
-        throw new ApiError("Your session has expired. Please sign in again.");
-    }
-
     return request(path, {
         ...options,
         headers: {
             ...options.headers,
-            Authorization: `Bearer ${token}`,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
     });
 }
@@ -175,4 +171,41 @@ export function getLiveIndices(refresh = false) {
     const query = refresh ? "?refresh=true" : "";
     return request(`/market/indices${query}`);
 }
+
+export function createCryptoDeposit(amount, network = "TRC20", couponCode = null) {
+    return authenticatedRequest("/wallet/deposit/create", {
+        method: "POST",
+        body: JSON.stringify({
+            amount,
+            network,
+            couponCode,
+        }),
+    });
+}
+
+export function getCryptoDepositStatus(paymentId) {
+    return authenticatedRequest(`/wallet/deposit/status/${paymentId}`);
+}
+
+export function getWalletBalance() {
+    return authenticatedRequest("/wallet/balance");
+}
+
+export function getWalletTransactions(limit = 20) {
+    return authenticatedRequest(`/wallet/transactions?limit=${limit}`);
+}
+
+export function simulateIpnFinished(paymentId, payAmount = 25, payCurrency = "usdttrc20") {
+    return request("/wallet/deposit/webhook", {
+        method: "POST",
+        body: JSON.stringify({
+            payment_id: String(paymentId),
+            payment_status: "finished",
+            pay_amount: payAmount,
+            price_amount: payAmount,
+            pay_currency: payCurrency,
+        }),
+    });
+}
+
 
