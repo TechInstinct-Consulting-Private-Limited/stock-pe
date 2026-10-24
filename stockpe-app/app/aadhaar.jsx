@@ -234,6 +234,18 @@ export default function AadhaarVerification() {
         });
     };
 
+    const handleSkipForNow = () => {
+        Keyboard.dismiss();
+        clearPendingAadhaarNumber();
+        router.replace({
+            pathname: "/usdt-wallet",
+            params: {
+                mobile: String(mobile || ""),
+                mode: mode === "signin" ? "signin" : "signup",
+            },
+        });
+    };
+
     const handleRequestOtp = async () => {
         if (aadhaarNumber.length !== 12) {
             setFormError("Enter a valid 12-digit Aadhaar number.");
@@ -621,6 +633,23 @@ export default function AadhaarVerification() {
                             <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
                         </TouchableOpacity>
                     )}
+
+                    {!isVerified && !verificationId ? (
+                        <>
+                            <TouchableOpacity
+                                onPress={handleSkipForNow}
+                                disabled={isLoading}
+                                style={styles.skipButton}
+                                accessibilityRole="button"
+                                accessibilityLabel="Skip Aadhaar verification for now"
+                            >
+                                <Text style={styles.skipButtonText}>Skip for now →</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.skipHint}>
+                                You can complete Aadhaar verification later from Profile.
+                            </Text>
+                        </>
+                    ) : null}
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -703,6 +732,24 @@ const styles = StyleSheet.create({
     progress: {
         width: "50%",
         height: "100%",
+    },
+    skipButton: {
+        alignSelf: "center",
+        marginTop: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    skipButtonText: {
+        color: "#657189",
+        fontSize: 14,
+        fontWeight: "700",
+    },
+    skipHint: {
+        color: "#8A91A3",
+        fontSize: 12,
+        lineHeight: 18,
+        marginTop: 2,
+        textAlign: "center",
     },
     scrollView: {
         flex: 1,
