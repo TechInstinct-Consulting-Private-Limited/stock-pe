@@ -53,6 +53,7 @@ export default function PredictionModalSheet({
   const secs = String(secondsLeft % 60).padStart(2, "0");
 
   const entryCredits = Number(event?.entryCredits || 0);
+  const demoUnit = event?.currency === 'DEMO_USDT' ? 'Demo USDT' : 'Credits';
   const hasWalletBalance = Number.isFinite(Number(walletBalance));
   const balanceCredits = hasWalletBalance ? Number(walletBalance) : 0;
   const afterCredits = Math.max(0, balanceCredits - entryCredits);
@@ -129,7 +130,7 @@ export default function PredictionModalSheet({
                 <Text style={styles.usdtDotText}>₮</Text>
               </View>
               <Text style={styles.usdtBadgeText}>
-                Demo credits
+                {demoUnit}
               </Text>
             </View>
           </View>
@@ -220,7 +221,7 @@ export default function PredictionModalSheet({
         <View style={styles.breakdownRow}>
           <Text style={styles.breakdownLabel}>Demo Entry</Text>
           <View style={styles.breakdownRight}>
-            <Text style={styles.breakdownInr}>{entryCredits.toLocaleString("en-IN")} Credits</Text>
+            <Text style={styles.breakdownInr}>{entryCredits.toLocaleString("en-IN")} {demoUnit}</Text>
             <View style={styles.breakdownPill}>
               <View style={styles.usdtMiniDot}>
                 <Text style={styles.usdtMiniText}>₮</Text>
@@ -237,7 +238,7 @@ export default function PredictionModalSheet({
           <Text style={styles.breakdownLabel}>Demo Balance</Text>
           <View style={styles.breakdownRight}>
             <Text style={styles.breakdownInr}>
-              {hasWalletBalance ? `${balanceCredits.toLocaleString("en-IN")} Credits` : "Loading…"}
+              {hasWalletBalance ? `${balanceCredits.toLocaleString("en-IN")} ${demoUnit}` : "Loading…"}
             </Text>
             <View style={styles.breakdownPill}>
               <View style={styles.usdtMiniDot}>
@@ -255,7 +256,7 @@ export default function PredictionModalSheet({
           <Text style={styles.breakdownLabel}>After entry</Text>
           <View style={styles.breakdownRight}>
             <Text style={styles.breakdownInr}>
-              {hasWalletBalance ? `${afterCredits.toLocaleString("en-IN")} Credits` : "—"}
+              {hasWalletBalance ? `${afterCredits.toLocaleString("en-IN")} ${demoUnit}` : "—"}
             </Text>
             <View style={styles.breakdownPill}>
               <View style={styles.usdtMiniDot}>

@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import TabPills from "../../../components/ui/TabPills";
 import AppCard from "../../../components/ui/AppCard";
@@ -59,6 +59,16 @@ export default function EventsFeedScreen() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshDashboard();
+      const timer = setInterval(() => {
+        refreshDashboard();
+      }, 30_000);
+      return () => clearInterval(timer);
+    }, [refreshDashboard])
+  );
 
   useEffect(() => {
     const timer = setInterval(() => setClock(Date.now()), 1000);

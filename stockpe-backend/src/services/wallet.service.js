@@ -46,14 +46,17 @@ async function linkUsdtWallet({ userId, network, address }) {
     assertValidWallet({ network, address: suppliedAddress });
     const normalizedAddress = normalizeAddress(network, suppliedAddress);
 
-    const kycResult = await pool.query(
-        `SELECT id FROM aadhaar_kyc_verifications
-         WHERE user_id = $1 AND status = 'verified' LIMIT 1`,
-        [userId]
-    );
-
-    if (kycResult.rowCount === 0) {
-        throw publicError(409, "Complete Aadhaar KYC before linking a wallet");
+    // Demo environments can link a wallet independently; keep the existing
+    // verification requirement in production until its policy is approved.
+    if (process.env.NODE_ENV === "production") {
+        const kycResult = await pool.query(
+            `SELECT id FROM aadhaar_kyc_verifications
+             WHERE user_id = $1 AND status = 'verified' LIMIT 1`,
+            [userId]
+        );
+        if (kycResult.rowCount === 0) {
+            throw publicError(409, "Complete Aadhaar KYC before linking a wallet");
+        }
     }
 
     const existingWalletResult = await pool.query(

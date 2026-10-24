@@ -5,6 +5,7 @@ import { shadows } from "../../../theme";
 
 export default function ContestRulesView({ event }) {
   const entryCredits = Number(event?.entryCredits || 0).toLocaleString("en-IN");
+  const unit = event?.currency === 'DEMO_USDT' ? 'Demo USDT' : 'demo credits';
   const entryCutoff = new Date(event?.liveAt || event?.closesAt);
   const entryCutoffLabel = Number.isFinite(entryCutoff.getTime())
     ? entryCutoff.toLocaleString("en-IN", {
@@ -18,8 +19,8 @@ export default function ContestRulesView({ event }) {
   const steps = [
     {
       num: "01",
-      title: "Reserve Demo Credits",
-      desc: `${entryCredits} non-withdrawable demo credits are reserved when you submit.`,
+      title: "Reserve demo balance",
+      desc: `${entryCredits} non-withdrawable ${unit} are reserved when you submit.`,
       icon: "wallet-outline",
       iconColor: "#00C987",
       iconBg: "#E6FBF3",
@@ -43,7 +44,7 @@ export default function ContestRulesView({ event }) {
     {
       num: "04",
       title: "Results",
-      desc: "The official closing value is recorded and the closest prediction wins.",
+      desc: "The demo settlement value is recorded and the closest prediction wins.",
       icon: "stats-chart-outline",
       iconColor: "#8B5CF6",
       iconBg: "#F3E8FF",
@@ -51,7 +52,7 @@ export default function ContestRulesView({ event }) {
     {
       num: "05",
       title: "Demo Results",
-      desc: "After admin settlement, demo-credit rewards are credited to eligible winners.",
+      desc: `After settlement, ${unit} rewards are credited to eligible winners.`,
       icon: "trophy-outline",
       iconColor: "#D97706",
       iconBg: "#FEF3C7",
@@ -60,10 +61,9 @@ export default function ContestRulesView({ event }) {
 
   const contestRules = [
     "One prediction per user — no edits after submission",
-    "Ties broken by earliest submission timestamp",
     "Equal closest predictions share the demo prize pool; the earlier entry receives any remainder",
-    "Demo credits are non-withdrawable and have no cash or USDT value",
-    "Results are available after the contest is settled by an administrator",
+    `${unit} are simulated, non-withdrawable and have no real cash or USDT value`,
+    "Results are available after the contest is settled",
   ];
 
   return (
@@ -83,7 +83,7 @@ export default function ContestRulesView({ event }) {
             <Text style={[styles.tagPillText, { color: "#6366F1" }]}>{event?.instrument?.exchange || "Market"}</Text>
           </View>
           <View style={[styles.tagPill, { backgroundColor: "#FEF3C7" }]}>
-            <Text style={[styles.tagPillText, { color: "#D97706" }]}>Demo credits only</Text>
+            <Text style={[styles.tagPillText, { color: "#D97706" }]}>{unit} only</Text>
           </View>
         </View>
       </View>

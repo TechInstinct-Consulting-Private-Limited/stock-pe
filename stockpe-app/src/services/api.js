@@ -173,6 +173,10 @@ export function getDemoCreditBalance() {
     });
 }
 
+export function getDemoUsdtWallet() {
+    return authenticatedRequest('/demo-contests/demo-usdt-wallet', { headers: { 'Cache-Control': 'no-store' } });
+}
+
 export function joinDemoContest(publicId, predictionValue) {
     return authenticatedRequest(`/demo-contests/${encodeURIComponent(publicId)}/join`, {
         method: "POST",

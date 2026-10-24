@@ -27,7 +27,7 @@ export default function OrderSuccessModal({
 
           <Text style={styles.title}>Prediction Placed!</Text>
           <Text style={styles.subtitle}>
-            Your demo prediction has been saved. Demo credits have no cash value.
+            Your demo prediction has been saved. Demo amounts have no cash value.
           </Text>
 
           <View style={styles.summaryBox}>
@@ -44,7 +44,7 @@ export default function OrderSuccessModal({
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Entry:</Text>
               <Text style={[styles.summaryValue, { color: colors.primary, fontWeight: typography.black }]}>
-                Demo credits reserved
+                {trade.currency === 'DEMO_USDT' ? 'Demo USDT reserved' : 'Demo credits reserved'}
               </Text>
             </View>
           </View>

@@ -103,7 +103,7 @@ export default function EventDetailScreen({ eventId }) {
             <View style={styles.stickyLeftCol}>
                 <Text style={styles.stickyFeeLabel}>DEMO ENTRY</Text>
               <View style={styles.stickyFeeRow}>
-                <Text style={styles.stickyFeeInr}>{Number(event?.entryCredits || 0).toLocaleString("en-IN")} Credits</Text>
+                <Text style={styles.stickyFeeInr}>{Number(event?.entryCredits || 0).toLocaleString("en-IN")} {event?.currency === 'DEMO_USDT' ? 'Demo USDT' : 'Credits'}</Text>
                 <View style={styles.usdtPillSmall}>
                   <View style={styles.usdtDotSmall}>
                     <Text style={styles.usdtDotText}>₮</Text>

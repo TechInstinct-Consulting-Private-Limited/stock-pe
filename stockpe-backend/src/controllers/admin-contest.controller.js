@@ -10,6 +10,7 @@ function respond(handler) {
 }
 
 const list = respond(async (req) => ({ contests: await service.listContests({ status: req.query.status }) }));
+const details = respond(async (req) => ({ ...(await service.getContestDetails(req.params.publicId)) }));
 const entries = respond(async (req) => ({ entries: await service.getContestEntries(req.params.publicId) }));
 const create = respond(async (req) => ({ contest: await service.createContest({ adminUserId: req.admin.userId, input: req.body }) }));
 const update = respond(async (req) => ({ contest: await service.updateContest({ adminUserId: req.admin.userId, publicId: req.params.publicId, input: req.body }) }));
@@ -22,4 +23,4 @@ const approvePayout = respond(async (req) => ({ payout: await payouts.approveTes
 const completePayout = respond(async (req) => ({ payout: await payouts.completeTestPayout({ adminUserId: req.admin.userId, payoutId: req.params.payoutId, note: req.body?.note }) }));
 const rejectPayout = respond(async (req) => ({ payout: await payouts.rejectTestPayout({ adminUserId: req.admin.userId, payoutId: req.params.payoutId, note: req.body?.note }) }));
 
-module.exports = { approvePayout, changeStatus, completePayout, create, createPayout, entries, list, listPayouts, listUsers, rejectPayout, settle, update };
+module.exports = { approvePayout, changeStatus, completePayout, create, createPayout, details, entries, list, listPayouts, listUsers, rejectPayout, settle, update };

@@ -22,6 +22,7 @@ function serializeContest(row) {
         isPositive: Number(row.change_percent) >= 0,
         entryCredits: Number(row.entry_credits),
         prizePoolCredits: Number(row.prize_pool_credits),
+        currency: row.demo_usdt ? 'DEMO_USDT' : 'DEMO_CREDITS',
         players: playerCount,
         playerCapacity,
         fillPercent: Math.round((playerCount / playerCapacity) * 100),
@@ -40,8 +41,10 @@ async function getContestByPublicId(publicId) {
     await syncDashboardMarketPrices();
     const result = await pool.query(
         `SELECT contest.public_id, contest.title, contest.question, contest.status,
+                EXISTS (SELECT 1 FROM demo_usdt_contests dc WHERE dc.contest_id=contest.id) AS demo_usdt,
                 contest.entry_credits, contest.prize_pool_credits, contest.player_capacity,
-                contest.player_count, contest.opens_at, contest.live_at, contest.closes_at, contest.settlement_source,
+                (SELECT COUNT(*)::INTEGER FROM demo_contest_entries entry WHERE entry.contest_id=contest.id) AS player_count,
+                contest.opens_at, contest.live_at, contest.closes_at, contest.settlement_source,
                 instrument.code AS instrument_code, instrument.display_name AS instrument_name,
                 instrument.exchange, instrument.category,
                 quote.value::TEXT AS current_price, quote.change_percent::TEXT AS change_percent,
@@ -108,8 +111,10 @@ async function getDashboard({ filter }) {
         ),
         pool.query(
             `SELECT contest.public_id, contest.title, contest.question, contest.status,
+                    EXISTS (SELECT 1 FROM demo_usdt_contests dc WHERE dc.contest_id=contest.id) AS demo_usdt,
                     contest.entry_credits, contest.prize_pool_credits, contest.player_capacity,
-                    contest.player_count, contest.opens_at, contest.live_at, contest.closes_at, contest.settlement_source,
+                    (SELECT COUNT(*)::INTEGER FROM demo_contest_entries entry WHERE entry.contest_id=contest.id) AS player_count,
+                    contest.opens_at, contest.live_at, contest.closes_at, contest.settlement_source,
                     quote.value::TEXT AS current_price, quote.change_percent::TEXT AS change_percent,
                     GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (contest.opens_at - NOW()))))::INTEGER
                         AS seconds_until_open,

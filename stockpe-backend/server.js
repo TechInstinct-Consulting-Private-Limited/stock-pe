@@ -4,7 +4,7 @@ const app = require("./src/app");
 const { startContestLifecycleScheduler } = require("./src/services/contest-lifecycle.service");
 
 const PORT = process.env.PORT || 5000;
-const lifecycleIntervalMs = Number(process.env.CONTEST_LIFECYCLE_INTERVAL_MS || 60_000);
+const lifecycleIntervalMs = Number(process.env.CONTEST_LIFECYCLE_INTERVAL_MS || 15_000);
 
 const server = app.listen(PORT, () => {
     console.log(`StockPE Backend running on port ${PORT}`);

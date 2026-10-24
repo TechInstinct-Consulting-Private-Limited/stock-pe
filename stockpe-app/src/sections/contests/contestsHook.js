@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useFocusEffect } from "expo-router";
 import { getMyDemoContests, joinDemoContest } from "../../services/api";
 import {
   fetchContestById,
@@ -178,15 +179,16 @@ export function useMyContests() {
       contestTitle: entry.title,
       status: entry.status,
       timestamp: new Date(entry.joined_at).toLocaleString("en-IN"),
-      entryFeeInr: `${entry.entry_credits} Credits`,
-      entryFeeUsdt: "Demo credits",
+      currency: entry.currency || "DEMO_CREDITS",
+      entryFeeInr: `${entry.entry_credits} ${entry.currency === "DEMO_USDT" ? "Demo USDT" : "Credits"}`,
+      entryFeeUsdt: entry.currency === "DEMO_USDT" ? "Simulated" : "Demo credits",
       predictionValue: entry.prediction_value === null ? null : Number(entry.prediction_value),
-      rewardCredits: Number(entry.reward_credits || 0),
+      rewardCredits: Number(entry.currency === "DEMO_USDT" ? entry.demo_usdt_reward : entry.reward_credits || 0),
       prediction: entry.prediction_value === null
         ? "Not submitted"
         : Number(entry.prediction_value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      prizeInr: Number(entry.reward_credits || 0) > 0 ? `${entry.reward_credits} Credits` : null,
-      prizeUsdt: Number(entry.reward_credits || 0) > 0 ? "Demo reward" : null,
+      prizeInr: Number(entry.currency === "DEMO_USDT" ? entry.demo_usdt_reward : entry.reward_credits || 0) > 0 ? `${entry.currency === "DEMO_USDT" ? entry.demo_usdt_reward : entry.reward_credits} ${entry.currency === "DEMO_USDT" ? "Demo USDT" : "Credits"}` : null,
+      prizeUsdt: entry.status === "WON" ? "Demo reward" : null,
       accuracy: null,
     })));
   }, [activeFilter]);
@@ -195,6 +197,16 @@ export function useMyContests() {
     refreshContests().catch(() => {});
   }, [refreshContests]);
 
+  useFocusEffect(
+    useCallback(() => {
+      refreshContests().catch(() => {});
+      const timer = setInterval(() => {
+        refreshContests().catch(() => {});
+      }, 30_000);
+      return () => clearInterval(timer);
+    }, [refreshContests])
+  );
+
   const filteredContests = joinedList;
 
   const summary = useMemo(() => {
@@ -202,15 +214,17 @@ export function useMyContests() {
     const active = joinedList.filter((i) => i.status === "ACTIVE").length;
     const won = joinedList.filter((i) => i.status.includes("WON")).length;
     const lost = joinedList.filter((i) => i.status === "LOST").length;
+    const currencies = new Set(joinedList.map((item) => item.currency));
+    const unit = currencies.size > 1 ? null : currencies.has("DEMO_USDT") ? "Demo USDT" : "Credits";
 
     return {
       totalJoined,
       active,
       won,
       lost,
-      totalSpent: `${joinedList.reduce((total, item) => total + Number(String(item.entryFeeInr).split(" ")[0]), 0)} Credits`,
-      totalWon: `${joinedList.reduce((total, item) => total + item.rewardCredits, 0)} Credits`,
-      netPnl: `${joinedList.reduce((total, item) => total + item.rewardCredits - Number(String(item.entryFeeInr).split(" ")[0]), 0)} Credits`,
+      totalSpent: unit ? `${joinedList.reduce((total, item) => total + Number(String(item.entryFeeInr).split(" ")[0]), 0)} ${unit}` : "Mixed demo units",
+      totalWon: unit ? `${joinedList.reduce((total, item) => total + item.rewardCredits, 0)} ${unit}` : "Mixed demo units",
+      netPnl: unit ? `${joinedList.reduce((total, item) => total + item.rewardCredits - Number(String(item.entryFeeInr).split(" ")[0]), 0)} ${unit}` : "Mixed demo units",
     };
   }, [joinedList]);
 

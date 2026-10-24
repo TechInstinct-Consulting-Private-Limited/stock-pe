@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import { fetchDashboardContest } from "../services/dashboardService";
 
 export function useEventDetail(eventId) {
@@ -38,6 +39,16 @@ export function useEventDetail(eventId) {
       isMounted = false;
     };
   }, [eventId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshEvent();
+      const timer = setInterval(() => {
+        refreshEvent();
+      }, 15_000);
+      return () => clearInterval(timer);
+    }, [refreshEvent])
+  );
 
   return {
     event,

@@ -26,10 +26,12 @@ export function toFeedCard(contest, now = Date.now()) {
   const opensAt = new Date(contest.opensAt).getTime();
   const closesAt = new Date(contest.closesAt).getTime();
   const isSoon = contest.status === "SOON";
-  const targetTime = isSoon ? opensAt : closesAt;
+  const isOpen = contest.status === "OPEN";
+  const liveAt = contest.liveAt ? new Date(contest.liveAt).getTime() : NaN;
+  const targetTime = isSoon ? opensAt : isOpen && Number.isFinite(liveAt) ? liveAt : closesAt;
   const fallbackSeconds = isSoon
     ? contest.secondsUntilOpen
-    : contest.secondsUntilClose;
+    : isOpen && contest.liveAt ? contest.secondsUntilLive : contest.secondsUntilClose;
   const countdown = Number.isFinite(targetTime)
     ? formatCountdown((targetTime - now) / 1000)
     : formatCountdown(fallbackSeconds);
@@ -50,11 +52,11 @@ export function toFeedCard(contest, now = Date.now()) {
     }),
     change: `${Number(contest.changePercent).toFixed(2)}%`,
     isPositive: contest.isPositive,
-    prizePool: formatCredits(contest.prizePoolCredits),
+    prizePool: contest.currency === 'DEMO_USDT' ? `${contest.prizePoolCredits} USDT` : formatCredits(contest.prizePoolCredits),
     prizePoolLabel: "DEMO POOL",
-    entry: formatCredits(contest.entryCredits),
+    entry: contest.currency === 'DEMO_USDT' ? `${contest.entryCredits} USDT` : formatCredits(contest.entryCredits),
     entryLabel: "DEMO ENTRY",
-    entrySubLabel: "Non-withdrawable credits",
+    entrySubLabel: contest.currency === 'DEMO_USDT' ? "Simulated · non-withdrawable" : "Non-withdrawable credits",
     players: contest.players,
     closesIn: countdown,
     timeLabel,
@@ -83,6 +85,7 @@ export function toDetailEvent(contest) {
     question: contest.question,
     description: contest.question,
     status: contest.status,
+    currency: contest.currency,
     currentPrice: currentPrice.toLocaleString("en-IN", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

@@ -12,11 +12,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { fetchTransactionHistory, fetchWalletSummary, WALLET_SUMMARY_DATA } from "../../src/features/wallet/services/walletService";
 import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
+import { getDemoUsdtWallet } from "../../src/services/api";
 
 export default function WalletScreen() {
   const router = useRouter();
   const [wallet, setWallet] = useState(WALLET_SUMMARY_DATA);
   const [liveTransactions, setLiveTransactions] = useState([]);
+  const [demoWallet, setDemoWallet] = useState(null);
+  const [demoWalletError, setDemoWalletError] = useState(false);
+  const [historyWarning, setHistoryWarning] = useState("");
 
   const refreshWallet = useCallback(async () => {
     const [summaryResult, transactionsResult] = await Promise.all([
@@ -25,6 +29,9 @@ export default function WalletScreen() {
     ]);
     if (summaryResult.success) setWallet(summaryResult.data);
     if (transactionsResult.success) setLiveTransactions(transactionsResult.data);
+    setHistoryWarning(transactionsResult.success ? transactionsResult.warning || "" : "Transaction history is unavailable.");
+    try { setDemoWallet(await getDemoUsdtWallet()); setDemoWalletError(false); }
+    catch { setDemoWalletError(true); }
   }, []);
 
   useEffect(() => {
@@ -75,8 +82,8 @@ export default function WalletScreen() {
     status: item.status,
     statusBg: "#F1F5F9",
     statusColor: "#64748B",
-    amountInr: `${item.type === "CREDIT" ? "+" : "-"}₹${item.amountInr.toLocaleString("en-IN")}`,
-    amountUsdt: `${item.type === "CREDIT" ? "+" : "-"}${item.amountUsdt.toFixed(2)} USDT`,
+    amountInr: item.simulated ? 'Test only' : `${item.type === "CREDIT" ? "+" : "-"}₹${item.amountInr.toLocaleString("en-IN")}`,
+    amountUsdt: `${item.type === "CREDIT" ? "+" : "-"}${item.amountUsdtText ?? item.amountUsdt.toFixed(2)} USDT${item.simulated ? ' · simulated' : ''}`,
     isCredit: item.type === "CREDIT",
     icon: item.type === "CREDIT" ? "arrow-down-outline" : "arrow-up-outline",
   }));
@@ -98,7 +105,7 @@ export default function WalletScreen() {
         >
           <View style={styles.heroTopRow}>
             <View>
-              <Text style={styles.balanceLabel}>TOTAL BALANCE</Text>
+              <Text style={styles.balanceLabel}>WALLET BALANCE · TEST</Text>
               <Text style={styles.balanceAmount}>₹{wallet.totalBalanceInr.toLocaleString("en-IN")}</Text>
             </View>
 
@@ -113,7 +120,7 @@ export default function WalletScreen() {
           </View>
 
           <Text style={styles.verifiedRateText}>
-            1 USDT = ₹73.42{"   "}•{"   "}Verified account
+            Test wallet ledger · not an on-chain balance{"\n"}Estimated rate: 1 USDT = ₹73.42
           </Text>
 
           {/* Action Buttons */}
@@ -137,6 +144,14 @@ export default function WalletScreen() {
             </TouchableOpacity>
           </View>
         </LinearGradient>
+
+        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginTop: 16 }}>
+          <Text style={{ fontWeight: '700', color: '#102c25' }}>USDT test balance</Text>
+          <Text style={{ fontSize: 24, fontWeight: '800', color: '#008A5E', marginTop: 6 }}>
+            {demoWalletError ? 'Unavailable' : demoWallet ? `${demoWallet.available} USDT` : 'Loading…'}
+          </Text>
+          <Text style={{ color: '#64748B', marginTop: 4 }}>For contest testing only · separate from wallet balance · not withdrawable · no blockchain transfer</Text>
+        </View>
 
         {/* Quick Actions 4-Grid */}
         <View style={styles.quickGrid}>
@@ -176,6 +191,8 @@ export default function WalletScreen() {
         </View>
 
         <View style={styles.transactionsList}>
+          <Text style={styles.emptyText}>Test records only. Contest activity and wallet records use separate balances; no real USDT is transferred.</Text>
+          {!!historyWarning && <Text style={styles.emptyText}>{historyWarning}</Text>}
           {transactions.length === 0 ? <Text style={styles.emptyText}>No mock transactions yet. Use Add Funds to test the wallet flow.</Text> : transactions.map((tx) => (
             <TouchableOpacity
               key={tx.id}

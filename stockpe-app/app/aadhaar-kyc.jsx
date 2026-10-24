@@ -418,7 +418,7 @@ export default function AadhaarKyc() {
                                     <Text style={styles.skipButtonText}>Skip for now →</Text>
                                 </TouchableOpacity>
                                 <Text style={styles.skipHint}>
-                                    KYC will remain pending. Wallet linking and other restricted features stay unavailable until verification is completed.
+                                    KYC will remain pending. Some features may require verification.
                                 </Text>
                             </>
                         ) : null}

@@ -3,6 +3,7 @@
 import {
   createMockDepositAddress,
   getUsdtWallet,
+  getDemoUsdtWallet,
   getWalletPaymentSummary,
   simulateMockDeposit,
   simulateMockWithdrawal,
@@ -135,6 +136,7 @@ function mapTransaction(item, type) {
     amountInr: Math.round(amountUsdt * USDT_INR_RATE),
     amountUsdt,
     date: new Date(item.detected_at || item.requested_at || item.created_at || Date.now()).toLocaleString("en-IN"),
+    timestamp: item.detected_at || item.requested_at || item.created_at,
     refId: item.id,
     description: isDemoPayout ? "Test-only contest payout · no blockchain transfer" : `${isDeposit ? "Demo deposit" : "Demo payout"} · TRC20`,
     paymentMethod: "USDT (TRC-20) · Demo",
@@ -144,12 +146,28 @@ function mapTransaction(item, type) {
 
 export async function fetchTransactionHistory({ category = "ALL" } = {}) {
   try {
-    const summary = await getWalletPaymentSummary();
+    const [summary, demoWallet] = await Promise.all([getWalletPaymentSummary(), getDemoUsdtWallet().catch(() => null)]);
     const deposits = (summary.deposits || []).map((item) => mapTransaction(item, "DEPOSITS"));
     const withdrawals = (summary.withdrawals || []).map((item) => mapTransaction(item, "WITHDRAWALS"));
     const demoPayouts = (summary.demoPayouts || []).map((item) => mapTransaction(item, "DEMO_PAYOUTS"));
-    const transactions = [...demoPayouts, ...deposits, ...withdrawals];
-    return { success: true, data: category === "ALL" ? transactions : transactions.filter((item) => item.category === category) };
+    const demoActivity = (demoWallet?.activity || []).map((item) => ({
+      id: item.id,
+      title: `${item.contest_title || 'Starting balance'} · ${item.activity_type === 'ENTRY' ? 'Entry' : item.activity_type === 'REWARD' ? 'Winning' : item.activity_type === 'REFUND' ? 'Refund' : 'Starting balance'}`,
+      category: 'CONTESTS',
+      type: item.activity_type === 'ENTRY' ? 'DEBIT' : 'CREDIT',
+      status: 'SIMULATED',
+      amountInr: null,
+      amountUsdt: Number(item.amount),
+      amountUsdtText: item.amount,
+      date: new Date(item.created_at).toLocaleString('en-IN'),
+      timestamp: item.created_at,
+      refId: item.id,
+      description: 'Simulated test balance · not withdrawable · no blockchain transfer',
+      paymentMethod: 'USDT test balance',
+      simulated: true,
+    }));
+    const transactions = [...demoActivity, ...demoPayouts, ...deposits, ...withdrawals].sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    return { success: true, warning: demoWallet ? null : 'Contest test history is unavailable.', data: category === "ALL" ? transactions : transactions.filter((item) => item.category === category) };
   } catch (error) {
     return { success: false, error: error.message || "Transaction history is unavailable" };
   }

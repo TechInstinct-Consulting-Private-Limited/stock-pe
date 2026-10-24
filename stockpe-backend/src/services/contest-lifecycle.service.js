@@ -1,4 +1,6 @@
 const pool = require("../config/database");
+const { syncDashboardMarketPrices } = require("./market-snapshot.service");
+const { autoSettleScheduledContests } = require("./admin-contest.service");
 
 const SCHEDULED_TRANSITIONS = [
     { previousStatus: "SOON", nextStatus: "OPEN", dueColumn: "opens_at" },
@@ -16,10 +18,14 @@ async function runScheduledContestLifecycle() {
     if (runInFlight) return runInFlight;
 
     runInFlight = (async () => {
+        const automaticSettlementEnabled = process.env.DEMO_AUTO_SETTLEMENT_ENABLED !== "false";
+        if (automaticSettlementEnabled) {
+            await syncDashboardMarketPrices();
+        }
         const client = await pool.connect();
+        let transitions = [];
         try {
             await client.query("BEGIN");
-            const transitions = [];
 
             // Ordered transitions let a delayed worker catch up safely.
             for (const transition of SCHEDULED_TRANSITIONS) {
@@ -49,13 +55,16 @@ async function runScheduledContestLifecycle() {
             }
 
             await client.query("COMMIT");
-            return { transitions };
         } catch (error) {
             await client.query("ROLLBACK");
             throw error;
         } finally {
             client.release();
         }
+
+        if (!automaticSettlementEnabled) return { transitions, settlements: [] };
+        const { settlements } = await autoSettleScheduledContests();
+        return { transitions, settlements };
     })();
 
     try {
@@ -68,8 +77,9 @@ async function runScheduledContestLifecycle() {
 function startContestLifecycleScheduler({ intervalMs = 60_000, logger = console } = {}) {
     const safeIntervalMs = Math.max(15_000, Number(intervalMs) || 60_000);
     const tick = () => runScheduledContestLifecycle()
-        .then(({ transitions }) => {
+        .then(({ transitions, settlements }) => {
             if (transitions.length) logger.info(`[ContestLifecycle] Advanced ${transitions.length} contest(s)`);
+            if (settlements.length) logger.info(`[ContestLifecycle] Automatically settled ${settlements.length} demo contest(s)`);
         })
         .catch((error) => logger.error("[ContestLifecycle] Run skipped:", error.message));
 

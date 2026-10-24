@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { calculateOrderMetrics, calculatePricePredictionMetrics } from "../../../utils/calculations";
-import { getDemoCreditBalance, getMyDemoContests, getUserFacingError, joinDemoContest } from "../../../services/api";
+import { getDemoCreditBalance, getDemoUsdtWallet, getMyDemoContests, getUserFacingError, joinDemoContest } from "../../../services/api";
 
 export function useTradeExecution(event) {
   const [tradeMode, setTradeMode] = useState("PRICE_TARGET");
@@ -41,15 +41,15 @@ export function useTradeExecution(event) {
 
   useEffect(() => {
     let mounted = true;
-    getDemoCreditBalance()
+    (event?.currency === 'DEMO_USDT' ? getDemoUsdtWallet() : getDemoCreditBalance())
       .then((response) => {
-        if (mounted) setWalletBalance(Number(response.availableCredits));
+        if (mounted) setWalletBalance(Number(event?.currency === 'DEMO_USDT' ? response.available : response.availableCredits));
       })
       .catch(() => {
         if (mounted) setWalletBalance(null);
       });
     return () => { mounted = false; };
-  }, [event?.id]);
+  }, [event?.id, event?.currency]);
 
   const canJoin = event?.status === "OPEN" && !hasJoined;
   const joinMessage = hasJoined
@@ -83,6 +83,7 @@ export function useTradeExecution(event) {
         eventId: response.entry.contestId,
         title: response.entry.contestTitle,
         status: response.entry.status,
+        currency: event?.currency,
         timestamp: response.entry.joinedAt,
         targetPrice: Number(targetPrice),
         option: selectedOption,

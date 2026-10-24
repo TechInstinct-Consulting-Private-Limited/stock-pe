@@ -26,8 +26,9 @@ export default function EventDetailHero({ event }) {
   const status = event?.status || "OPEN";
   const spotPrice = event?.currentPrice || "—";
   const change = event?.change || "—";
-  const prizePool = `${Number(event?.prizePoolCredits || 0).toLocaleString("en-IN")} Credits`;
-  const entryCredits = `${Number(event?.entryCredits || 0).toLocaleString("en-IN")} Credits`;
+  const unit = event?.currency === 'DEMO_USDT' ? 'Demo USDT' : 'Credits';
+  const prizePool = `${Number(event?.prizePoolCredits || 0).toLocaleString("en-IN")} ${unit}`;
+  const entryCredits = `${Number(event?.entryCredits || 0).toLocaleString("en-IN")} ${unit}`;
   const players = Number(event?.players || 0).toLocaleString();
   const fill = Number(event?.fillPercent || 0);
   const capacity = event?.playerCapacity ? Number(event.playerCapacity).toLocaleString("en-IN") : "--";
@@ -146,7 +147,7 @@ export default function EventDetailHero({ event }) {
             <Text style={styles.metricTitle}>MAX WIN</Text>
           </View>
           <Text style={styles.metricVal}>{prizePool}</Text>
-          <Text style={styles.metricSub}>Demo credits</Text>
+          <Text style={styles.metricSub}>{event?.currency === 'DEMO_USDT' ? 'Demo USDT' : 'Demo credits'}</Text>
         </View>
       </View>
 
