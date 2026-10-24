@@ -15,7 +15,7 @@ function validationError(res, message) {
 
 async function requestOtp(req, res, next) {
     try {
-        const { aadhaarNumber, consent } = req.body;
+        const { aadhaarNumber, consent, fullName } = req.body;
 
         if (!AADHAAR_PATTERN.test(aadhaarNumber)) {
             return validationError(res, "Aadhaar number must contain 12 digits");
@@ -28,6 +28,7 @@ async function requestOtp(req, res, next) {
         const result = await requestAadhaarOtp({
             userId: req.auth.sub,
             aadhaarNumber,
+            fullName,
         });
 
         return res.status(201).json({

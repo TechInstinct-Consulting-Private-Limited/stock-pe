@@ -12,18 +12,15 @@ import { SUPPORTED_USDT_NETWORKS } from "../services/walletService";
 export default function PaymentMethodSelector({
   selectedNetwork = "trc20",
   onSelectNetwork,
+  depositAddress,
   txHash,
   setTxHash,
-  liveDepositAddress,
-  isSandbox = true,
 }) {
   const [copied, setCopied] = useState(false);
 
   const activeNetwork =
     SUPPORTED_USDT_NETWORKS.find((n) => n.id === selectedNetwork) ||
     SUPPORTED_USDT_NETWORKS[0];
-
-  const displayAddress = liveDepositAddress || activeNetwork.depositAddress;
 
   const handleCopy = () => {
     setCopied(true);
@@ -37,13 +34,10 @@ export default function PaymentMethodSelector({
         <View style={styles.titleWithBadge}>
           <Text style={styles.sectionTitle}>USDT CRYPTO DEPOSIT HUB</Text>
           <View style={styles.cryptoBadge}>
-            <Text style={styles.cryptoBadgeText}>
-              {isSandbox ? "⚡ NOWPAYMENTS SANDBOX" : "TRC20 • BEP20 • POLYGON"}
-            </Text>
+            <Text style={styles.cryptoBadgeText}>TRC20 • DEMO</Text>
           </View>
         </View>
       </View>
-
 
       {/* Network Selectors */}
       <Text style={styles.subLabel}>1. SELECT TRANSFER NETWORK</Text>
@@ -112,12 +106,12 @@ export default function PaymentMethodSelector({
               {activeNetwork.name}
             </Text>
             <Text style={styles.qrNetworkDesc}>
-              Scan from Binance, OKX, TrustWallet, or MetaMask
+              Mock wallet address for integration testing only
             </Text>
             <View style={styles.minPill}>
               <Ionicons name="shield-checkmark" size={12} color="#00C987" />
               <Text style={styles.minPillText}>
-                Min Deposit: ${activeNetwork.minDepositUsdt} USDT
+                Mock-only · no real USDT accepted
               </Text>
             </View>
           </View>
@@ -126,14 +120,11 @@ export default function PaymentMethodSelector({
         {/* Copyable Address Box */}
         <View style={styles.addressBox}>
           <View style={styles.addressTextWrapper}>
-            <Text style={styles.addressLabel}>
-              {liveDepositAddress ? "LIVE NOWPAYMENTS DEPOSIT ADDRESS" : "OFFICIAL DEPOSIT ADDRESS"}
-            </Text>
+            <Text style={styles.addressLabel}>OFFICIAL DEPOSIT ADDRESS</Text>
             <Text style={styles.addressString} numberOfLines={1} ellipsizeMode="middle">
-              {displayAddress}
+              {depositAddress || "Creating demo address…"}
             </Text>
           </View>
-
 
           <TouchableOpacity
             style={[styles.copyBtn, copied && styles.copyBtnSuccess]}
@@ -164,7 +155,7 @@ export default function PaymentMethodSelector({
           <Ionicons name="receipt-outline" size={18} color="#94A3B8" />
           <TextInput
             style={styles.txInput}
-            placeholder="Paste 0x... or Tron TxID for instant sync"
+            placeholder="Optional demo transaction note"
             placeholderTextColor="#94A3B8"
             value={txHash}
             onChangeText={setTxHash}
@@ -177,7 +168,7 @@ export default function PaymentMethodSelector({
       <View style={styles.securityAlert}>
         <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
         <Text style={styles.securityText}>
-          Send only <Text style={{ fontWeight: "800", color: "#0F172A" }}>USDT</Text> via the selected <Text style={{ fontWeight: "800", color: "#0F172A" }}>{activeNetwork.shortName}</Text> network. Transfers are credited automatically after 1 block confirmation.
+          This is a <Text style={{ fontWeight: "800", color: "#0F172A" }}>mock TRC20 test flow</Text>. Do not send real USDT to the displayed address.
         </Text>
       </View>
     </View>

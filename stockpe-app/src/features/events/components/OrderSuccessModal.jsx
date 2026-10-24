@@ -4,7 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import PrimaryButton from "../../../components/ui/PrimaryButton";
-import { formatINR } from "../../../utils/formatters";
 
 export default function OrderSuccessModal({
   visible,
@@ -28,7 +27,7 @@ export default function OrderSuccessModal({
 
           <Text style={styles.title}>Prediction Placed!</Text>
           <Text style={styles.subtitle}>
-            Your order of {trade.quantity} {trade.option} contracts has been successfully placed.
+            Your demo prediction has been saved. Demo amounts have no cash value.
           </Text>
 
           <View style={styles.summaryBox}>
@@ -37,15 +36,15 @@ export default function OrderSuccessModal({
               <Text style={styles.summaryValue}>{trade.tradeId}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Invested Amount:</Text>
+              <Text style={styles.summaryLabel}>Prediction:</Text>
               <Text style={styles.summaryValue}>
-                {formatINR(trade.investedAmount)}
+                {Number(trade.targetPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Potential Payout:</Text>
+              <Text style={styles.summaryLabel}>Entry:</Text>
               <Text style={[styles.summaryValue, { color: colors.primary, fontWeight: typography.black }]}>
-                {formatINR(trade.potentialPayout)}
+                {trade.currency === 'DEMO_USDT' ? 'Demo USDT reserved' : 'Demo credits reserved'}
               </Text>
             </View>
           </View>
@@ -55,7 +54,7 @@ export default function OrderSuccessModal({
               title="View My Positions"
               onPress={() => {
                 onClose();
-                router.push("/event/my-trades");
+                router.push("/(tabs)/contests");
               }}
             />
             <PrimaryButton

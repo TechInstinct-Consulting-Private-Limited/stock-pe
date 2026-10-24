@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,9 +11,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { removeAuthToken } from "../../src/services/authStorage";
+import { useProfileSummary } from "../../src/features/profile/hooks/useProfileSummary";
+import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { profile, refreshProfile } = useProfileSummary();
+  const { refreshing, onRefresh } = usePullToRefresh(refreshProfile);
+  const user = profile?.user;
+  const stats = profile?.stats;
+  const initials = user?.displayName?.split(" ").map((part) => part[0]).join("").slice(0, 2) || "SP";
+  const setupPending = user && (!user.kycVerified || !user.walletLinked);
+  const setupMessage = !user?.kycVerified && !user?.walletLinked
+    ? "Complete Aadhaar KYC and link your demo wallet to finish setup."
+    : !user?.kycVerified
+      ? "Aadhaar KYC is pending. Complete verification to finish setup."
+      : "Demo wallet link is pending. Link your wallet to finish setup.";
 
   const handleLogout = async () => {
     await removeAuthToken();
@@ -30,7 +44,7 @@ export default function ProfileScreen() {
     },
     {
       id: "winnings",
-      title: "My Winnings",
+      title: "My Demo Rewards",
       icon: "trophy-outline",
       iconColor: "#F59E0B",
       bgColor: "#FEF3C7",
@@ -46,7 +60,7 @@ export default function ProfileScreen() {
     },
     {
       id: "refer",
-      title: "Refer & Earn (₹250/friend)",
+      title: "Refer & Earn (Coming soon)",
       icon: "gift-outline",
       iconColor: "#EC4899",
       bgColor: "#FDF2F8",
@@ -67,6 +81,7 @@ export default function ProfileScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Dark Profile Header Card */}
@@ -75,7 +90,7 @@ export default function ProfileScreen() {
             {/* Avatar with Checkmark */}
             <View style={styles.avatarWrapper}>
               <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>AK</Text>
+                <Text style={styles.avatarText}>{initials}</Text>
               </View>
               <View style={styles.verifiedCheckBadge}>
                 <Ionicons name="checkmark" size={10} color="#FFFFFF" />
@@ -84,8 +99,8 @@ export default function ProfileScreen() {
 
             {/* Name & Details */}
             <View style={styles.profileDetails}>
-              <Text style={styles.userName}>Arjun Kumar</Text>
-              <Text style={styles.userPhone}>+91-98765-43210</Text>
+              <Text style={styles.userName}>{user?.displayName || "Complete Aadhaar KYC"}</Text>
+              <Text style={styles.userPhone}>{user?.mobile ? `+91-${user.mobile}` : "Loading profile…"}</Text>
 
               {/* Badges */}
               <View style={styles.badgesRow}>
@@ -95,12 +110,12 @@ export default function ProfileScreen() {
                   onPress={() => router.push("/profile/kyc")}
                 >
                   <Ionicons name="checkmark-circle" size={11} color="#00C987" />
-                  <Text style={styles.kycBadgeText}>KYC</Text>
+                  <Text style={styles.kycBadgeText}>{user?.kycVerified ? "KYC" : "KYC PENDING"}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.usdtBadgePill}>
                   <Text style={styles.usdtIconText}>₮</Text>
-                  <Text style={styles.usdtBadgeText}>USDT</Text>
+                  <Text style={styles.usdtBadgeText}>{user?.walletLinked ? "WALLET" : "WALLET PENDING"}</Text>
                 </View>
               </View>
             </View>
@@ -128,8 +143,8 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
             onPress={() => router.push("/profile/predictions")}
           >
-            <Text style={styles.statCardLabel}>TOTAL EVENTS</Text>
-            <Text style={styles.statCardValue}>47</Text>
+            <Text style={styles.statCardLabel}>DEMO CONTESTS</Text>
+            <Text style={styles.statCardValue}>{stats?.totalContests ?? "—"}</Text>
             <Text style={styles.statCardSub}>Participated</Text>
           </TouchableOpacity>
 
@@ -140,8 +155,8 @@ export default function ProfileScreen() {
             onPress={() => router.push("/profile/predictions")}
           >
             <Text style={styles.statCardLabel}>WIN RATE</Text>
-            <Text style={[styles.statCardValue, { color: "#00C987" }]}>31%</Text>
-            <Text style={styles.statCardSub}>14 wins</Text>
+            <Text style={[styles.statCardValue, { color: "#00C987" }]}>{stats?.winRate ?? 0}%</Text>
+            <Text style={styles.statCardSub}>{stats?.wonContests ?? 0} wins</Text>
           </TouchableOpacity>
 
           {/* Winnings */}
@@ -150,9 +165,9 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
             onPress={() => router.push("/profile/winnings")}
           >
-            <Text style={styles.statCardLabel}>WINNINGS</Text>
-            <Text style={[styles.statCardValue, { color: "#F59E0B" }]}>₹2.4L</Text>
-            <Text style={styles.statCardSub}>~ 3,269 USDT</Text>
+            <Text style={styles.statCardLabel}>DEMO REWARDS</Text>
+            <Text style={[styles.statCardValue, { color: "#F59E0B" }]}>{stats?.totalRewardCredits ?? 0}</Text>
+            <Text style={styles.statCardSub}>Non-withdrawable credits</Text>
           </TouchableOpacity>
 
           {/* Best Accuracy */}
@@ -161,11 +176,11 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
             onPress={() => router.push("/profile/predictions")}
           >
-            <Text style={styles.statCardLabel}>BEST ACCURACY</Text>
+            <Text style={styles.statCardLabel}>ACTIVE ENTRIES</Text>
             <Text style={[styles.statCardValue, { color: "#6366F1" }]}>
-              99.99%
+              {stats?.activeContests ?? 0}
             </Text>
-            <Text style={styles.statCardSub}>NIFTY Jan</Text>
+            <Text style={styles.statCardSub}>Current demo contests</Text>
           </TouchableOpacity>
         </View>
 
@@ -176,10 +191,10 @@ export default function ProfileScreen() {
               <Ionicons name="trophy-outline" size={24} color="#F59E0B" />
             </View>
             <View style={styles.rankTextContainer}>
-              <Text style={styles.rankLabel}>CURRENT RANK</Text>
-              <Text style={styles.rankTitle}>GOLD TRADER</Text>
+              <Text style={styles.rankLabel}>DEMO PROGRESS</Text>
+              <Text style={styles.rankTitle}>{stats?.wonContests ?? 0} CONTEST WINS</Text>
               <Text style={styles.rankSubText}>
-                1,240 XP • Platinum at 2,000 XP
+                {stats?.lostContests ?? 0} settled without a reward
               </Text>
             </View>
           </View>
@@ -189,31 +204,42 @@ export default function ProfileScreen() {
             <View
               style={[
                 styles.xpProgressFill,
-                { width: `${(1240 / 2000) * 100}%` },
+                { width: `${Math.min(100, (stats?.winRate ?? 0))}%` },
               ]}
             />
           </View>
           <View style={styles.xpFooter}>
-            <Text style={styles.xpCurrent}>1,240 / 2,000 XP</Text>
-            <Text style={styles.xpToGo}>760 XP to go</Text>
+            <Text style={styles.xpCurrent}>{stats?.winRate ?? 0}% win rate</Text>
+            <Text style={styles.xpToGo}>Demo mode</Text>
           </View>
         </View>
 
-        {/* Download User Guide PDF Card */}
-        <TouchableOpacity style={styles.guideCard} activeOpacity={0.8}>
+        <View style={styles.guideCard}>
           <View style={styles.guideIconCircle}>
             <Ionicons name="arrow-down-circle" size={26} color="#00C987" />
           </View>
           <View style={styles.guideTextCol}>
-            <Text style={styles.guideTitle}>Download User Guide PDF</Text>
+            <Text style={styles.guideTitle}>Demo contest mode</Text>
             <Text style={styles.guideSub}>
-              8 pages • iPhone 16 Pro Max format
+              Credits, rewards and wallet actions are non-withdrawable.
             </Text>
           </View>
           <View style={styles.pdfBadge}>
-            <Text style={styles.pdfBadgeText}>PDF</Text>
+            <Text style={styles.pdfBadgeText}>DEMO</Text>
           </View>
-        </TouchableOpacity>
+        </View>
+
+        {setupPending ? (
+          <TouchableOpacity
+            style={styles.setupWarning}
+            activeOpacity={0.8}
+            onPress={() => router.push(!user?.kycVerified ? "/profile/kyc" : "/usdt-wallet")}
+          >
+            <Ionicons name="alert-circle-outline" size={18} color="#B45309" />
+            <Text style={styles.setupWarningText}>{setupMessage}</Text>
+            <Ionicons name="chevron-forward" size={17} color="#B45309" />
+          </TouchableOpacity>
+        ) : null}
 
         {/* Menu Items */}
         <View style={styles.menuContainer}>
@@ -286,6 +312,25 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.06)",
+  },
+  setupWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    marginBottom: 14,
+  },
+  setupWarningText: {
+    flex: 1,
+    color: "#92400E",
+    fontSize: 11.5,
+    fontWeight: "700",
+    lineHeight: 16,
   },
   profileMainRow: {
     flexDirection: "row",

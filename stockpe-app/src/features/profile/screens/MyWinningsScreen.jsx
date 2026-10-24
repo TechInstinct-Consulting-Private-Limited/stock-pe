@@ -29,7 +29,7 @@ export default function MyWinningsScreen() {
           >
             <Ionicons name="arrow-back" size={22} color="#0F172A" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Winnings & Rewards</Text>
+          <Text style={styles.headerTitle}>My Demo Rewards</Text>
           <TouchableOpacity
             onPress={() => router.push("/wallet/history")}
             style={styles.historyBtn}
@@ -53,9 +53,9 @@ export default function MyWinningsScreen() {
               <WinningsSummaryCard winningsData={winningsData} />
 
               {/* Hall of Fame / Top Wins */}
-              <Text style={styles.sectionTitle}>BIGGEST WINS & MILESTONES</Text>
+              <Text style={styles.sectionTitle}>SETTLED CONTEST WINS</Text>
 
-              {winningsData.topWins.map((win) => (
+              {winningsData.topWins.length === 0 ? <View style={styles.emptyCard}><Text style={styles.emptyText}>No demo rewards yet. Settled contest wins will appear here.</Text></View> : winningsData.topWins.map((win) => (
                 <View key={win.id} style={styles.winCard}>
                   <View style={styles.winLeft}>
                     <View style={styles.trophyCircle}>
@@ -64,9 +64,9 @@ export default function MyWinningsScreen() {
                     <View style={styles.winInfo}>
                       <Text style={styles.winTitle}>{win.title}</Text>
                       <View style={styles.winMetaRow}>
-                        <Text style={styles.winDate}>{win.date}</Text>
+                      <Text style={styles.winDate}>{win.settledAt}</Text>
                         <View style={styles.winBadge}>
-                          <Text style={styles.winBadgeText}>{win.badge}</Text>
+                          <Text style={styles.winBadgeText}>Demo reward</Text>
                         </View>
                       </View>
                     </View>
@@ -74,28 +74,20 @@ export default function MyWinningsScreen() {
 
                   <View style={styles.winRight}>
                     <Text style={styles.winAmount}>
-                      +₹{win.prizeInr.toLocaleString("en-IN")}
+                      +{win.rewardCredits} credits
                     </Text>
-                    <Text style={styles.winUsdt}>+{win.prizeUsdt} USDT</Text>
+                    <Text style={styles.winUsdt}>Prediction: {win.predictionValue}</Text>
                   </View>
                 </View>
               ))}
 
-              {/* Withdraw Winnings CTA Card */}
               <View style={styles.withdrawCard}>
                 <View style={styles.withdrawLeft}>
-                  <Text style={styles.withdrawTitle}>Ready to cash out?</Text>
+                  <Text style={styles.withdrawTitle}>Demo mode is active</Text>
                   <Text style={styles.withdrawSub}>
-                    Instant transfer to your verified HDFC bank account.
+                    Rewards cannot be withdrawn or converted to USDT.
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.withdrawBtn}
-                  onPress={() => router.push("/wallet/withdraw")}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.withdrawBtnText}>WITHDRAW</Text>
-                </TouchableOpacity>
               </View>
             </>
           )}
@@ -228,6 +220,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#64748B",
   },
+  emptyCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 18, borderWidth: 1, borderColor: "#EDF2F7", marginBottom: 10 },
+  emptyText: { color: "#64748B", fontSize: 12, lineHeight: 18, textAlign: "center" },
   withdrawCard: {
     flexDirection: "row",
     alignItems: "center",

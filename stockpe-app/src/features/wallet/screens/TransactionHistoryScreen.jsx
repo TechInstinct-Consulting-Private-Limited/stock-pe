@@ -25,6 +25,7 @@ export default function TransactionHistoryScreen() {
     setSearchQuery,
     transactions,
     isLoading,
+    warning,
     selectedTxn,
     setSelectedTxn,
   } = useTransactionHistory();
@@ -96,6 +97,8 @@ export default function TransactionHistoryScreen() {
       </View>
 
       {/* Transactions List */}
+      <Text style={{ color: '#64748B', paddingHorizontal: 16, paddingBottom: 8 }}>Test records only · contest and wallet balances are separate · no real USDT transfer</Text>
+      {!!warning && <Text style={{ color: '#b45309', paddingHorizontal: 16 }}>{warning}</Text>}
       <ScrollView
         style={styles.listContainer}
         contentContainerStyle={styles.listContent}
@@ -158,11 +161,10 @@ export default function TransactionHistoryScreen() {
                     },
                   ]}
                 >
-                  {selectedTxn.type === "CREDIT" ? "+" : "-"}₹
-                  {selectedTxn.amountInr.toLocaleString("en-IN")}
+                  {selectedTxn.simulated ? `${selectedTxn.type === "CREDIT" ? "+" : "-"}${selectedTxn.amountUsdtText} USDT` : `${selectedTxn.type === "CREDIT" ? "+" : "-"}₹${selectedTxn.amountInr.toLocaleString("en-IN")}`}
                 </Text>
                 <Text style={styles.modalUsdtText}>
-                  ~{selectedTxn.amountUsdt} USDT
+                  {selectedTxn.simulated ? "Simulated · no blockchain transfer" : `~${selectedTxn.amountUsdt} USDT`}
                 </Text>
               </View>
 

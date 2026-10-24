@@ -39,7 +39,6 @@ let joinedContests = [
 export function fetchJoinedContests() {
   return [...joinedContests];
 }
-
 export function fetchContestSummary() {
   const totalJoined = joinedContests.length;
   const active = joinedContests.filter((i) => i.status === "LIVE" || i.status === "ACTIVE").length;
@@ -56,5 +55,3 @@ export function fetchContestSummary() {
     netPnl: "+₹44,752",
   };
 }
-
-

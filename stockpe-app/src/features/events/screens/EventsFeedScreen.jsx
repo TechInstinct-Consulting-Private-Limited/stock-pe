@@ -1,40 +1,93 @@
-import React, { useState, useMemo } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import TabPills from "../../../components/ui/TabPills";
 import AppCard from "../../../components/ui/AppCard";
 import EventFeedCard from "../components/EventFeedCard";
-import { CATEGORIES, EVENTS_DATA, fetchUserTrades } from "../services/eventsService";
+import { fetchUserTrades } from "../services/eventsService";
+import { DASHBOARD_TABS, fetchDashboard, toFeedCard } from "../services/dashboardService";
+import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 
 export default function EventsFeedScreen() {
   const [activeFilter, setActiveFilter] = useState("ALL");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [dashboard, setDashboard] = useState(null);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [clock, setClock] = useState(Date.now());
 
-  const filterTabs = ["ALL", "• LIVE", "OPEN", "SOON"];
   const userTrades = fetchUserTrades();
   const activeCount = userTrades.filter((t) => t.status === "ACTIVE").length;
 
-  const filteredEvents = useMemo(() => {
-    return EVENTS_DATA.filter((ev) => {
-      const matchesCategory =
-        selectedCategory === "all" || ev.category === selectedCategory;
+  const loadDashboard = useCallback(async ({ showLoading = true } = {}) => {
+    if (showLoading) setIsLoading(true);
+    setError("");
 
-      let matchesFilter = true;
-      if (activeFilter === "• LIVE") matchesFilter = ev.status.includes("LIVE");
-      if (activeFilter === "OPEN") matchesFilter = ev.status === "OPEN";
-      if (activeFilter === "SOON") matchesFilter = ev.status === "SOON";
+    try {
+      const response = await fetchDashboard(activeFilter);
+      setDashboard(response);
+    } catch (_error) {
+      setError("Dashboard data is unavailable. Please try again.");
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  }, [activeFilter]);
 
-      return matchesCategory && matchesFilter;
-    });
-  }, [selectedCategory, activeFilter]);
+  const refreshDashboard = useCallback(async () => {
+    try {
+      const response = await fetchDashboard(activeFilter);
+      setDashboard(response);
+      setError("");
+    } catch (_error) {
+      // Preserve the visible dashboard if a manual refresh cannot complete.
+    }
+  }, [activeFilter]);
+
+  const { refreshing, onRefresh } = usePullToRefresh(
+    refreshDashboard
+  );
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshDashboard();
+      const timer = setInterval(() => {
+        refreshDashboard();
+      }, 30_000);
+      return () => clearInterval(timer);
+    }, [refreshDashboard])
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const feedCards = useMemo(
+    () => (dashboard?.contests || []).map((contest) => toFeedCard(contest, clock)),
+    [clock, dashboard]
+  );
+
+  const summary = dashboard?.summary;
 
   return (
     <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Quick Nav Bar */}
@@ -69,9 +122,9 @@ export default function EventsFeedScreen() {
             <View style={styles.heroStatCol}>
               <Text style={styles.heroStatLabel}>PRIZE POOL</Text>
               <Text style={[styles.heroStatNum, { color: colors.primary }]}>
-                ₹49.5L
+                {summary ? `${(summary.prizePoolCredits / 100000).toFixed(1)}L` : "--"}
               </Text>
-              <Text style={styles.heroStatSub}>today</Text>
+              <Text style={styles.heroStatSub}>demo credits today</Text>
             </View>
 
             <View style={styles.statDivider} />
@@ -79,9 +132,9 @@ export default function EventsFeedScreen() {
             <View style={styles.heroStatCol}>
               <Text style={styles.heroStatLabel}>LIVE TRADERS</Text>
               <Text style={[styles.heroStatNum, { color: colors.cyan }]}>
-                23,490
+                {summary ? summary.livePlayers.toLocaleString("en-IN") : "--"}
               </Text>
-              <Text style={styles.heroStatSub}>competing</Text>
+              <Text style={styles.heroStatSub}>demo players</Text>
             </View>
 
             <View style={styles.statDivider} />
@@ -89,9 +142,9 @@ export default function EventsFeedScreen() {
             <View style={styles.heroStatCol}>
               <Text style={styles.heroStatLabel}>PAID OUT</Text>
               <Text style={[styles.heroStatNum, { color: colors.gold }]}>
-                ₹2.1Cr
+                {summary ? `${(summary.paidOutCredits / 10000000).toFixed(1)}Cr` : "--"}
               </Text>
-              <Text style={styles.heroStatSub}>all time</Text>
+              <Text style={styles.heroStatSub}>demo only</Text>
             </View>
           </View>
 
@@ -100,51 +153,14 @@ export default function EventsFeedScreen() {
               <Text style={styles.usdtSymbol}>₮</Text>
             </View>
             <Text style={styles.usdtText}>
-              1 USDT = ₹73.42{"   "}•{"   "}Live{"   "}•{"   "}All payouts in crypto
+              Demo credits only • No entries, payouts, deposits, or withdrawals
             </Text>
           </View>
         </AppCard>
 
-        {/* Category Horizontal Scroll */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryScroll}
-          style={styles.categoryContainer}
-        >
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <TouchableOpacity
-                key={cat.id}
-                style={[
-                  styles.categoryChip,
-                  isSelected && styles.categoryChipActive,
-                ]}
-                onPress={() => setSelectedCategory(cat.id)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={cat.icon}
-                  size={13}
-                  color={isSelected ? colors.textWhite : colors.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.categoryText,
-                    isSelected && styles.categoryTextActive,
-                  ]}
-                >
-                  {cat.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
         {/* Filter Pills */}
         <TabPills
-          tabs={filterTabs}
+          tabs={DASHBOARD_TABS}
           activeTab={activeFilter}
           onTabChange={setActiveFilter}
           style={{ marginBottom: spacing.md }}
@@ -152,7 +168,29 @@ export default function EventsFeedScreen() {
 
         {/* Event Cards List */}
         <View style={styles.list}>
-          {filteredEvents.map((item) => (
+          {isLoading && (
+            <View style={styles.stateCard}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.stateText}>Loading demo dashboard…</Text>
+            </View>
+          )}
+
+          {!isLoading && error && (
+            <View style={styles.stateCard}>
+              <Text style={styles.stateText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={loadDashboard}>
+                <Text style={styles.retryButtonText}>TRY AGAIN</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!isLoading && !error && feedCards.length === 0 && (
+            <View style={styles.stateCard}>
+              <Text style={styles.stateText}>No demo contests are available in this tab.</Text>
+            </View>
+          )}
+
+          {!isLoading && !error && feedCards.map((item) => (
             <EventFeedCard key={item.id} item={item} />
           ))}
         </View>
@@ -288,37 +326,34 @@ const styles = StyleSheet.create({
     fontWeight: typography.bold,
     letterSpacing: typography.wide,
   },
-  categoryContainer: {
-    marginBottom: spacing.md,
-  },
-  categoryScroll: {
-    gap: spacing.sm,
-  },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm - 1,
-    borderRadius: radii.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderMedium,
-  },
-  categoryChipActive: {
-    backgroundColor: colors.textPrimary,
-    borderColor: colors.textPrimary,
-  },
-  categoryText: {
-    fontSize: typography.sm + 0.5,
-    fontWeight: typography.bold,
-    color: colors.textMuted,
-  },
-  categoryTextActive: {
-    color: colors.textWhite,
-    fontWeight: typography.black,
-  },
   list: {
     gap: spacing.xs,
+  },
+  stateCard: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.borderMedium,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  stateText: {
+    color: colors.textMuted,
+    fontSize: typography.sm + 1,
+    fontWeight: typography.bold,
+    textAlign: "center",
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  retryButtonText: {
+    color: colors.textWhite,
+    fontSize: typography.xs + 1,
+    fontWeight: typography.black,
+    letterSpacing: typography.wide,
   },
 });

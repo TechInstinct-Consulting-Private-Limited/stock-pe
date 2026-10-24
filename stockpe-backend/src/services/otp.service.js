@@ -9,7 +9,26 @@ const {
 
 const OTP_EXPIRY_MINUTES = 10;
 
-function createOtp() {
+function createOtp(mobile) {
+    const reviewOtp = process.env.REVIEW_TEST_OTP;
+    const reviewMobiles = new Set(
+        String(process.env.REVIEW_TEST_MOBILES || "")
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean)
+    );
+
+    // A review APK needs a known OTP, but it must never become a general
+    // authentication bypass. This path is restricted to staging and an
+    // explicit mobile allow-list; production always uses a random OTP.
+    if (
+        process.env.NODE_ENV === "staging" &&
+        /^\d{6}$/.test(reviewOtp || "") &&
+        reviewMobiles.has(mobile)
+    ) {
+        return reviewOtp;
+    }
+
     return crypto.randomInt(100000, 1000000).toString();
 }
 
@@ -37,7 +56,7 @@ async function createOtpVerification(mobile, purpose) {
         throw error;
     }
 
-    const otp = createOtp();
+    const otp = createOtp(mobile);
     const otpHash = await bcrypt.hash(otp, 12);
 
     const insertResult = await pool.query(

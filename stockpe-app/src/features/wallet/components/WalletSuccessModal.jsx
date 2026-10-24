@@ -37,8 +37,8 @@ export default function WalletSuccessModal({
           </Text>
           <Text style={styles.subtitle}>
             {isDeposit
-              ? "Funds added instantly to your trading balance."
-              : "Payout is being dispatched to your verified account."}
+              ? "Demo funds were credited to your mock wallet balance."
+              : "Demo payout was recorded for your verified linked wallet."}
           </Text>
 
           {/* Amount Box */}

@@ -49,7 +49,7 @@ export default function TransactionItemCard({ transaction, onPress }) {
               isCredit ? styles.creditText : styles.debitText,
             ]}
           >
-            {isCredit ? "+" : "-"}₹{transaction.amountInr.toLocaleString("en-IN")}
+            {transaction.simulated ? "Test only" : `${isCredit ? "+" : "-"}₹${transaction.amountInr.toLocaleString("en-IN")}`}
           </Text>
         </View>
 
@@ -62,7 +62,7 @@ export default function TransactionItemCard({ transaction, onPress }) {
           </View>
           <Text style={styles.amountUsdt}>
             {isCredit ? "+" : "-"}
-            {transaction.amountUsdt} USDT
+            {transaction.amountUsdtText ?? transaction.amountUsdt} USDT{transaction.simulated ? " · simulated" : ""}
           </Text>
         </View>
 
