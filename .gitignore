@@ -1,2 +1,4 @@
 .DS_Store
 stockpe-app/.env
+# Admin panel is maintained in the separate stock-pe-admin repository.
+stockpe-admin/
