@@ -19,6 +19,7 @@ router.post("/notifications/campaigns", controller.createNotificationCampaign);
 router.get("/contests", controller.list);
 router.get("/contests/:publicId/details", controller.details);
 router.post("/contests", controller.create);
+router.post("/contests/bulk-schedule", controller.createBulkSchedule);
 router.put("/contests/:publicId", controller.update);
 router.put("/contests/:publicId/status", controller.changeStatus);
 router.post("/contests/:publicId/settle", controller.settle);

@@ -14,6 +14,7 @@ const list = respond(async (req) => ({ contests: await service.listContests({ st
 const details = respond(async (req) => ({ ...(await service.getContestDetails(req.params.publicId)) }));
 const entries = respond(async (req) => ({ entries: await service.getContestEntries(req.params.publicId) }));
 const create = respond(async (req) => ({ contest: await service.createContest({ adminUserId: req.admin.userId, input: req.body }) }));
+const createBulkSchedule = respond(async (req) => ({ schedule: await service.createBulkScheduledContests({ adminUserId: req.admin.userId, input: req.body || {} }) }));
 const update = respond(async (req) => ({ contest: await service.updateContest({ adminUserId: req.admin.userId, publicId: req.params.publicId, input: req.body }) }));
 const changeStatus = respond(async (req) => ({ contest: await service.changeContestStatus({ adminUserId: req.admin.userId, publicId: req.params.publicId, ...req.body }) }));
 const settle = respond(async (req) => ({ contest: await service.settleContest({ adminUserId: req.admin.userId, publicId: req.params.publicId, ...req.body }) }));
@@ -35,4 +36,4 @@ const notificationMetrics = respond(async () => ({ metrics: await notifications.
 const notificationTemplates = respond(async () => ({ templates: await notifications.listTemplates() }));
 const createNotificationCampaign = respond(async (req) => ({ campaign: await notifications.createCampaign({ adminUserId: req.admin.userId, input: req.body || {} }) }));
 
-module.exports = { approvePayout, changeStatus, completePayout, create, createNotificationCampaign, createPayout, details, entries, list, listNotifications, listPayouts, listUsers, listWallets, notificationMetrics, notificationTemplates, rejectPayout, settle, update, userActivity, userContests, userKyc, userNotifications, userOverview, userWallet };
+module.exports = { approvePayout, changeStatus, completePayout, create, createBulkSchedule, createNotificationCampaign, createPayout, details, entries, list, listNotifications, listPayouts, listUsers, listWallets, notificationMetrics, notificationTemplates, rejectPayout, settle, update, userActivity, userContests, userKyc, userNotifications, userOverview, userWallet };

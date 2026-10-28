@@ -2,6 +2,7 @@ const pool = require("../config/database");
 const { createNotification, notifyContestCreated, notifyContestLifecycle } = require("./profile-notification.service");
 const { toAtomicUsdt } = require('./wallet-ledger.service');
 const { settleDemoUsdtEntry, refundDemoUsdtEntry, splitDemoUsdtPool, atomicToDemoUsdt } = require('./demo-usdt.service');
+const { buildTradingSchedule, makePublicId } = require('./contest-bulk-schedule.service');
 
 const CONTEST_STATUSES = new Set(["DRAFT", "SOON", "OPEN", "LIVE", "CLOSED", "SETTLED", "CANCELLED"]);
 const TRANSITIONS = {
@@ -121,6 +122,76 @@ async function createContest({ adminUserId, input }) {
     } catch (error) {
         await client.query("ROLLBACK");
         if (error.code === "23505") throw operationalError(409, "A contest with this publicId already exists");
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+async function createBulkScheduledContests({ adminUserId, input }) {
+    const instrumentCode = String(input.instrumentCode || "").trim().toUpperCase();
+    const entryCredits = Number(input.entryCredits);
+    const prizePoolCredits = Number(input.prizePoolCredits);
+    const playerCapacity = Number(input.playerCapacity);
+    if (!instrumentCode || ![entryCredits, prizePoolCredits, playerCapacity].every(Number.isInteger)
+        || entryCredits <= 0 || prizePoolCredits <= 0 || playerCapacity <= 0) {
+        throw operationalError(400, "instrumentCode, entryCredits, prizePoolCredits, and playerCapacity are required");
+    }
+
+    const excludedDates = Array.isArray(input.excludedDates) ? input.excludedDates : [];
+    let schedule;
+    try {
+        schedule = buildTradingSchedule({
+            startDate: input.startDate,
+            tradingDays: input.tradingDays,
+            opensTime: input.opensTime || "09:15",
+            liveTime: input.liveTime || "15:15",
+            closesTime: input.closesTime || "15:35",
+            excludedDates,
+        });
+    } catch (error) {
+        throw operationalError(error.statusCode || 400, error.message);
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        const instrument = await client.query(
+            "SELECT id, display_name FROM market_instruments WHERE code=$1 AND is_active=TRUE FOR SHARE",
+            [instrumentCode]
+        );
+        if (!instrument.rowCount) throw operationalError(400, "Active instrument was not found");
+
+        const created = [];
+        for (const [index, slot] of schedule.items.entries()) {
+            const publicId = makePublicId(instrumentCode, slot.date, index + 1);
+            const title = `${instrument.rows[0].display_name} Daily Prediction`;
+            const question = `Predict the ${instrument.rows[0].display_name} closing value for ${slot.date}.`;
+            const result = await client.query(
+                `INSERT INTO demo_dashboard_contests (
+                    public_id, instrument_id, title, question, status, entry_credits, prize_pool_credits,
+                    player_capacity, opens_at, live_at, closes_at, lifecycle_mode, settlement_source, display_order
+                 ) VALUES ($1,$2,$3,$4,'SOON',$5,$6,$7,$8,$9,$10,'SCHEDULED',$11,$12)
+                 RETURNING id, public_id, opens_at, live_at, closes_at`,
+                [publicId, instrument.rows[0].id, title, question, entryCredits, prizePoolCredits, playerCapacity,
+                    slot.opensAt, slot.liveAt, slot.closesAt,
+                    String(input.settlementSource || "Automatic market snapshot near scheduled close").trim(), index]
+            );
+            if (input.currency === "DEMO_USDT") {
+                await client.query(
+                    "INSERT INTO demo_usdt_contests (contest_id, entry_atomic, prize_pool_atomic) VALUES ($1,$2,$3)",
+                    [result.rows[0].id, toAtomicUsdt(entryCredits).toString(), toAtomicUsdt(prizePoolCredits).toString()]
+                );
+            }
+            await audit(client, adminUserId, "BULK_CONTEST_SCHEDULED", result.rows[0].id, { publicId, date: slot.date });
+            await notifyContestCreated(client, { publicId, title, opensAt: slot.opensAt });
+            created.push({ publicId, date: slot.date, opensAt: slot.opensAt, liveAt: slot.liveAt, closesAt: slot.closesAt });
+        }
+        await client.query("COMMIT");
+        return { created, skipped: schedule.skipped };
+    } catch (error) {
+        await client.query("ROLLBACK");
+        if (error.code === "23505") throw operationalError(409, "A scheduled contest already exists for at least one selected date");
         throw error;
     } finally {
         client.release();
@@ -478,4 +549,4 @@ async function getContestDetails(publicId) {
     return { contest: contestResult.rows[0], timeline: timelineResult.rows, entries: await getContestEntries(publicId) };
 }
 
-module.exports = { autoSettleScheduledContests, calculateWinnerRewards, changeContestStatus, createContest, getContestDetails, getContestEntries, listContests, settleContest, updateContest };
+module.exports = { autoSettleScheduledContests, calculateWinnerRewards, changeContestStatus, createBulkScheduledContests, createContest, getContestDetails, getContestEntries, listContests, settleContest, updateContest };
