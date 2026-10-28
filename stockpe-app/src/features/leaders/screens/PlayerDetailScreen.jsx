@@ -1,111 +1,17 @@
 import React from "react";
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlayerDetail } from "../hooks/usePlayerDetail";
-import PlayerHeaderCard from "../components/PlayerHeaderCard";
-import PlayerTrophyCard from "../components/PlayerTrophyCard";
-import HeadToHeadComparisonCard from "../components/HeadToHeadComparisonCard";
-import PlayerPastMatchesCard from "../components/PlayerPastMatchesCard";
+
+const date = (value) => value ? new Date(value).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "—";
+const amount = (value) => `${value || "0.000000"} Demo USDT`;
 
 export default function PlayerDetailScreen() {
-  const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const { player, currentUser, isLoading } = usePlayerDetail(id);
-
-  return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
-      <View style={styles.screen}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={22} color="#0F172A" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Competitor Profile</Text>
-          <View style={{ width: 34 }} />
-        </View>
-
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {isLoading || !player ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color="#00C987" />
-            </View>
-          ) : (
-            <>
-              {/* 1. Header Card (Avatar, Tier, 4 Stats) */}
-              <PlayerHeaderCard player={player} />
-
-              {/* 2. Trophy Shelf */}
-              <PlayerTrophyCard trophies={player.trophies} />
-
-              {/* 3. Head to Head Analytics vs Current User */}
-              <HeadToHeadComparisonCard
-                player={player}
-                currentUser={currentUser}
-              />
-
-              {/* 4. Past Completed Contests & Winning Picks */}
-              <PlayerPastMatchesCard pastPicks={player.pastPicks} />
-            </>
-          )}
-        </ScrollView>
-      </View>
-    </SafeAreaView>
-  );
+  const router = useRouter(); const { id } = useLocalSearchParams(); const { player, isLoading, error } = usePlayerDetail(id);
+  const profile = player?.player; const recent = player?.recent || [];
+  return <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}><View style={styles.screen}><View style={styles.header}><TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}><Ionicons name="arrow-back" size={22} color="#0F172A" /></TouchableOpacity><Text style={styles.headerTitle}>Player profile</Text><View style={{ width: 34 }} /></View><ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>{isLoading ? <View style={styles.loadingBox}><ActivityIndicator size="large" color="#00C987" /></View> : error || !profile ? <View style={styles.empty}><Ionicons name="cloud-offline-outline" size={28} color="#EF4444" /><Text style={styles.error}>{error || "Player profile is unavailable."}</Text></View> : <><View style={styles.profile}><View style={styles.avatar}><Text style={styles.avatarText}>{profile.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}</Text></View><View style={styles.info}><Text style={styles.name}>{profile.name}{profile.isCurrentUser ? " (You)" : ""}</Text><Text style={styles.member}>Member since {date(profile.joinedAt)}</Text></View></View><View style={styles.metrics}>{[["WIN RATE", `${profile.winRate}%`], ["PLAYED", String(profile.contestsPlayed)], ["WON", String(profile.contestsWon)], ["REWARDS", amount(profile.rewards)]].map(([label, value]) => <View key={label} style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text></View>)}</View><View style={styles.card}><Text style={styles.sectionTitle}>RECENT CONTEST ACTIVITY</Text><Text style={styles.subtitle}>Only contest entries and rewards recorded by the backend are shown.</Text>{recent.length ? recent.map((entry) => <View key={entry.id} style={styles.entry}><View style={styles.entryTop}><View><Text style={styles.contest}>{entry.title}</Text><Text style={styles.entrySub}>{entry.instrument_code} · {date(entry.joined_at)}</Text></View><Text style={[styles.status, entry.status === "WON" ? styles.won : entry.status === "LOST" ? styles.lost : styles.active]}>{entry.status}</Text></View><View style={styles.entryFooter}><Text style={styles.prediction}>Prediction {entry.prediction_value || "—"}</Text><Text style={styles.reward}>+{amount(entry.reward_amount)}</Text></View></View>) : <Text style={styles.subtitle}>No contest entries yet.</Text>}</View></>}</ScrollView></View></SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  screen: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EDF2F7",
-  },
-  backBtn: {
-    padding: 6,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#0F172A",
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 30,
-  },
-  loadingBox: {
-    padding: 40,
-    alignItems: "center",
-  },
-});
+const styles = StyleSheet.create({ safeArea: { flex: 1, backgroundColor: "#FFFFFF" }, screen: { flex: 1, backgroundColor: "#F8FAFC" }, header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#EDF2F7" }, backBtn: { padding: 6 }, headerTitle: { fontSize: 16, fontWeight: "900", color: "#0F172A" }, scroll: { flex: 1 }, scrollContent: { padding: 16, paddingBottom: 30 }, loadingBox: { padding: 40, alignItems: "center" }, empty: { backgroundColor: "#FFFFFF", alignItems: "center", gap: 10, borderRadius: 18, padding: 28 }, error: { color: "#DC2626", textAlign: "center", fontWeight: "700" }, profile: { backgroundColor: "#0F172A", borderRadius: 20, padding: 18, flexDirection: "row", alignItems: "center" }, avatar: { width: 54, height: 54, borderRadius: 16, backgroundColor: "#DCFCE7", alignItems: "center", justifyContent: "center", marginRight: 14 }, avatarText: { fontSize: 18, fontWeight: "900", color: "#059669" }, info: { flex: 1 }, name: { color: "#FFFFFF", fontSize: 17, fontWeight: "900" }, member: { color: "#94A3B8", fontSize: 11, marginTop: 4 }, metrics: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 }, metric: { width: "48%", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E8EDF5", borderRadius: 14, padding: 12 }, metricLabel: { color: "#64748B", fontSize: 9, fontWeight: "900" }, metricValue: { color: "#0F172A", fontSize: 14, fontWeight: "900", marginTop: 4 }, card: { marginTop: 16, backgroundColor: "#FFFFFF", borderRadius: 20, padding: 18, borderWidth: 1, borderColor: "#EDF2F7" }, sectionTitle: { fontSize: 11, fontWeight: "900", color: "#64748B", letterSpacing: .8 }, subtitle: { fontSize: 11.5, color: "#94A3B8", marginTop: 4, lineHeight: 17 }, entry: { marginTop: 14, padding: 12, borderRadius: 14, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0" }, entryTop: { flexDirection: "row", justifyContent: "space-between", gap: 8 }, contest: { color: "#0F172A", fontSize: 13, fontWeight: "800", maxWidth: 210 }, entrySub: { color: "#94A3B8", fontSize: 10.5, marginTop: 3 }, status: { fontSize: 9, fontWeight: "900", paddingHorizontal: 7, paddingVertical: 4, borderRadius: 5, overflow: "hidden", height: 20 }, won: { backgroundColor: "#DCFCE7", color: "#15803D" }, lost: { backgroundColor: "#FEE2E2", color: "#DC2626" }, active: { backgroundColor: "#DBEAFE", color: "#2563EB" }, entryFooter: { flexDirection: "row", justifyContent: "space-between", marginTop: 12, borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 9 }, prediction: { color: "#64748B", fontSize: 11, fontWeight: "700" }, reward: { color: "#059669", fontSize: 11, fontWeight: "900" } });

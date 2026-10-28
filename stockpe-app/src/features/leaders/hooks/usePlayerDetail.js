@@ -1,25 +1,30 @@
 import { useState, useEffect } from "react";
 import { fetchPlayerProfile } from "../services/leadersService";
-import { PROFILE_USER_DATA } from "../../profile/services/profileService";
 
 export function usePlayerDetail(playerId) {
   const [player, setPlayer] = useState(null);
-  const [currentUser] = useState(PROFILE_USER_DATA);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setIsLoading(true);
-    fetchPlayerProfile(playerId || "1").then((res) => {
-      setIsLoading(false);
-      if (res.success) {
-        setPlayer(res.data);
-      }
-    });
+    const timer = setTimeout(() => {
+      setIsLoading(true);
+      setError("");
+      fetchPlayerProfile(playerId).then((res) => {
+        setIsLoading(false);
+        if (res.success) {
+          setPlayer(res.data);
+        } else {
+          setError(res.message || "Could not load player profile.");
+        }
+      });
+    }, 0);
+    return () => clearTimeout(timer);
   }, [playerId]);
 
   return {
     player,
-    currentUser,
     isLoading,
+    error,
   };
 }
