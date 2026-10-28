@@ -21,6 +21,10 @@ export default function NotificationsScreen() {
     handleMarkAllAsRead,
     handleNotificationPress,
   } = useNotifications();
+  const openNotification = async (notification) => {
+    const contestId = await handleNotificationPress(notification);
+    if (contestId) router.push({ pathname: "/event/[id]", params: { id: contestId } });
+  };
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
@@ -36,11 +40,11 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Notifications</Text>
           <TouchableOpacity
-            onPress={handleMarkAllAsRead}
+            onPress={() => router.push("/profile/notification-preferences")}
             activeOpacity={0.7}
             style={styles.readAllBtn}
           >
-            <Text style={styles.readAllText}>Mark Read</Text>
+            <Ionicons name="settings-outline" size={19} color="#00A971" />
           </TouchableOpacity>
         </View>
 
@@ -49,6 +53,11 @@ export default function NotificationsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {notifications.some((notification) => !notification.read) ? (
+            <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markReadInline}>
+              <Text style={styles.readAllText}>Mark all as read</Text>
+            </TouchableOpacity>
+          ) : null}
           {isLoading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="large" color="#00C987" />
@@ -70,7 +79,7 @@ export default function NotificationsScreen() {
               <NotificationItemCard
                 key={n.id}
                 notification={n}
-                onPress={handleNotificationPress}
+                onPress={openNotification}
               />
             ))
           )}
@@ -110,6 +119,12 @@ const styles = StyleSheet.create({
   readAllBtn: {
     paddingVertical: 4,
     paddingHorizontal: 8,
+  },
+  markReadInline: {
+    alignSelf: "flex-end",
+    marginBottom: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
   },
   readAllText: {
     fontSize: 12,

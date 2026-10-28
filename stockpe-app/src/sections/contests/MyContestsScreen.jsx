@@ -138,7 +138,7 @@ export default function MyContestsScreen() {
                       <View style={styles.cardHeaderRow}>
                         <View style={styles.cardTitleCol}>
                           <View style={styles.cardTitleGroup}>
-                            <Text style={styles.indexTitle}>
+                            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.indexTitle}>
                               {item.indexSymbol || item.contestTitle}
                             </Text>
                             <View
@@ -167,7 +167,7 @@ export default function MyContestsScreen() {
                         {/* Top Right: Prize Info */}
                         {isWon && item.prizeInr && (
                           <View style={styles.prizeRightCol}>
-                            <Text style={styles.prizeInrText}>{item.prizeInr}</Text>
+                            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.prizeInrText}>{item.prizeInr}</Text>
                             {item.prizeUsdt && (
                               <View style={styles.usdtBadgePill}>
                                 <View style={styles.usdtSymbolCircle}>
@@ -187,7 +187,7 @@ export default function MyContestsScreen() {
                         {/* Column 1: PREDICTION */}
                         <View style={styles.metricCol}>
                           <Text style={styles.metricHeader}>PREDICTION</Text>
-                          <Text style={styles.metricValueBold}>
+                          <Text numberOfLines={1} adjustsFontSizeToFit style={styles.metricValueBold}>
                             {item.prediction || "Not submitted"}
                           </Text>
                         </View>
@@ -195,10 +195,10 @@ export default function MyContestsScreen() {
                         {/* Column 2: ENTRY FEE */}
                         <View style={styles.metricCol}>
                           <Text style={styles.metricHeader}>ENTRY FEE</Text>
-                          <Text style={styles.metricValueBold}>
+                          <Text numberOfLines={1} adjustsFontSizeToFit style={styles.metricValueBold}>
                             {item.entryFeeInr || item.entryFee || "₹99"}
                           </Text>
-                          <Text style={styles.metricSubValue}>
+                          <Text numberOfLines={1} style={styles.metricSubValue}>
                             {item.entryFeeUsdt || "1.35 USDT"}
                           </Text>
                         </View>
@@ -207,6 +207,8 @@ export default function MyContestsScreen() {
                         <View style={[styles.metricCol, { alignItems: "flex-end" }]}>
                           <Text style={styles.metricHeader}>ACCURACY</Text>
                           <Text
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
                             style={[
                               styles.metricValueBold,
                               { color: isWon ? colors.primary : colors.textPrimary },
@@ -409,19 +411,25 @@ const styles = StyleSheet.create({
   },
   cardTitleCol: {
     flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
   },
   cardTitleGroup: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    minWidth: 0,
   },
   indexTitle: {
+    flex: 1,
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: "900",
     color: "#0F172A",
     letterSpacing: -0.3,
   },
   statusBadge: {
+    flexShrink: 0,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
@@ -462,6 +470,8 @@ const styles = StyleSheet.create({
   },
   prizeRightCol: {
     alignItems: "flex-end",
+    flexShrink: 1,
+    maxWidth: "42%",
   },
   prizeInrText: {
     fontSize: 22,
@@ -508,6 +518,7 @@ const styles = StyleSheet.create({
   },
   metricCol: {
     flex: 1,
+    minWidth: 0,
   },
   metricHeader: {
     fontSize: 9.5,

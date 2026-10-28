@@ -264,6 +264,18 @@ export function getProfileNotifications() {
     return authenticatedRequest("/profile/notifications", { headers: { "Cache-Control": "no-store" } });
 }
 
+export function getNotificationPreferences() {
+    return authenticatedRequest("/profile/notifications/preferences", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function updateNotificationPreferences(payload) {
+    return authenticatedRequest("/profile/notifications/preferences", { method: "PUT", body: JSON.stringify(payload) });
+}
+
+export function registerExpoPushToken(token, platform) {
+    return authenticatedRequest("/profile/notifications/push-token", { method: "POST", body: JSON.stringify({ token, platform }) });
+}
+
 export function markProfileNotificationRead(notificationId) {
     return authenticatedRequest(`/profile/notifications/${encodeURIComponent(notificationId)}/read`, { method: "PATCH" });
 }

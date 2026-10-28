@@ -55,7 +55,7 @@ export default function EventDetailHero({ event }) {
           <Text style={styles.navSub}>{event?.instrument?.category || "Index"} • {event?.instrument?.exchange || "Market"}</Text>
         </View>
 
-        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7} onPress={() => router.push("/profile/notifications")}>
           <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>

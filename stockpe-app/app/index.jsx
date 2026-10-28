@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BrandLogo from "../src/components/BrandLogo";
 import { getAuthToken } from "../src/services/authStorage";
+import { registerCurrentDeviceForPush } from "../src/services/pushNotifications";
 
 export default function Index() {
   const [progress, setProgress] = useState(0);
@@ -31,6 +32,7 @@ export default function Index() {
       getAuthToken()
         .then((token) => {
           if (token) {
+            registerCurrentDeviceForPush().catch(() => {});
             router.replace("/(tabs)/events");
           } else {
             router.replace("/login");

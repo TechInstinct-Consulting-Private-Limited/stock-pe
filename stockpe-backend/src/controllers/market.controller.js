@@ -11,6 +11,7 @@ async function getIndices(req, res, next) {
         cached: data.cached,
         stale: !!data.stale,
         lastUpdated: data.lastUpdated,
+        providers: [...new Set(data.indices.map((quote) => quote.provider).filter(Boolean))],
       },
     });
   } catch (error) {

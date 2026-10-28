@@ -5,6 +5,17 @@ const controller = require("../controllers/admin-contest.controller");
 
 router.use(requireAuth, requireAdmin());
 router.get("/users", controller.listUsers);
+router.get("/wallets", controller.listWallets);
+router.get("/users/:userId/overview", controller.userOverview);
+router.get("/users/:userId/wallet", controller.userWallet);
+router.get("/users/:userId/contests", controller.userContests);
+router.get("/users/:userId/kyc", controller.userKyc);
+router.get("/users/:userId/notifications", controller.userNotifications);
+router.get("/users/:userId/activity", controller.userActivity);
+router.get("/notifications", controller.listNotifications);
+router.get("/notifications/metrics", controller.notificationMetrics);
+router.get("/notifications/templates", controller.notificationTemplates);
+router.post("/notifications/campaigns", controller.createNotificationCampaign);
 router.get("/contests", controller.list);
 router.get("/contests/:publicId/details", controller.details);
 router.post("/contests", controller.create);

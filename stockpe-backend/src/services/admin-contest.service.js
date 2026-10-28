@@ -1,5 +1,5 @@
 const pool = require("../config/database");
-const { createNotification } = require("./profile-notification.service");
+const { createNotification, notifyContestCreated, notifyContestLifecycle } = require("./profile-notification.service");
 const { toAtomicUsdt } = require('./wallet-ledger.service');
 const { settleDemoUsdtEntry, refundDemoUsdtEntry, splitDemoUsdtPool, atomicToDemoUsdt } = require('./demo-usdt.service');
 
@@ -113,6 +113,9 @@ async function createContest({ adminUserId, input }) {
             );
         }
         await audit(client, adminUserId, "CONTEST_CREATED", result.rows[0].id, { publicId: contest.publicId, status });
+        if (status === "SOON") {
+            await notifyContestCreated(client, { publicId: contest.publicId, title: contest.title, opensAt: contest.opensAt });
+        }
         await client.query("COMMIT");
         return result.rows[0];
     } catch (error) {
@@ -253,6 +256,8 @@ async function settleContest({ adminUserId, publicId, closingValue, settlementNo
             publicId, closingValue: finalValue, winnerCount: settlement.winnerCount,
         });
         await client.query("COMMIT");
+        try { await notifyContestLifecycle(publicId, "SETTLED"); }
+        catch (notificationError) { console.error(`[Notifications] Settlement notification skipped for ${publicId}:`, notificationError.message); }
         return { publicId, closingValue: finalValue, winnerCount: settlement.winnerCount, status: "SETTLED" };
     } catch (error) {
         await client.query("ROLLBACK");
@@ -348,7 +353,7 @@ async function changeContestStatus({ adminUserId, publicId, status, reason, sett
     const client = await pool.connect();
     try {
         await client.query("BEGIN");
-        const contest = await client.query("SELECT id, status, lifecycle_mode FROM demo_dashboard_contests WHERE public_id=$1 FOR UPDATE", [publicId]);
+        const contest = await client.query("SELECT id, status, lifecycle_mode, title, opens_at FROM demo_dashboard_contests WHERE public_id=$1 FOR UPDATE", [publicId]);
         if (!contest.rowCount) throw operationalError(404, "Demo contest was not found");
         const current = contest.rows[0].status;
         if (contest.rows[0].lifecycle_mode === "SCHEDULED") {
@@ -394,6 +399,30 @@ async function changeContestStatus({ adminUserId, publicId, status, reason, sett
             outcomeCount: nextStatus === "SETTLED" ? outcomes.length : undefined,
         });
         await client.query("COMMIT");
+        try {
+            if (nextStatus === "SOON") {
+                const notificationClient = await pool.connect();
+                try {
+                    await notificationClient.query("BEGIN");
+                    await notifyContestCreated(notificationClient, {
+                        publicId,
+                        title: contest.rows[0].title,
+                        opensAt: contest.rows[0].opens_at,
+                    });
+                    await notificationClient.query("COMMIT");
+                } catch (notificationError) {
+                    await notificationClient.query("ROLLBACK");
+                    throw notificationError;
+                } finally {
+                    notificationClient.release();
+                }
+            } else if (["OPEN", "LIVE", "CLOSED"].includes(nextStatus)) {
+                await notifyContestLifecycle(publicId, nextStatus);
+            }
+        } catch (notificationError) {
+            // The contest transition is already durable; a delivery problem must not undo it.
+            console.error(`[Notifications] Lifecycle notification skipped for ${publicId}:`, notificationError.message);
+        }
         return { publicId, previousStatus: current, status: nextStatus };
     } catch (error) {
         await client.query("ROLLBACK");

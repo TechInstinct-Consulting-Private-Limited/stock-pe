@@ -9,7 +9,8 @@
     "test": "node --test",
     "db:check": "node src/scripts/checkDatabase.js",
     "migrate": "node src/scripts/migrate.js",
-    "admin:grant": "node src/scripts/grantAdmin.js"
+    "admin:grant": "node src/scripts/grantAdmin.js",
+    "notifications:worker": "node src/workers/notification-delivery.worker.js"
   },
   "keywords": [],
   "author": "",

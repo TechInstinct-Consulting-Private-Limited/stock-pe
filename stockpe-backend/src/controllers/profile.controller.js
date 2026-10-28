@@ -9,4 +9,7 @@ module.exports = {
     notifications: respond(async (req) => ({ notifications: await service.listNotifications(req.auth.sub) })),
     markRead: respond(async (req) => { await service.markNotificationRead(req.auth.sub, req.params.notificationId); return {}; }),
     markAllRead: respond(async (req) => { await service.markAllNotificationsRead(req.auth.sub); return {}; }),
+    notificationPreferences: respond(async (req) => ({ preferences: await service.getNotificationPreferences(req.auth.sub) })),
+    updateNotificationPreferences: respond(async (req) => ({ preferences: await service.updateNotificationPreferences(req.auth.sub, req.body) })),
+    registerPushToken: respond(async (req) => { await service.registerPushToken(req.auth.sub, req.body?.token, req.body?.platform); return {}; }),
 };

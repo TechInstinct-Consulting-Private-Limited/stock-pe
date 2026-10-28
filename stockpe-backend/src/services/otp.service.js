@@ -9,27 +9,31 @@ const {
 
 const OTP_EXPIRY_MINUTES = 10;
 
-function createOtp(mobile) {
-    const reviewOtp = process.env.REVIEW_TEST_OTP;
+function getReviewOtpSettings(mobile, env = process.env) {
+    const reviewOtp = env.REVIEW_TEST_OTP;
     const reviewMobiles = new Set(
-        String(process.env.REVIEW_TEST_MOBILES || "")
+        String(env.REVIEW_TEST_MOBILES || "")
             .split(",")
             .map((value) => value.trim())
             .filter(Boolean)
     );
+    const isProduction = String(env.NODE_ENV || "").trim().toLowerCase() === "production";
+    const allowEveryTestMobile = String(env.REVIEW_ALLOW_ALL_MOBILES || "").trim().toLowerCase() === "true";
+    const skipDelivery = String(env.REVIEW_SKIP_OTP_DELIVERY || "").trim().toLowerCase() === "true";
 
-    // A review APK needs a known OTP, but it must never become a general
-    // authentication bypass. This path is restricted to staging and an
-    // explicit mobile allow-list; production always uses a random OTP.
-    if (
-        process.env.NODE_ENV === "staging" &&
-        /^\d{6}$/.test(reviewOtp || "") &&
-        reviewMobiles.has(mobile)
-    ) {
-        return reviewOtp;
+    // Review builds can use a known OTP without depending on an SMS provider.
+    // This is explicitly non-production only; normal OTP verification, expiry,
+    // attempt limits, and session creation remain unchanged.
+    if (!isProduction && /^\d{6}$/.test(reviewOtp || "") && (allowEveryTestMobile || reviewMobiles.has(mobile))) {
+        return { otp: reviewOtp, skipDelivery };
     }
 
-    return crypto.randomInt(100000, 1000000).toString();
+    return null;
+}
+
+function createOtp(mobile, env = process.env) {
+    return getReviewOtpSettings(mobile, env)?.otp
+        || crypto.randomInt(100000, 1000000).toString();
 }
 
 async function createOtpVerification(mobile, purpose) {
@@ -56,7 +60,8 @@ async function createOtpVerification(mobile, purpose) {
         throw error;
     }
 
-    const otp = createOtp(mobile);
+    const reviewSettings = getReviewOtpSettings(mobile);
+    const otp = reviewSettings?.otp || createOtp(mobile);
     const otpHash = await bcrypt.hash(otp, 12);
 
     const insertResult = await pool.query(
@@ -67,13 +72,15 @@ async function createOtpVerification(mobile, purpose) {
     );
 
     try {
-        const deliveryProvider = createOtpDeliveryProvider();
-        await deliveryProvider.sendOtp({
-            mobile,
-            otp,
-            purpose,
-            expiresInMinutes: OTP_EXPIRY_MINUTES,
-        });
+        if (!reviewSettings?.skipDelivery) {
+            const deliveryProvider = createOtpDeliveryProvider();
+            await deliveryProvider.sendOtp({
+                mobile,
+                otp,
+                purpose,
+                expiresInMinutes: OTP_EXPIRY_MINUTES,
+            });
+        }
     } catch (error) {
         // A failed delivery must not trigger the resend cooldown.
         await pool.query(
@@ -89,5 +96,7 @@ async function createOtpVerification(mobile, purpose) {
 }
 
 module.exports = {
+    createOtp,
     createOtpVerification,
+    getReviewOtpSettings,
 };
