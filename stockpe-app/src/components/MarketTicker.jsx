@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { getDemoDashboard, getLiveIndices } from "../services/api";
+import { subscribeToLiveMarket } from "../services/liveMarketStream";
 
 const FALLBACK_INDICES = [
   {
@@ -88,6 +89,13 @@ export default function MarketTicker() {
       clearInterval(interval);
     };
   }, []);
+
+  useEffect(() => subscribeToLiveMarket((updates) => {
+    setIndices((current) => {
+      const updateBySymbol = new Map(updates.map((item) => [item.rawSymbol || item.symbol, item]));
+      return current.map((item) => updateBySymbol.get(item.rawSymbol || item.symbol) || item);
+    });
+  }), []);
 
   // Repeat items to create an uninterrupted continuous ribbon
   const repeatCount = Math.max(6, Math.ceil(30 / (indices.length || 1)));

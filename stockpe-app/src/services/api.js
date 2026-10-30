@@ -42,6 +42,10 @@ function resolveApiBaseUrl() {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+export function getApiBaseUrl() {
+    return API_BASE_URL;
+}
+
 class ApiError extends Error {}
 
 export function getUserFacingError(

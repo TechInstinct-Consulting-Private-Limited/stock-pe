@@ -52,6 +52,72 @@ let cache = {
 
 const CACHE_TTL_MS = 20 * 1000; // 20-second cache
 
+function formatLiveDhanQuote({ lastPrice, previousClose, exchangeSegment, securityId }) {
+  const config = INDICES_CONFIG.find((item) =>
+    item.dhan
+    && item.dhan.exchangeSegment === exchangeSegment
+    && Number(item.dhan.securityId) === Number(securityId)
+  );
+  if (!config || !Number.isFinite(Number(lastPrice))) return null;
+
+  const previous = Number(previousClose);
+  const changeValue = Number.isFinite(previous) ? Number(lastPrice) - previous : 0;
+  const percentChange = Number.isFinite(previous) && previous !== 0
+    ? (changeValue / previous) * 100
+    : 0;
+  const isPositive = changeValue >= 0;
+
+  return {
+    symbol: config.shortName,
+    rawSymbol: config.symbol,
+    name: config.name,
+    value: Number(lastPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    rawValue: Number(lastPrice),
+    changeValue: `${isPositive ? "+" : ""}${changeValue.toFixed(2)}`,
+    change: `${isPositive ? "+" : ""}${percentChange.toFixed(2)}%`,
+    percentChange,
+    isPositive,
+    marketState: "REGULAR",
+    currency: "INR",
+    provider: "dhan-live",
+    tickUpdatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Apply a Dhan WebSocket tick to the same normalized quote cache used by the
+ * existing REST endpoint. REST remains the fallback and source of any missing
+ * previous-close data.
+ */
+function applyDhanLiveTick(tick) {
+  const existing = cache.data?.find((quote) => {
+    const config = INDICES_CONFIG.find((item) => item.symbol === quote.rawSymbol);
+    return config?.dhan
+      && config.dhan.exchangeSegment === tick.exchangeSegment
+      && Number(config.dhan.securityId) === Number(tick.securityId);
+  });
+  const previousClose = Number.isFinite(Number(tick.previousClose))
+    ? Number(tick.previousClose)
+    : Number(existing?.rawValue) - Number(existing?.changeValue || 0);
+  const quote = formatLiveDhanQuote({ ...tick, previousClose });
+  if (!quote) return null;
+
+  const current = cache.data || getFallbackList();
+  cache.data = current.map((item) => item.rawSymbol === quote.rawSymbol ? quote : item);
+  cache.lastUpdated = Date.now();
+  return quote;
+}
+
+function getDhanLiveSubscriptions() {
+  return INDICES_CONFIG
+    .filter((config) => config.dhan)
+    .map((config) => ({
+      exchangeSegment: config.dhan.exchangeSegment,
+      securityId: config.dhan.securityId,
+      rawSymbol: config.symbol,
+    }));
+}
+
 function formatQuote(quote, config) {
   const currentPrice = quote?.regularMarketPrice ?? quote?.regularMarketPreviousClose ?? config.fallback.rawValue;
   const change = quote?.regularMarketChange ?? 0;
@@ -273,4 +339,6 @@ module.exports = {
   INDICES_CONFIG,
   getContestInstrumentMatches,
   searchContestInstruments,
+  getDhanLiveSubscriptions,
+  applyDhanLiveTick,
 };
