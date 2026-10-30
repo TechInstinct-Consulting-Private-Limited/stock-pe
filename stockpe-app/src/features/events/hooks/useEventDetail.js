@@ -68,6 +68,8 @@ export function useEventDetail(eventId) {
         spotNumeric: Number(quote.rawValue),
         change: quote.change,
         isPositive: quote.isPositive,
+        marketProvider: quote.provider,
+        marketUpdatedAt: new Date().toISOString(),
       };
     });
   }), []);
