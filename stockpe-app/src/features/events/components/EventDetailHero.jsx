@@ -3,12 +3,12 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { colors, shadows } from "../../../theme";
+import { getContestTiming } from "../services/contestTiming";
 
 export default function EventDetailHero({ event }) {
-  const isEntryOpen = event?.status === "OPEN";
-  const deadlineAt = isEntryOpen ? (event?.liveAt || event?.closesAt) : event?.closesAt;
+  const timing = getContestTiming(event);
   const [secondsLeft, setSecondsLeft] = useState(
-    isEntryOpen ? Number(event?.secondsUntilLive || event?.secondsUntilClose || 0) : Number(event?.secondsUntilClose || 0)
+    timing.countdownSeconds
   );
   const [marketClock, setMarketClock] = useState(Date.now());
 
@@ -18,6 +18,10 @@ export default function EventDetailHero({ event }) {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    setSecondsLeft(timing.countdownSeconds);
+  }, [timing.countdownSeconds]);
 
   useEffect(() => {
     const timer = setInterval(() => setMarketClock(Date.now()), 1000);
@@ -67,7 +71,7 @@ export default function EventDetailHero({ event }) {
               <Text style={styles.openPillText}>{status}</Text>
             </View>
           </View>
-          <Text style={styles.navSub}>{event?.instrument?.category || "Index"} • {event?.instrument?.exchange || "Market"}</Text>
+          <Text style={styles.navSub}>{event?.instrument?.category || "Index"} • {event?.instrument?.exchange || "Market"} • {timing.label}</Text>
         </View>
 
         <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7} onPress={() => router.push("/profile/notifications")}>
@@ -105,7 +109,7 @@ export default function EventDetailHero({ event }) {
       <View style={styles.timerCard}>
         <View style={styles.timerHeader}>
           <Ionicons name="time-outline" size={14} color="#D97706" />
-          <Text style={styles.timerLabel}>{isEntryOpen ? "ENTRY CLOSES IN" : "CONTEST ENDS IN"}</Text>
+          <Text style={styles.timerLabel}>{timing.countdownLabel}</Text>
         </View>
 
         <View style={styles.timerDigitsRow}>

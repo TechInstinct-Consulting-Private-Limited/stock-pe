@@ -57,7 +57,7 @@ export default function EventFeedCard({ item }) {
             </View>
 
             <View style={statusStyle}>
-              <Text style={statusTextStyle}>{item.status || "OPEN"}</Text>
+              <Text style={statusTextStyle}>{item.status || "OPEN"} · {item.contestTypeLabel || "SCHEDULED"}</Text>
             </View>
 
             <View style={styles.priceRow}>

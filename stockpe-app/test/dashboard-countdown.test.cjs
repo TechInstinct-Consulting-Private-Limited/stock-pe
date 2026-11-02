@@ -13,7 +13,7 @@ vm.runInContext(`${source}\nthis.toFeedCard = toFeedCard;`, context);
 test("feed countdown uses the correct milestone for each status", () => {
   const now = Date.parse("2026-10-21T10:09:00Z");
   const contest = { opensAt: "2026-10-21T10:05:00Z", liveAt: "2026-10-21T10:10:00Z", closesAt: "2026-10-21T10:15:00Z", currentPrice: 1, changePercent: 0 };
-  for (const [status, label, expected] of [["SOON", "OPENS IN", "00:00:00"], ["OPEN", "ENTRY CLOSES IN", "00:01:00"], ["LIVE", "CONTEST ENDS IN", "00:06:00"]]) {
+  for (const [status, label, expected] of [["SOON", "ENTRIES OPEN IN", "00:00:00"], ["OPEN", "ENTRY CLOSES IN", "00:01:00"], ["LIVE", "TARGET VALUE IN", "00:06:00"]]) {
     const card = context.toFeedCard({ ...contest, status }, now);
     assert.equal(card.timeLabel, label);
     assert.equal(card.closesIn, expected);

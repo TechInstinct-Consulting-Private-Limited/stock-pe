@@ -11,6 +11,17 @@ function formatCredits(value) {
   return `${Number(value || 0).toLocaleString("en-IN")} Credits`;
 }
 
+function getFeedCountdownLabel(status) {
+  if (status === "SOON") return "ENTRIES OPEN IN";
+  if (status === "OPEN") return "ENTRY CLOSES IN";
+  if (status === "LIVE") return "TARGET VALUE IN";
+  return "RESULTS IN";
+}
+
+function getContestTypeLabel(contestType) {
+  return ({ DAY_OPEN: "DAY OPEN", ONE_HOUR: "10 AM", MIDDAY: "MIDDAY", CLOSING: "CLOSING", NEXT_DAY_CLOSE: "NEXT-DAY" })[contestType] || "SCHEDULED";
+}
+
 export function formatCountdown(seconds) {
   const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
   const hours = Math.floor(safeSeconds / 3600);
@@ -35,17 +46,15 @@ export function toFeedCard(contest, now = Date.now()) {
   const countdown = Number.isFinite(targetTime)
     ? formatCountdown((targetTime - now) / 1000)
     : formatCountdown(fallbackSeconds);
-  const timeLabel = isSoon
-    ? "OPENS IN"
-    : contest.status === "LIVE"
-      ? "CONTEST ENDS IN"
-      : "ENTRY CLOSES IN";
+  const timeLabel = getFeedCountdownLabel(contest.status);
 
   return {
     id: contest.id,
     title: contest.title,
     question: contest.question,
     status: contest.status,
+    contestType: contest.contestType || "CUSTOM",
+    contestTypeLabel: getContestTypeLabel(contest.contestType),
     currentPrice: Number(contest.currentPrice).toLocaleString("en-IN", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -85,6 +94,7 @@ export function toDetailEvent(contest) {
     question: contest.question,
     description: contest.question,
     status: contest.status,
+    contestType: contest.contestType || "CUSTOM",
     currency: contest.currency,
     currentPrice: currentPrice.toLocaleString("en-IN", {
       minimumFractionDigits: 2,
@@ -99,6 +109,7 @@ export function toDetailEvent(contest) {
     playerCapacity: Number(contest.playerCapacity),
     fillPercent: Number(contest.fillPercent),
     opensAt: contest.opensAt,
+    secondsUntilOpen: Number(contest.secondsUntilOpen),
     liveAt: contest.liveAt,
     secondsUntilLive: Number(contest.secondsUntilLive),
     closesAt: contest.closesAt,
