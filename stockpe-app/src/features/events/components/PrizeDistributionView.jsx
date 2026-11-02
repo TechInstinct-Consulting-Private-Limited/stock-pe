@@ -1,20 +1,30 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radii, shadows, spacing, typography } from "../../../theme";
 
 export default function PrizeDistributionView({ event }) {
   const [chartMode, setChartMode] = useState("bars"); // "bars" | "donut"
+  const unit = event?.currency === "DEMO_USDT" ? "Demo USDT" : "Credits";
+  const prizePool = Math.max(0, Number(event?.prizePoolCredits || 0));
+  const formatAmount = (value) => Number(value || 0).toLocaleString("en-IN", {
+    minimumFractionDigits: unit === "Demo USDT" ? 2 : 0,
+    maximumFractionDigits: 2,
+  });
 
-  const distribution = [
-    { rank: "1st Place", percent: 40, color: "#F59E0B", amountInr: "₹400K", amountUsdt: "5448.11 USDT", sub: "Rank 1 • 40%" },
-    { rank: "2nd Place", percent: 20, color: "#94A3B8", amountInr: "₹200K", amountUsdt: "2724.05 USDT", sub: "Rank 2 • 20%" },
-    { rank: "3rd Place", percent: 15, color: "#D97706", amountInr: "₹150K", amountUsdt: "2043.04 USDT", sub: "Rank 3 • 15%" },
-    { rank: "Rank 4–5", percent: 10, color: "#00C987", amountInr: "₹100K", amountUsdt: "1362.03 USDT", sub: "Rank 4–5 • 10%" },
-    { rank: "Rank 6–10", percent: 8, color: "#6366F1", amountInr: "₹80K", amountUsdt: "1089.62 USDT", sub: "Rank 6–10 • 8%" },
-    { rank: "Rank 11–50", percent: 5, color: "#A855F7", amountInr: "₹50K", amountUsdt: "681.01 USDT", sub: "Rank 11–50 • 5%" },
-    { rank: "Rank 51+", percent: 2, color: "#64748B", amountInr: "₹20K", amountUsdt: "272.41 USDT", sub: "Rank 51–100 • 2%" },
-  ];
+  const distribution = useMemo(() => [
+    { rank: "1st Place", rankRange: "Rank 1", percent: 40, color: "#F59E0B" },
+    { rank: "2nd Place", rankRange: "Rank 2", percent: 20, color: "#94A3B8" },
+    { rank: "3rd Place", rankRange: "Rank 3", percent: 15, color: "#D97706" },
+    { rank: "Rank 4–5", rankRange: "Rank 4–5", percent: 10, color: "#00C987" },
+    { rank: "Rank 6–10", rankRange: "Rank 6–10", percent: 8, color: "#6366F1" },
+    { rank: "Rank 11–50", rankRange: "Rank 11–50", percent: 5, color: "#A855F7" },
+    { rank: "Rank 51+", rankRange: "Rank 51–100", percent: 2, color: "#64748B" },
+  ].map((item) => ({
+    ...item,
+    amount: prizePool * (item.percent / 100),
+    sub: `${item.rankRange} · ${item.percent}%`,
+  })), [prizePool]);
 
   return (
     <View style={styles.container}>
@@ -26,8 +36,8 @@ export default function PrizeDistributionView({ event }) {
           <View style={styles.trophyCircle}>
             <Ionicons name="trophy-outline" size={16} color="#64748B" />
           </View>
-          <Text style={styles.podiumPrizeInr}>₹200K</Text>
-          <Text style={styles.podiumPrizeUsdt}>2724.05 USDT</Text>
+          <Text style={styles.podiumPrizeInr}>{formatAmount(distribution[1].amount)}</Text>
+          <Text style={styles.podiumPrizeUsdt}>{unit}</Text>
         </View>
 
         {/* 1st Place (Gold Highlighted) */}
@@ -36,8 +46,8 @@ export default function PrizeDistributionView({ event }) {
           <View style={[styles.trophyCircle, { backgroundColor: "#FEF3C7" }]}>
             <Ionicons name="trophy" size={18} color="#F59E0B" />
           </View>
-          <Text style={[styles.podiumPrizeInr, { fontSize: 16 }]}>₹400K</Text>
-          <Text style={styles.podiumPrizeUsdt}>5448.11 USDT</Text>
+          <Text style={[styles.podiumPrizeInr, { fontSize: 16 }]}>{formatAmount(distribution[0].amount)}</Text>
+          <Text style={styles.podiumPrizeUsdt}>{unit}</Text>
         </View>
 
         {/* 3rd Place (Bronze) */}
@@ -46,8 +56,8 @@ export default function PrizeDistributionView({ event }) {
           <View style={styles.trophyCircle}>
             <Ionicons name="trophy-outline" size={16} color="#D97706" />
           </View>
-          <Text style={styles.podiumPrizeInr}>₹150K</Text>
-          <Text style={styles.podiumPrizeUsdt}>2043.04 USDT</Text>
+          <Text style={styles.podiumPrizeInr}>{formatAmount(distribution[2].amount)}</Text>
+          <Text style={styles.podiumPrizeUsdt}>{unit}</Text>
         </View>
       </View>
 
@@ -105,7 +115,7 @@ export default function PrizeDistributionView({ event }) {
             <View style={styles.donutCircleGraphic}>
               <View style={styles.donutInnerHole}>
                 <Text style={styles.donutTotalLabel}>TOTAL</Text>
-                <Text style={styles.donutTotalVal}>₹10.0L</Text>
+                <Text style={styles.donutTotalVal}>{formatAmount(prizePool)}</Text>
               </View>
             </View>
             <View style={styles.donutLegend}>
@@ -124,7 +134,7 @@ export default function PrizeDistributionView({ event }) {
       <View style={styles.tableCard}>
         <View style={styles.tableHeader}>
           <Text style={styles.tableTitle}>FULL PRIZE TABLE</Text>
-          <Text style={styles.tableTotalPrize}>₹10,00,000</Text>
+          <Text style={styles.tableTotalPrize}>{formatAmount(prizePool)} {unit}</Text>
         </View>
 
         <View style={styles.tableBody}>
@@ -145,8 +155,8 @@ export default function PrizeDistributionView({ event }) {
               </View>
 
               <View style={styles.tableRowRight}>
-                <Text style={styles.rowAmountInr}>{row.amountInr}</Text>
-                <Text style={styles.rowAmountUsdt}>{row.amountUsdt}</Text>
+                <Text style={styles.rowAmountInr}>{formatAmount(row.amount)}</Text>
+                <Text style={styles.rowAmountUsdt}>{unit}</Text>
               </View>
             </View>
           ))}

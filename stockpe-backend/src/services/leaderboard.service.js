@@ -15,7 +15,28 @@ function operationalError(statusCode, message) {
     const error = new Error(message); error.statusCode = statusCode; error.isOperational = true; return error;
 }
 
-async function findLeaderboardContest(instrumentCode) {
+async function findLeaderboardContest(instrumentCode, contestPublicId) {
+    if (contestPublicId) {
+        const result = await pool.query(
+            `SELECT contest.id, contest.public_id, contest.title, contest.status, contest.player_capacity,
+                    contest.settlement_value::text, instrument.code AS instrument_code, instrument.display_name AS instrument_name,
+                    COALESCE(demo.prize_pool_atomic::numeric / 1000000, contest.prize_pool_credits)::text AS prize_pool,
+                    CASE WHEN demo.contest_id IS NULL THEN 'DEMO_CREDITS' ELSE 'DEMO_USDT' END AS currency,
+                    CASE WHEN contest.status='SETTLED' THEN contest.settlement_value ELSE snapshot.value END::text AS reference_value,
+                    snapshot.observed_at AS reference_observed_at
+             FROM demo_dashboard_contests contest
+             JOIN market_instruments instrument ON instrument.id=contest.instrument_id
+             LEFT JOIN demo_usdt_contests demo ON demo.contest_id=contest.id
+             LEFT JOIN LATERAL (
+               SELECT value, observed_at FROM market_price_snapshots
+               WHERE instrument_id=contest.instrument_id ORDER BY observed_at DESC LIMIT 1
+             ) snapshot ON TRUE
+             WHERE contest.public_id=$1
+               AND contest.status IN ('SOON','OPEN','LIVE','CLOSED','SETTLED')`,
+            [contestPublicId]
+        );
+        return result.rows[0] || null;
+    }
     const values = instrumentCode === "ALL" ? [] : [instrumentCode];
     const filter = instrumentCode === "ALL" ? "" : "AND instrument.code=$1";
     const result = await pool.query(
@@ -40,14 +61,14 @@ async function findLeaderboardContest(instrumentCode) {
     return result.rows[0] || null;
 }
 
-async function listLeaderboard({ instrument, currentUserId }) {
+async function listLeaderboard({ instrument, contestId, currentUserId }) {
     const requestedInstrument = normalizeInstrument(instrument);
     const filters = await pool.query(
         `SELECT DISTINCT instrument.code, instrument.display_name
          FROM demo_dashboard_contests contest JOIN market_instruments instrument ON instrument.id=contest.instrument_id
          WHERE contest.status IN ('OPEN','LIVE','SETTLED') ORDER BY instrument.display_name ASC`
     );
-    const contest = await findLeaderboardContest(requestedInstrument);
+    const contest = await findLeaderboardContest(requestedInstrument, String(contestId || "").trim());
     if (!contest) return { filters: filters.rows, selectedInstrument: requestedInstrument, contest: null, entries: [] };
     const reference = Number(contest.reference_value);
     const usableReference = Number.isFinite(reference) && reference > 0 ? reference : null;

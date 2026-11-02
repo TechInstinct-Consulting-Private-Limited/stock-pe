@@ -187,6 +187,12 @@ export function getLeaderboard(instrument = "ALL") {
     });
 }
 
+export function getContestLeaderboard(publicId) {
+    return authenticatedRequest(`/leaders?contest=${encodeURIComponent(publicId)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
 export function getLeaderProfile(userId) {
     return authenticatedRequest(`/leaders/${encodeURIComponent(userId)}`, {
         headers: { "Cache-Control": "no-store" },
