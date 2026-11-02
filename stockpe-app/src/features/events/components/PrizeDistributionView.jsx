@@ -11,9 +11,9 @@ export default function PrizeDistributionView({ event }) {
     { rank: "2nd Place", percent: 20, color: "#94A3B8", amountInr: "₹200K", amountUsdt: "2724.05 USDT", sub: "Rank 2 • 20%" },
     { rank: "3rd Place", percent: 15, color: "#D97706", amountInr: "₹150K", amountUsdt: "2043.04 USDT", sub: "Rank 3 • 15%" },
     { rank: "Rank 4–5", percent: 10, color: "#00C987", amountInr: "₹100K", amountUsdt: "1362.03 USDT", sub: "Rank 4–5 • 10%" },
-    { rank: "Rank 6–10", percent: 7, color: "#6366F1", amountInr: "₹70K", amountUsdt: "953.42 USDT", sub: "Rank 6–10 • 7%" },
+    { rank: "Rank 6–10", percent: 8, color: "#6366F1", amountInr: "₹80K", amountUsdt: "1089.62 USDT", sub: "Rank 6–10 • 8%" },
     { rank: "Rank 11–50", percent: 5, color: "#A855F7", amountInr: "₹50K", amountUsdt: "681.01 USDT", sub: "Rank 11–50 • 5%" },
-    { rank: "Rank 51+", percent: 3, color: "#64748B", amountInr: "₹30K", amountUsdt: "408.61 USDT", sub: "Rank 51+ • 3%" },
+    { rank: "Rank 51+", percent: 2, color: "#64748B", amountInr: "₹20K", amountUsdt: "272.41 USDT", sub: "Rank 51–100 • 2%" },
   ];
 
   return (

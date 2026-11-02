@@ -16,6 +16,8 @@ import { useEventDetail } from "../hooks/useEventDetail";
 import { useTradeExecution } from "../hooks/useTradeExecution";
 import EventDetailHero from "../components/EventDetailHero";
 import ContestRulesView from "../components/ContestRulesView";
+import PrizeDistributionView from "../components/PrizeDistributionView";
+import LiveLeaderboardView from "../components/LiveLeaderboardView";
 import PredictionModalSheet from "../components/PredictionModalSheet";
 import OrderSuccessModal from "../components/OrderSuccessModal";
 import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
@@ -23,7 +25,7 @@ import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 export default function EventDetailScreen({ eventId }) {
   const insets = useSafeAreaInsets();
   const [isTradeSheetVisible, setIsTradeSheetVisible] = useState(false);
-  const [isContestInfoVisible, setIsContestInfoVisible] = useState(false);
+  const [activeInfoTab, setActiveInfoTab] = useState("PRIZES");
 
   const { event, isLoading, error, refreshEvent } = useEventDetail(eventId);
   const { refreshing, onRefresh } = usePullToRefresh(refreshEvent);
@@ -76,22 +78,30 @@ export default function EventDetailScreen({ eventId }) {
           {/* Top Hero: Spot price, Digital Timer & 4-col metrics */}
           <EventDetailHero event={event} />
 
-          <TouchableOpacity
-            style={styles.contestInfoToggle}
-            onPress={() => setIsContestInfoVisible((visible) => !visible)}
-            activeOpacity={0.75}
-          >
-            <View>
-              <Text style={styles.contestInfoTitle}>CONTEST DETAILS</Text>
-              <Text style={styles.contestInfoSub}>How demo prediction and settlement work</Text>
-            </View>
-            <Ionicons
-              name={isContestInfoVisible ? "chevron-up" : "chevron-down"}
-              size={20}
-              color="#64748B"
-            />
-          </TouchableOpacity>
-          {isContestInfoVisible && <ContestRulesView event={event} />}
+          <View style={styles.infoTabs}>
+            {[
+              { key: "PRIZES", icon: "trophy-outline", label: "PRIZES" },
+              { key: "RULES", icon: "document-text-outline", label: "RULES" },
+              { key: "BOARD", icon: "podium-outline", label: "BOARD" },
+            ].map((tab) => {
+              const isActive = activeInfoTab === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[styles.infoTab, isActive && styles.infoTabActive]}
+                  onPress={() => setActiveInfoTab(tab.key)}
+                  activeOpacity={0.78}
+                >
+                  <Ionicons name={tab.icon} size={14} color={isActive ? "#00A870" : "#64748B"} />
+                  <Text style={[styles.infoTabText, isActive && styles.infoTabTextActive]}>{tab.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {activeInfoTab === "PRIZES" && <PrizeDistributionView event={event} />}
+          {activeInfoTab === "RULES" && <ContestRulesView event={event} />}
+          {activeInfoTab === "BOARD" && <LiveLeaderboardView event={event} />}
 
           {/* Spacer for bottom sticky bar */}
           <View style={{ height: 140 }} />
@@ -188,32 +198,39 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  contestInfoToggle: {
+  infoTabs: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEF2F6",
     marginHorizontal: 16,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderRadius: 14,
+    padding: 3,
     marginTop: 12,
-    marginBottom: 2,
-    alignItems: "center",
-    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     ...shadows.sm,
   },
-  contestInfoTitle: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: "#071329",
-    letterSpacing: 0.5,
+  infoTab: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
   },
-  contestInfoSub: {
-    fontSize: 11,
-    fontWeight: "600",
+  infoTabActive: {
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#34D399",
+  },
+  infoTabText: {
+    fontSize: 10.5,
+    fontWeight: "900",
     color: "#64748B",
-    marginTop: 3,
+    letterSpacing: 0.3,
+  },
+  infoTabTextActive: {
+    color: "#007B52",
   },
   bottomStickyBar: {
     position: "absolute",
