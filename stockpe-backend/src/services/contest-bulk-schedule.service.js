@@ -1,6 +1,15 @@
 const IST_OFFSET = "+05:30";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const CONTEST_TYPES = new Set(["DAY_OPEN", "ONE_HOUR", "MIDDAY", "CLOSING", "NEXT_DAY_CLOSE"]);
+
+const CONTEST_TEMPLATE_RULES = {
+    DAY_OPEN: { label: "Day Open Prediction", targetTime: "09:15", lockTime: "08:59", openMode: "PRIOR_CLOSE" },
+    ONE_HOUR: { label: "10 AM Prediction", targetTime: "10:00", lockTime: "08:59", openMode: "PRIOR_CLOSE" },
+    MIDDAY: { label: "Midday Prediction", targetTime: "12:00", lockTime: "10:45", openMode: "SAME_DAY" },
+    CLOSING: { label: "Closing Prediction", targetTime: "15:30", lockTime: "09:00", openMode: "PRIOR_CLOSE" },
+    NEXT_DAY_CLOSE: { label: "Next-day Closing Prediction", targetTime: "15:30", lockTime: "15:30", openMode: "PRIOR_DAY" },
+};
 
 function operationalError(message) {
     const error = new Error(message);
@@ -38,16 +47,43 @@ function isWeekend(date) {
     return day === 0 || day === 6;
 }
 
-function buildTradingSchedule({ startDate, tradingDays, opensTime, liveTime, closesTime, excludedDates = [], now = new Date() }) {
+function previousEligibleDate(date, excluded) {
+    let cursor = new Date(`${date}T00:00:00Z`);
+    for (let scanned = 0; scanned < 10; scanned += 1) {
+        cursor.setUTCDate(cursor.getUTCDate() - 1);
+        const candidate = cursor.toISOString().slice(0, 10);
+        if (!isWeekend(candidate) && !excluded.has(candidate)) return candidate;
+    }
+    throw operationalError("Could not find a prior eligible trading date");
+}
+
+function buildTemplateSlot(date, contestType, excluded) {
+    const rule = CONTEST_TEMPLATE_RULES[contestType];
+    if (!rule) throw operationalError("Invalid contestType");
+    const priorDate = previousEligibleDate(date, excluded);
+    const opensAt = rule.openMode === "SAME_DAY"
+        ? dateAtIst(date, "09:15")
+        : rule.openMode === "PRIOR_CLOSE"
+            ? dateAtIst(priorDate, "15:31")
+            : dateAtIst(priorDate, "09:15");
+    const liveAt = rule.openMode === "PRIOR_DAY"
+        ? dateAtIst(priorDate, rule.lockTime)
+        : dateAtIst(date, rule.lockTime);
+    return { date, opensAt, liveAt, closesAt: dateAtIst(date, rule.targetTime), contestType, rule };
+}
+
+function buildTradingSchedule({ startDate, tradingDays, opensTime, liveTime, closesTime, contestType, excludedDates = [], now = new Date() }) {
     const start = asDateOnly(startDate, "startDate");
     const requestedDays = Number(tradingDays);
     if (!Number.isInteger(requestedDays) || requestedDays < 1 || requestedDays > 31) {
         throw operationalError("tradingDays must be an integer between 1 and 31");
     }
-    const open = asTime(opensTime, "opensTime");
-    const live = asTime(liveTime, "liveTime");
-    const close = asTime(closesTime, "closesTime");
-    if (!(open < live && live < close)) throw operationalError("opensTime must be before liveTime, which must be before closesTime");
+    const requestedType = contestType ? String(contestType).trim().toUpperCase() : null;
+    if (requestedType && !CONTEST_TYPES.has(requestedType)) throw operationalError("Invalid contestType");
+    const open = requestedType ? null : asTime(opensTime, "opensTime");
+    const live = requestedType ? null : asTime(liveTime, "liveTime");
+    const close = requestedType ? null : asTime(closesTime, "closesTime");
+    if (!requestedType && !(open < live && live < close)) throw operationalError("opensTime must be before liveTime, which must be before closesTime");
 
     const excluded = new Set(excludedDates.map((date) => asDateOnly(date, "excludedDates")));
     const items = [];
@@ -58,9 +94,11 @@ function buildTradingSchedule({ startDate, tradingDays, opensTime, liveTime, clo
         if (isWeekend(cursor)) skipped.push({ date: cursor, reason: "WEEKEND" });
         else if (excluded.has(cursor)) skipped.push({ date: cursor, reason: "EXCLUDED_DATE" });
         else {
-            const opensAt = dateAtIst(cursor, open);
-            if (opensAt <= now) skipped.push({ date: cursor, reason: "PAST_OPEN_TIME" });
-            else items.push({ date: cursor, opensAt, liveAt: dateAtIst(cursor, live), closesAt: dateAtIst(cursor, close) });
+            const slot = requestedType
+                ? buildTemplateSlot(cursor, requestedType, excluded)
+                : { date: cursor, opensAt: dateAtIst(cursor, open), liveAt: dateAtIst(cursor, live), closesAt: dateAtIst(cursor, close), contestType: null };
+            if (slot.opensAt <= now) skipped.push({ date: cursor, reason: "PAST_OPEN_TIME" });
+            else items.push(slot);
         }
         cursor = nextDate(cursor);
     }
@@ -73,4 +111,4 @@ function makePublicId(instrumentCode, date, sequence) {
     return `${code}-${date.replace(/-/g, "")}-${String(sequence).padStart(2, "0")}`;
 }
 
-module.exports = { buildTradingSchedule, makePublicId };
+module.exports = { buildTradingSchedule, makePublicId, CONTEST_TEMPLATE_RULES };

@@ -2,7 +2,7 @@ const pool = require("../config/database");
 const { createNotification, notifyContestCreated, notifyContestLifecycle } = require("./profile-notification.service");
 const { toAtomicUsdt } = require('./wallet-ledger.service');
 const { settleDemoUsdtEntry, refundDemoUsdtEntry, splitDemoUsdtPool, atomicToDemoUsdt } = require('./demo-usdt.service');
-const { buildTradingSchedule, makePublicId } = require('./contest-bulk-schedule.service');
+const { buildTradingSchedule, makePublicId, CONTEST_TEMPLATE_RULES } = require('./contest-bulk-schedule.service');
 
 const CONTEST_STATUSES = new Set(["DRAFT", "SOON", "OPEN", "LIVE", "CLOSED", "SETTLED", "CANCELLED"]);
 const TRANSITIONS = {
@@ -144,6 +144,7 @@ async function createBulkScheduledContests({ adminUserId, input }) {
         schedule = buildTradingSchedule({
             startDate: input.startDate,
             tradingDays: input.tradingDays,
+            contestType: input.contestType,
             opensTime: input.opensTime || "09:15",
             liveTime: input.liveTime || "15:15",
             closesTime: input.closesTime || "15:35",
@@ -165,8 +166,10 @@ async function createBulkScheduledContests({ adminUserId, input }) {
         const created = [];
         for (const [index, slot] of schedule.items.entries()) {
             const publicId = makePublicId(instrumentCode, slot.date, index + 1);
-            const title = `${instrument.rows[0].display_name} Daily Prediction`;
-            const question = `Predict the ${instrument.rows[0].display_name} closing value for ${slot.date}.`;
+            const rule = slot.contestType ? CONTEST_TEMPLATE_RULES[slot.contestType] : null;
+            const title = `${instrument.rows[0].display_name} ${rule?.label || "Daily Prediction"}`;
+            const targetLabel = rule?.targetTime ? `${rule.targetTime} IST` : "scheduled close";
+            const question = `Predict the ${instrument.rows[0].display_name} value at ${targetLabel} for ${slot.date}.`;
             const result = await client.query(
                 `INSERT INTO demo_dashboard_contests (
                     public_id, instrument_id, title, question, status, entry_credits, prize_pool_credits,
@@ -183,7 +186,7 @@ async function createBulkScheduledContests({ adminUserId, input }) {
                     [result.rows[0].id, toAtomicUsdt(entryCredits).toString(), toAtomicUsdt(prizePoolCredits).toString()]
                 );
             }
-            await audit(client, adminUserId, "BULK_CONTEST_SCHEDULED", result.rows[0].id, { publicId, date: slot.date });
+            await audit(client, adminUserId, "BULK_CONTEST_SCHEDULED", result.rows[0].id, { publicId, date: slot.date, contestType: slot.contestType || "CUSTOM" });
             await notifyContestCreated(client, { publicId, title, opensAt: slot.opensAt });
             created.push({ publicId, date: slot.date, opensAt: slot.opensAt, liveAt: slot.liveAt, closesAt: slot.closesAt });
         }
