@@ -15,6 +15,7 @@ import { shadows } from "../../../theme";
 import { useEventDetail } from "../hooks/useEventDetail";
 import { useTradeExecution } from "../hooks/useTradeExecution";
 import EventDetailHero from "../components/EventDetailHero";
+import ContestScheduleTimeline from "../components/ContestScheduleTimeline";
 import ContestRulesView from "../components/ContestRulesView";
 import PrizeDistributionView from "../components/PrizeDistributionView";
 import LiveLeaderboardView from "../components/LiveLeaderboardView";
@@ -77,6 +78,7 @@ export default function EventDetailScreen({ eventId }) {
         >
           {/* Top Hero: Spot price, Digital Timer & 4-col metrics */}
           <EventDetailHero event={event} />
+          <ContestScheduleTimeline event={event} />
 
           <View style={styles.infoTabs}>
             {[

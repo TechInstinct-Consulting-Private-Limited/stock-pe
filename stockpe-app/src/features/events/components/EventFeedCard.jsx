@@ -57,8 +57,10 @@ export default function EventFeedCard({ item }) {
             </View>
 
             <View style={statusStyle}>
-              <Text style={statusTextStyle}>{item.status || "OPEN"} · {item.contestTypeLabel || "SCHEDULED"}</Text>
+              <Text style={statusTextStyle}>{item.stateLabel || item.status || "OPEN"} · {item.contestTypeLabel || "SCHEDULED"}</Text>
             </View>
+
+            <Text numberOfLines={1} style={styles.scheduleLabel}>{item.scheduleLabel}</Text>
 
             <View style={styles.priceRow}>
               <Text style={styles.spotPrice}>
@@ -95,6 +97,7 @@ export default function EventFeedCard({ item }) {
           <View style={[styles.metricCol, { alignItems: "flex-end" }]}>
             <Text style={styles.metricLabel}>{timeLabel}</Text>
             <Text style={styles.closesValue}>{closesIn}</Text>
+            {!!item.stateDetail && <Text numberOfLines={1} style={styles.stateDetail}>{item.stateDetail}</Text>}
           </View>
         </View>
 
@@ -214,6 +217,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     gap: 8,
   },
+  scheduleLabel: {
+    color: "#64748B",
+    fontSize: 10.5,
+    fontWeight: "700",
+    marginTop: 6,
+  },
   spotPrice: {
     fontSize: 18,
     fontWeight: "800",
@@ -317,6 +326,13 @@ const styles = StyleSheet.create({
     color: "#F59E0B",
     letterSpacing: 0.8,
     marginTop: 4,
+  },
+  stateDetail: {
+    color: "#94A3B8",
+    fontSize: 9,
+    fontWeight: "600",
+    marginTop: 2,
+    textAlign: "right",
   },
   progressBarTrack: {
     height: 4.5,

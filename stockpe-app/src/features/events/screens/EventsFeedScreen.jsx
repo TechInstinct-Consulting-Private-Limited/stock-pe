@@ -15,7 +15,7 @@ import TabPills from "../../../components/ui/TabPills";
 import AppCard from "../../../components/ui/AppCard";
 import EventFeedCard from "../components/EventFeedCard";
 import { fetchUserTrades } from "../services/eventsService";
-import { DASHBOARD_TABS, fetchDashboard, toFeedCard } from "../services/dashboardService";
+import { DASHBOARD_TABS, fetchDashboard, groupFeedCards, toFeedCard } from "../services/dashboardService";
 import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 
 export default function EventsFeedScreen() {
@@ -78,6 +78,10 @@ export default function EventsFeedScreen() {
   const feedCards = useMemo(
     () => (dashboard?.contests || []).map((contest) => toFeedCard(contest, clock)),
     [clock, dashboard]
+  );
+  const feedGroups = useMemo(
+    () => groupFeedCards(feedCards, clock),
+    [clock, feedCards]
   );
 
   const summary = dashboard?.summary;
@@ -190,7 +194,17 @@ export default function EventsFeedScreen() {
             </View>
           )}
 
-          {!isLoading && !error && feedCards.map((item) => (
+          {!isLoading && !error && activeFilter === "ALL" && feedGroups.map((group) => (
+            <View key={group.id} style={styles.feedGroup}>
+              <View style={styles.groupHeading}>
+                <Text style={styles.groupTitle}>{group.title}</Text>
+                <Text style={styles.groupSubtitle}>{group.subtitle}</Text>
+              </View>
+              {group.cards.map((item) => <EventFeedCard key={item.id} item={item} />)}
+            </View>
+          ))}
+
+          {!isLoading && !error && activeFilter !== "ALL" && feedCards.map((item) => (
             <EventFeedCard key={item.id} item={item} />
           ))}
         </View>
@@ -328,6 +342,25 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: spacing.xs,
+  },
+  feedGroup: {
+    marginBottom: spacing.sm,
+  },
+  groupHeading: {
+    marginBottom: spacing.sm,
+    marginLeft: 2,
+  },
+  groupTitle: {
+    color: colors.textPrimary,
+    fontSize: typography.sm,
+    fontWeight: typography.black,
+    letterSpacing: typography.wide,
+  },
+  groupSubtitle: {
+    color: colors.textMuted,
+    fontSize: typography.xs + 1,
+    fontWeight: typography.bold,
+    marginTop: 2,
   },
   stateCard: {
     alignItems: "center",

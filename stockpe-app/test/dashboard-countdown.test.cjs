@@ -8,7 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, "../src/features/events/serv
   .replace(/^import .*;\s*/m, "")
   .replace(/export /g, "");
 const context = vm.createContext({});
-vm.runInContext(`${source}\nthis.toFeedCard = toFeedCard;`, context);
+vm.runInContext(`${source}\nthis.toFeedCard = toFeedCard; this.groupFeedCards = groupFeedCards;`, context);
 
 test("feed countdown uses the correct milestone for each status", () => {
   const now = Date.parse("2026-10-21T10:09:00Z");
@@ -19,4 +19,19 @@ test("feed countdown uses the correct milestone for each status", () => {
     assert.equal(card.closesIn, expected);
   }
   assert.equal(context.toFeedCard({ ...contest, status: "OPEN", liveAt: null }, now).closesIn, "00:06:00");
+});
+
+test("all-events presentation keeps today's prediction journey before upcoming contests", () => {
+  const now = Date.parse("2026-11-03T04:00:00Z");
+  const shared = { status: "SOON", opensAt: "2026-11-03T10:01:00Z", currentPrice: 1, changePercent: 0 };
+  const cards = [
+    context.toFeedCard({ ...shared, id: "closing", contestType: "CLOSING", liveAt: "2026-11-03T03:30:00Z", closesAt: "2026-11-03T10:00:00Z" }, now),
+    context.toFeedCard({ ...shared, id: "open", contestType: "DAY_OPEN", liveAt: "2026-11-03T03:29:00Z", closesAt: "2026-11-03T03:45:00Z" }, now),
+    context.toFeedCard({ ...shared, id: "tomorrow", contestType: "NEXT_DAY_CLOSE", liveAt: "2026-11-04T10:00:00Z", closesAt: "2026-11-05T10:00:00Z" }, now),
+  ];
+  const groups = context.groupFeedCards(cards, now);
+  assert.equal(groups[0].id, "today");
+  assert.equal(groups[0].cards.map((card) => card.id).join(","), "open,closing");
+  assert.equal(groups[1].id, "upcoming");
+  assert.equal(groups[1].cards.map((card) => card.id).join(","), "tomorrow");
 });
