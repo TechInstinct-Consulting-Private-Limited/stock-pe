@@ -138,6 +138,20 @@ async function refreshDigiLockerKyc({ userId, verificationId }) {
     return { verificationId, status: "verified", completed: true, kycData };
 }
 
+async function refreshDigiLockerKycBySession({ userId, sessionId }) {
+    const recordResult = await pool.query(
+        `SELECT id
+         FROM aadhaar_kyc_verifications
+         WHERE user_id=$1 AND provider='sandbox_digilocker' AND provider_transaction_id=$2
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [userId, sessionId]
+    );
+    const verification = recordResult.rows[0];
+    if (!verification) throw publicError(404, "DigiLocker verification was not found");
+    return refreshDigiLockerKyc({ userId, verificationId: verification.id });
+}
+
 async function requestAadhaarOtp({ userId, aadhaarNumber, fullName }) {
     const existingResult = await pool.query(
         `SELECT id
@@ -294,5 +308,6 @@ module.exports = {
     initiateDigiLockerKyc,
     requestAadhaarOtp,
     refreshDigiLockerKyc,
+    refreshDigiLockerKycBySession,
     verifyAadhaarOtp,
 };

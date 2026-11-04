@@ -3,6 +3,7 @@ const {
     initiateDigiLockerKyc,
     requestAadhaarOtp,
     refreshDigiLockerKyc,
+    refreshDigiLockerKycBySession,
     verifyAadhaarOtp,
 } = require("../services/aadhaar-kyc.service");
 
@@ -59,6 +60,15 @@ async function refreshDigiLocker(req, res, next) {
     } catch (error) { return next(error); }
 }
 
+async function refreshDigiLockerBySession(req, res, next) {
+    try {
+        const sessionId = String(req.params.sessionId || "");
+        if (!UUID_PATTERN.test(sessionId)) return validationError(res, "Invalid DigiLocker session");
+        const result = await refreshDigiLockerKycBySession({ userId: req.auth.sub, sessionId });
+        return res.status(200).json({ success: true, ...result });
+    } catch (error) { return next(error); }
+}
+
 async function verifyOtp(req, res, next) {
     try {
         const { verificationId, otp } = req.body;
@@ -96,6 +106,7 @@ module.exports = {
     getStatus,
     initiateDigiLocker,
     refreshDigiLocker,
+    refreshDigiLockerBySession,
     requestOtp,
     verifyOtp,
 };

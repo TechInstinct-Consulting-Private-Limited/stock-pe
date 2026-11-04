@@ -161,6 +161,10 @@ export function getDigiLockerKycStatus(verificationId) {
     return authenticatedRequest(`/kyc/digilocker/${encodeURIComponent(verificationId)}/status`);
 }
 
+export function getDigiLockerSessionStatus(sessionId) {
+    return authenticatedRequest(`/kyc/digilocker/session/${encodeURIComponent(sessionId)}/status`);
+}
+
 export function getDemoDashboard(status = "ALL") {
     return request(`/dashboard?status=${encodeURIComponent(status)}`, {
         headers: { "Cache-Control": "no-store" },
