@@ -42,11 +42,14 @@ function safeProviderReason(reason, fallback) {
         ? reason.replace(/\s+/g, " ").trim().slice(0, 160)
         : "";
 
-    if (!message || /(aadhaar|otp|api[ _-]?key|secret|authorization|token)/i.test(message)) {
-        return fallback;
-    }
+    if (!message) return fallback;
 
-    return message;
+    // The words "Aadhaar" and "OTP" are safe and help the user understand a
+    // provider response. Redact only the values that could be sensitive.
+    return message
+        .replace(/\b\d{12}\b/g, "[redacted Aadhaar number]")
+        .replace(/\b\d{6}\b/g, "[redacted OTP]")
+        .replace(/\b(api[ _-]?key|secret|authorization|token)\b\s*[:=]?\s*\S+/gi, "$1: [redacted]");
 }
 
 async function requestAadhaarOtp({ userId, aadhaarNumber, fullName }) {
