@@ -34,6 +34,21 @@ function publicError(statusCode, message) {
     return error;
 }
 
+// Provider messages are useful operational feedback (for example, an exhausted
+// sandbox credit balance), but must never echo identity data or credentials to
+// the mobile client. Keep only a short, non-sensitive plain-text explanation.
+function safeProviderReason(reason, fallback) {
+    const message = typeof reason === "string"
+        ? reason.replace(/\s+/g, " ").trim().slice(0, 160)
+        : "";
+
+    if (!message || /(aadhaar|otp|api[ _-]?key|secret|authorization|token)/i.test(message)) {
+        return fallback;
+    }
+
+    return message;
+}
+
 async function requestAadhaarOtp({ userId, aadhaarNumber, fullName }) {
     const existingResult = await pool.query(
         `SELECT id
@@ -51,7 +66,10 @@ async function requestAadhaarOtp({ userId, aadhaarNumber, fullName }) {
     const providerResult = await provider.requestOtp({ aadhaarNumber });
 
     if (!providerResult.accepted) {
-        throw publicError(400, "The Aadhaar KYC request was rejected");
+        throw publicError(400, safeProviderReason(
+            providerResult.reason,
+            "The Aadhaar KYC request was rejected. Please try again later."
+        ));
     }
 
     const insertResult = await pool.query(
