@@ -18,7 +18,7 @@ const router = express.Router();
 router.get("/digilocker/return", (req, res) => {
     const sessionId = String(req.query.session_id || "");
     if (/^[0-9a-f-]{36}$/i.test(sessionId)) {
-        return res.redirect(302, `stockpeapp://digilocker-kyc?callback=1&sessionId=${encodeURIComponent(sessionId)}`);
+        return res.redirect(302, `stockpeapp:///digilocker-kyc?callback=1&sessionId=${encodeURIComponent(sessionId)}`);
     }
 
     res.status(200).type("html").send(`<!doctype html>
