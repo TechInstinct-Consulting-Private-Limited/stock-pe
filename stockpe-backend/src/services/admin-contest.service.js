@@ -168,7 +168,10 @@ async function createBulkScheduledContests({ adminUserId, input }) {
 
         const created = [];
         for (const [index, slot] of schedule.items.entries()) {
-            const publicId = makePublicId(instrumentCode, slot.date, index + 1);
+            // Contest type is part of the public identity. One index can therefore
+            // have Day Open, 10 AM, Midday, and Closing contests for the same
+            // target date, while an identical index + type + date remains unique.
+            const publicId = makePublicId(instrumentCode, slot.date, index + 1, slot.contestType);
             const rule = slot.contestType ? CONTEST_TEMPLATE_RULES[slot.contestType] : null;
             const title = `${instrument.rows[0].display_name} ${rule?.label || "Daily Prediction"}`;
             const targetLabel = rule?.targetTime ? `${rule.targetTime} IST` : "scheduled close";

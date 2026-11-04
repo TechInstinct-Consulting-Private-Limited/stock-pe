@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { buildTradingSchedule } = require("../src/services/contest-bulk-schedule.service");
+const { buildTradingSchedule, makePublicId } = require("../src/services/contest-bulk-schedule.service");
 
 test("bulk schedule skips weekends and explicitly excluded exchange holidays", () => {
     const { items, skipped } = buildTradingSchedule({
@@ -22,4 +22,13 @@ test("bulk schedule rejects an invalid lifecycle time order", () => {
         opensTime: "15:15", liveTime: "09:15", closesTime: "15:35",
         now: new Date("2026-10-01T00:00:00Z"),
     }), /opensTime must be before liveTime/);
+});
+
+test("bulk schedule public ids are unique per contest type on the same target date", () => {
+    const dayOpen = makePublicId("NIFTY50", "2026-11-05", 1, "DAY_OPEN");
+    const tenAm = makePublicId("NIFTY50", "2026-11-05", 1, "ONE_HOUR");
+
+    assert.notEqual(dayOpen, tenAm);
+    assert.equal(dayOpen, "nifty50-dayopen-20261105-01");
+    assert.equal(tenAm, "nifty50-onehour-20261105-01");
 });

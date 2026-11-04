@@ -106,9 +106,10 @@ function buildTradingSchedule({ startDate, tradingDays, opensTime, liveTime, clo
     return { items, skipped };
 }
 
-function makePublicId(instrumentCode, date, sequence) {
+function makePublicId(instrumentCode, date, sequence, contestType = "CUSTOM") {
     const code = String(instrumentCode).toLowerCase().replace(/[^a-z0-9]/g, "");
-    return `${code}-${date.replace(/-/g, "")}-${String(sequence).padStart(2, "0")}`;
+    const type = String(contestType).toLowerCase().replace(/[^a-z0-9]/g, "") || "custom";
+    return `${code}-${type}-${date.replace(/-/g, "")}-${String(sequence).padStart(2, "0")}`;
 }
 
 module.exports = { buildTradingSchedule, makePublicId, CONTEST_TEMPLATE_RULES };
