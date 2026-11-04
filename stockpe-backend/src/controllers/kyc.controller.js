@@ -1,6 +1,8 @@
 const {
     getAadhaarKycStatus,
+    initiateDigiLockerKyc,
     requestAadhaarOtp,
+    refreshDigiLockerKyc,
     verifyAadhaarOtp,
 } = require("../services/aadhaar-kyc.service");
 
@@ -41,6 +43,22 @@ async function requestOtp(req, res, next) {
     }
 }
 
+async function initiateDigiLocker(req, res, next) {
+    try {
+        const result = await initiateDigiLockerKyc({ userId: req.auth.sub });
+        return res.status(201).json({ success: true, message: "DigiLocker verification started", ...result });
+    } catch (error) { return next(error); }
+}
+
+async function refreshDigiLocker(req, res, next) {
+    try {
+        const verificationId = String(req.params.verificationId || "");
+        if (!UUID_PATTERN.test(verificationId)) return validationError(res, "Invalid DigiLocker verification request");
+        const result = await refreshDigiLockerKyc({ userId: req.auth.sub, verificationId });
+        return res.status(200).json({ success: true, ...result });
+    } catch (error) { return next(error); }
+}
+
 async function verifyOtp(req, res, next) {
     try {
         const { verificationId, otp } = req.body;
@@ -76,6 +94,8 @@ async function getStatus(req, res, next) {
 
 module.exports = {
     getStatus,
+    initiateDigiLocker,
+    refreshDigiLocker,
     requestOtp,
     verifyOtp,
 };

@@ -153,6 +153,14 @@ export function getAadhaarKycStatus() {
     return authenticatedRequest("/kyc/aadhaar/status");
 }
 
+export function initiateDigiLockerKyc() {
+    return authenticatedRequest("/kyc/digilocker/initiate", { method: "POST" });
+}
+
+export function getDigiLockerKycStatus(verificationId) {
+    return authenticatedRequest(`/kyc/digilocker/${encodeURIComponent(verificationId)}/status`);
+}
+
 export function getDemoDashboard(status = "ALL") {
     return request(`/dashboard?status=${encodeURIComponent(status)}`, {
         headers: { "Cache-Control": "no-store" },

@@ -2,7 +2,9 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const {
     getStatus,
+    initiateDigiLocker,
     requestOtp,
+    refreshDigiLocker,
     verifyOtp,
 } = require("../controllers/kyc.controller");
 const { requireAuth } = require("../middleware/auth");
@@ -22,6 +24,8 @@ const kycLimiter = rateLimit({
 
 router.use(requireAuth);
 router.get("/aadhaar/status", getStatus);
+router.post("/digilocker/initiate", kycLimiter, initiateDigiLocker);
+router.get("/digilocker/:verificationId/status", kycLimiter, refreshDigiLocker);
 router.post("/aadhaar/request-otp", kycLimiter, requestOtp);
 router.post("/aadhaar/verify-otp", kycLimiter, verifyOtp);
 

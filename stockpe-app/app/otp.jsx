@@ -200,7 +200,7 @@ export default function OTP() {
                 }
 
                 router.replace({
-                    pathname: "/aadhaar",
+                    pathname: "/digilocker-kyc",
                     params: { mobile: String(mobile), mode: mode || "signin" },
                 });
             }, 500);
