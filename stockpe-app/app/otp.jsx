@@ -23,20 +23,18 @@ import {
 } from "../src/services/api";
 import { setAuthToken } from "../src/services/authStorage";
 
+// Must match "OTP length" on the MSG91 widget (currently 4).
+const OTP_LENGTH = 4;
+
 export default function OTP() {
 
     const { mobile, mode } = useLocalSearchParams();
     const { width, height } = useWindowDimensions();
     const isCompact = width < 600 || height < 800;
 
-    const [otp, setOtp] = useState([
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-    ]);
+    const [otp, setOtp] = useState(
+        Array(OTP_LENGTH).fill("")
+    );
 
     const [seconds, setSeconds] = useState(23);
 
@@ -152,7 +150,7 @@ export default function OTP() {
 
         const enteredOtp = otp.join("");
 
-        if (enteredOtp.length !== 6) {
+        if (enteredOtp.length !== OTP_LENGTH) {
             console.log("Please enter complete OTP");
             return;
         }
@@ -204,7 +202,7 @@ export default function OTP() {
                 mode === "signin" ? "signin" : "signup"
             );
 
-            setOtp(["", "", "", "", "", ""]);
+            setOtp(Array(OTP_LENGTH).fill(""));
             setSeconds(60);
             inputRefs.current[0]?.focus();
         } catch (error) {

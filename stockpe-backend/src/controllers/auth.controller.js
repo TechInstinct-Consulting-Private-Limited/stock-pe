@@ -250,4 +250,61 @@ async function resendOtp(req, res, next) {
     }
 }
 
-module.exports = { resendOtp, signIn, signUp, verifyOtp };
+async function createMsg91Session(req, res, next) {
+    try {
+        const { mobile, password, purpose } = req.body;
+        const cleanMobile = String(mobile || "").replace(/\D/g, "").slice(-10);
+
+        if (!validateMobile(cleanMobile)) {
+            return validationError(res, "Enter a valid 10-digit Indian mobile number");
+        }
+
+        let userResult = await pool.query(
+            "SELECT id, mobile, mobile_verified FROM users WHERE mobile = $1",
+            [cleanMobile]
+        );
+        let user = userResult.rows[0];
+
+        if (!user) {
+            const passwordHash = password && password.length >= 8
+                ? await bcrypt.hash(password, 12)
+                : await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 12);
+
+            const insertResult = await pool.query(
+                "INSERT INTO users (mobile, password_hash, mobile_verified) VALUES ($1, $2, TRUE) RETURNING id, mobile",
+                [cleanMobile, passwordHash]
+            );
+            user = insertResult.rows[0];
+        } else {
+            await pool.query(
+                "UPDATE users SET mobile_verified = TRUE, updated_at = NOW() WHERE id = $1",
+                [user.id]
+            );
+        }
+
+        const tokenJti = crypto.randomUUID();
+        const token = jwt.sign(
+            { sub: user.id, mobile: user.mobile, jti: tokenJti },
+            getJwtSecret(),
+            { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+        );
+        const tokenPayload = jwt.decode(token);
+        const expiresAt = new Date(tokenPayload.exp * 1000);
+
+        await pool.query(
+            "INSERT INTO sessions (user_id, token_jti, expires_at) VALUES ($1, $2, $3)",
+            [user.id, tokenJti, expiresAt]
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Authenticated successfully",
+            token,
+            user: { id: user.id, mobile: user.mobile },
+        });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+module.exports = { createMsg91Session, resendOtp, signIn, signUp, verifyOtp };

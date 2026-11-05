@@ -13,7 +13,9 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://13.126.195.235.nip.io/api",
-        "STOCKPE_REVIEW_BUILD": "true"
+        "STOCKPE_REVIEW_BUILD": "true",
+        "EXPO_PUBLIC_MSG91_WIDGET_ID": "366b6564656a323734333537",
+        "EXPO_PUBLIC_MSG91_TOKEN_AUTH": "587477TIEvgOCzMA6aec04cbP1"
       },
       "android": {
         "buildType": "apk"

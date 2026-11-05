@@ -1,3 +1,5 @@
+import { DefaultWidget } from "@msg91comm/sendotp-react-native";
+import { router } from "expo-router";
 import { useRef, useState } from "react";
 
 import {
@@ -14,6 +16,9 @@ import AlternativeAuth from "../src/components/AlternativeAuth";
 import AuthForm from "../src/components/AuthForm";
 import AuthHeader from "../src/components/AuthHeader.jsx";
 import AuthTabs from "../src/components/AuthTabs";
+import { authenticateWithMsg91 } from "../src/services/api";
+import { setAuthToken } from "../src/services/authStorage";
+import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID } from "../src/services/msg91";
 
 export default function Login() {
 
@@ -29,7 +34,53 @@ export default function Login() {
 
     const [agreeTerms, setAgreeTerms] = useState(false);
 
+    // MSG91 OTP widget: handles the full send + verify flow in a modal.
+    const [showMsg91Widget, setShowMsg91Widget] = useState(false);
+
     const scrollRef = useRef(null);
+
+
+    // ============================================
+    // MSG91 OTP WIDGET
+    // ============================================
+
+    const openMsg91Widget = () => {
+        Keyboard.dismiss();
+        setShowMsg91Widget(true);
+    };
+
+    const handleMsg91Completion = async (result) => {
+        setShowMsg91Widget(false);
+
+        // result.success === true on verified OTP.
+        // result.message holds the access token, result.identifier the number.
+        if (result?.success) {
+            const rawMobile = String(result.identifier || mobile || "");
+            const cleanMobile = rawMobile.replace(/\D/g, "").slice(-10);
+
+            try {
+                const authData = await authenticateWithMsg91(
+                    cleanMobile,
+                    activeTab,
+                    password,
+                    result.message
+                );
+                if (authData?.token) {
+                    await setAuthToken(authData.token);
+                }
+            } catch (err) {
+                console.warn("Backend session creation warning:", err?.message || err);
+            }
+
+            router.replace({
+                pathname: "/aadhaar",
+                params: {
+                    mobile: cleanMobile,
+                    mode: activeTab === "signup" ? "signup" : "signin",
+                },
+            });
+        }
+    };
 
 
     // ============================================
@@ -138,6 +189,8 @@ export default function Login() {
                             <AuthForm
                                 activeTab={activeTab}
 
+                                onRequestOtp={openMsg91Widget}
+
                                 mobile={mobile}
                                 setMobile={setMobile}
 
@@ -194,6 +247,20 @@ export default function Login() {
                 </View>
 
             </KeyboardAvoidingView>
+
+            {/* ========================================
+                MSG91 OTP WIDGET (drop-in modal)
+                ======================================== */}
+
+            <DefaultWidget
+                visible={showMsg91Widget}
+                onClose={() => setShowMsg91Widget(false)}
+                onCompletion={handleMsg91Completion}
+                widgetId={MSG91_WIDGET_ID}
+                tokenAuth={MSG91_TOKEN_AUTH}
+                theme="light"
+                primaryColor="#00C987"
+            />
 
         </SafeAreaView>
     );

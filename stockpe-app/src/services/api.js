@@ -98,6 +98,13 @@ export function verifyOtp(mobile, otp, purpose) {
     });
 }
 
+export function authenticateWithMsg91(mobile, purpose, password, msg91Token) {
+    return request("/auth/msg91-session", {
+        method: "POST",
+        body: JSON.stringify({ mobile, purpose, password, msg91Token }),
+    });
+}
+
 export function resendOtp(mobile, purpose) {
     return request("/auth/resend-otp", {
         method: "POST",

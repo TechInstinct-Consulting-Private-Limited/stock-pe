@@ -5,6 +5,7 @@ const {
     mobileOrIpKey,
 } = require("../middleware/authRateLimitKey");
 const {
+    createMsg91Session,
     resendOtp,
     signIn,
     signUp,
@@ -82,5 +83,6 @@ router.post(
     verifyOtp
 );
 router.post("/resend-otp", otpRequestLimiter, otpRequestMobileIpLimiter, resendOtp);
+router.post("/msg91-session", createMsg91Session);
 
 module.exports = router;
