@@ -40,9 +40,13 @@ async function getPredictions(userId, status = "ALL") {
     const values = [userId];
     const clause = requested === "ALL" ? "" : requested === "ACTIVE" ? "AND entry.status='ACTIVE'" : "AND entry.status IN ('WON','LOST','CANCELLED')";
     const result = await pool.query(
-        `SELECT entry.id, entry.status, entry.entry_credits, entry.prediction_value, entry.reward_credits, entry.joined_at, entry.settled_at,
-                contest.public_id, contest.title, contest.settlement_value
+        `SELECT entry.id, entry.status, entry.entry_credits, entry.prediction_value, entry.reward_credits, entry.settlement_rank, entry.joined_at, entry.settled_at,
+                contest.public_id, contest.title, contest.settlement_value,
+                CASE WHEN demo.contest_id IS NULL THEN 'DEMO_CREDITS' ELSE 'DEMO_USDT' END AS currency,
+                COALESCE((SELECT (activity.amount_atomic::numeric / 1000000)::text FROM demo_usdt_activity activity
+                    WHERE activity.entry_id=entry.id AND activity.activity_type='REWARD'), '0') AS demo_usdt_reward
          FROM demo_contest_entries entry JOIN demo_dashboard_contests contest ON contest.id=entry.contest_id
+         LEFT JOIN demo_usdt_contests demo ON demo.contest_id=contest.id
          WHERE entry.user_id=$1 ${clause} ORDER BY entry.joined_at DESC`, values,
     );
     return result.rows;

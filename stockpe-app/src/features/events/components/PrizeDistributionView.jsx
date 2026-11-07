@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radii, shadows, spacing, typography } from "../../../theme";
+import { shadows } from "../../../theme";
 
 export default function PrizeDistributionView({ event }) {
   const [chartMode, setChartMode] = useState("bars"); // "bars" | "donut"
@@ -12,7 +12,8 @@ export default function PrizeDistributionView({ event }) {
     maximumFractionDigits: 2,
   });
 
-  const distribution = useMemo(() => [
+  const savedDistribution = Array.isArray(event?.prizeDistribution) ? event.prizeDistribution : [];
+  const source = savedDistribution.length ? savedDistribution : [
     { rank: "1st Place", rankRange: "Rank 1", percent: 40, color: "#F59E0B" },
     { rank: "2nd Place", rankRange: "Rank 2", percent: 20, color: "#94A3B8" },
     { rank: "3rd Place", rankRange: "Rank 3", percent: 15, color: "#D97706" },
@@ -20,11 +21,15 @@ export default function PrizeDistributionView({ event }) {
     { rank: "Rank 6–10", rankRange: "Rank 6–10", percent: 8, color: "#6366F1" },
     { rank: "Rank 11–50", rankRange: "Rank 11–50", percent: 5, color: "#A855F7" },
     { rank: "Rank 51+", rankRange: "Rank 51–100", percent: 2, color: "#64748B" },
-  ].map((item) => ({
+  ];
+  const distribution = source.map((item, index) => ({
     ...item,
+    rank: item.rank || item.label,
+    rankRange: item.rankRange || `Rank ${item.startRank}${item.endRank && item.endRank !== item.startRank ? `–${item.endRank}` : ""}`,
+    color: item.color || ["#F59E0B", "#94A3B8", "#D97706", "#00C987", "#6366F1", "#A855F7", "#64748B"][index % 7],
     amount: prizePool * (item.percent / 100),
-    sub: `${item.rankRange} · ${item.percent}%`,
-  })), [prizePool]);
+    sub: `${item.rankRange || `Rank ${item.startRank}${item.endRank && item.endRank !== item.startRank ? `–${item.endRank}` : ""}`} · ${item.percent}%`,
+  }));
 
   return (
     <View style={styles.container}>

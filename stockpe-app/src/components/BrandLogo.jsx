@@ -1,21 +1,27 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function BrandLogo({ size = "medium" }) {
+export default function BrandLogo({ size = "medium", dimension }) {
+  const hasCustomDimension = Number.isFinite(dimension) && dimension > 0;
+  const customSize = hasCustomDimension
+    ? { width: dimension, height: dimension, borderRadius: Math.round(dimension * 0.24) }
+    : null;
+  const customIconSize = hasCustomDimension ? { fontSize: Math.round(dimension * 0.47) } : null;
+
   return (
     <View
       style={[
         styles.logoContainer,
-
         size === "large" && styles.largeLogo,
         size === "small" && styles.smallLogo,
+        customSize,
       ]}
     >
       <Text
         style={[
           styles.logoIcon,
-
           size === "large" && styles.largeIcon,
           size === "small" && styles.smallIcon,
+          customIconSize,
         ]}
       >
         ↗

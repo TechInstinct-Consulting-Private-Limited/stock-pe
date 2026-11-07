@@ -2,7 +2,6 @@ import React from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, radii, spacing } from "../../theme";
 import { useMyContests } from "./contestsHook";
 import { usePullToRefresh } from "../../hooks/usePullToRefresh";
@@ -116,7 +115,7 @@ export default function MyContestsScreen() {
                 </Text>
                 <TouchableOpacity
                   style={styles.exploreBtn}
-                  onPress={() => router.push("/(tabs)/explore")}
+                  onPress={() => router.push("/(tabs)/events")}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.exploreBtnText}>Explore Index Contests</Text>

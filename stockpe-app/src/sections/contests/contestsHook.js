@@ -184,6 +184,8 @@ export function useMyContests() {
       entryFeeUsdt: entry.currency === "DEMO_USDT" ? "Simulated" : "Demo credits",
       predictionValue: entry.prediction_value === null ? null : Number(entry.prediction_value),
       rewardCredits: Number(entry.currency === "DEMO_USDT" ? entry.demo_usdt_reward : entry.reward_credits || 0),
+      rank: entry.settlement_rank === null || entry.settlement_rank === undefined ? null : Number(entry.settlement_rank),
+      settlementValue: entry.settlement_value === null || entry.settlement_value === undefined ? null : Number(entry.settlement_value),
       prediction: entry.prediction_value === null
         ? "Not submitted"
         : Number(entry.prediction_value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),

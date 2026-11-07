@@ -46,7 +46,7 @@ export default function ContestRulesView({ event }) {
     {
       num: "04",
       title: "Results",
-      desc: `The market value at ${timing.target} is recorded and the closest prediction wins.`,
+      desc: `The market value at ${timing.target} is recorded and predictions are ranked by closeness.`,
       icon: "stats-chart-outline",
       iconColor: "#8B5CF6",
       iconBg: "#F3E8FF",
@@ -63,7 +63,7 @@ export default function ContestRulesView({ event }) {
 
   const contestRules = [
     "One prediction per user — no edits after submission",
-    "Equal closest predictions share the demo prize pool; the earlier entry receives any remainder",
+    "Final rewards follow the displayed rank-wise prize distribution. Equal predictions share the rank slots they occupy.",
     `${unit} are simulated, non-withdrawable and have no real cash or USDT value`,
     "Results are available after the contest is settled",
   ];

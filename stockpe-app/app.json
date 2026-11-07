@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "stockpe-app",
+    "name": "MarketPe",
     "slug": "stockpe-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -38,9 +38,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#F6FBF9",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#F6FBF9"
           }
         }
       ],
@@ -48,7 +48,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow StockPe to use your camera to scan the Secure QR code on your Aadhaar.",
+          "cameraPermission": "Allow MarketPe to use your camera to scan the Secure QR code on your Aadhaar.",
           "recordAudioAndroid": false
         }
       ],
