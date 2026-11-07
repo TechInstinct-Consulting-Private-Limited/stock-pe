@@ -3,3 +3,6 @@ node_modules/
 .env.*
 !.env.example
 last_reference_id.json
+test_*.js
+extract_qr_text.js
+generate_qr.js

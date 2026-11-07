@@ -10,15 +10,11 @@ import {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import {
-    getUserFacingError,
-    signIn,
-    signUp,
-} from "../services/api";
 
 export default function AuthForm({
     activeTab,
+
+    onRequestOtp,
 
     mobile,
     setMobile,
@@ -39,7 +35,8 @@ export default function AuthForm({
     setAgreeTerms,
 }) {
 
-    const [isLoading, setIsLoading] = useState(false);
+    // The MSG91 widget opens instantly, so there's no async loading state here.
+    const isLoading = false;
     
     // ============================================
     // ERROR STATES
@@ -162,24 +159,9 @@ export default function AuthForm({
             return;
         }
 
-        setIsLoading(true);
+        // Open the MSG91 OTP widget; it handles send + verify internally.
         setApiError("");
-
-        try {
-            await signIn(mobile, password);
-            router.push({
-                pathname: "/otp",
-                params: {
-                    mobile: mobile,
-                    mode: "signin",
-                },
-            });
-        } catch (error) {
-            setApiError(getUserFacingError(error));
-        } finally {
-            setIsLoading(false);
-        }
-
+        onRequestOtp?.();
     };
 
     // ============================================
@@ -205,23 +187,9 @@ export default function AuthForm({
             return;
         }
 
-        setIsLoading(true);
+        // Open the MSG91 OTP widget; it handles send + verify internally.
         setApiError("");
-
-        try {
-            await signUp(mobile, password);
-            router.push({
-                pathname: "/otp",
-                params: {
-                    mobile: mobile,
-                    mode: "signup",
-                },
-            });
-        } catch (error) {
-            setApiError(getUserFacingError(error));
-        } finally {
-            setIsLoading(false);
-        }
+        onRequestOtp?.();
     };
 
     // ============================================
