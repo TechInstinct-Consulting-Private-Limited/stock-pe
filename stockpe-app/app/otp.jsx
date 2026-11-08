@@ -17,14 +17,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
+    getOnboardingStatus,
     getUserFacingError,
     resendOtp,
     verifyOtp,
 } from "../src/services/api";
 import { setAuthToken } from "../src/services/authStorage";
+import { registerCurrentDeviceForPush } from "../src/services/pushNotifications";
 
-// Must match "OTP length" on the MSG91 widget (currently 4).
-const OTP_LENGTH = 4;
+// Backend review OTP and production mobile OTPs use the standard six digits.
+// The MSG91 widget completes its own verification, so this screen is used by
+// the backend OTP fallback only (including Expo Go local testing).
+const OTP_LENGTH = 6;
 
 export default function OTP() {
 
@@ -169,12 +173,34 @@ export default function OTP() {
 
             if (result?.token) {
                 await setAuthToken(result.token);
+                // Push permission/token errors must never interrupt sign-in.
+                registerCurrentDeviceForPush().catch(() => {});
             }
             setIsVerifying(false);
             setIsVerified(true);
+
+            // A returning user who has already completed both setup steps
+            // should not be sent through Aadhaar KYC and wallet linking again.
+            // New and incomplete users keep the existing onboarding route.
+            let onboardingCompleted = false;
+            if (mode === "signin") {
+                try {
+                    const onboarding = await getOnboardingStatus();
+                    onboardingCompleted = onboarding?.onboardingCompleted === true;
+                } catch (_onboardingError) {
+                    // Keep the safe existing route when status cannot be read.
+                    onboardingCompleted = false;
+                }
+            }
+
             setTimeout(() => {
+                if (onboardingCompleted) {
+                    router.replace("/(tabs)/events");
+                    return;
+                }
+
                 router.replace({
-                    pathname: "/aadhaar",
+                    pathname: "/digilocker-kyc",
                     params: { mobile: String(mobile), mode: mode || "signin" },
                 });
             }, 500);

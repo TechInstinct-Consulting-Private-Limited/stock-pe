@@ -22,6 +22,7 @@ function asSnapshotRows(indices, freshRawSymbols) {
             code: INSTRUMENT_CODE_BY_SYMBOL[quote.rawSymbol],
             value: Number(quote.rawValue),
             changePercent: Number(quote.percentChange),
+            provider: quote.provider || "unknown",
         }))
         .filter((snapshot) => Number.isFinite(snapshot.value) && snapshot.value >= 0 && Number.isFinite(snapshot.changePercent));
 }
@@ -36,10 +37,10 @@ async function writeSnapshots(snapshots) {
         for (const snapshot of snapshots) {
             const result = await client.query(
                 `INSERT INTO market_price_snapshots (instrument_id, value, change_percent, observed_at, provider_key)
-                 SELECT id, $2, $3, NOW(), 'yahoo-finance'
+                 SELECT id, $2, $3, NOW(), $4
                  FROM market_instruments
                  WHERE code = $1 AND is_active = TRUE`,
-                [snapshot.code, snapshot.value, snapshot.changePercent]
+                [snapshot.code, snapshot.value, snapshot.changePercent, snapshot.provider]
             );
             written += result.rowCount;
         }

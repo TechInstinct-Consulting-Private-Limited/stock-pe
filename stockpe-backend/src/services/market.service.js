@@ -1,5 +1,6 @@
 const YahooFinanceModule = require("yahoo-finance2");
 const YahooFinanceClass = YahooFinanceModule.default || YahooFinanceModule;
+const { fetchDhanQuotes, isDhanConfigured } = require("./market-providers/dhan.provider");
 
 // Support both v4 class instantiation and legacy singleton
 let yfInstance;
@@ -15,9 +16,9 @@ try {
 
 // Map of index symbols to clean display names
 const INDICES_CONFIG = [
-  { symbol: "^NSEI", name: "NIFTY 50", shortName: "NIFTY 50", fallback: { value: "24,187.65", rawValue: 24187.65, change: "+0.84%", isPositive: true } },
-  { symbol: "^BSESN", name: "SENSEX", shortName: "SENSEX", fallback: { value: "79,432.18", rawValue: 79432.18, change: "-0.31%", isPositive: false } },
-  { symbol: "^NSEBANK", name: "BANK NIFTY", shortName: "BANK NIFTY", fallback: { value: "51,843.25", rawValue: 51843.25, change: "+1.12%", isPositive: true } },
+  { symbol: "^NSEI", name: "NIFTY 50", shortName: "NIFTY 50", dhan: { exchangeSegment: "IDX_I", securityId: 13 }, fallback: { value: "24,187.65", rawValue: 24187.65, change: "+0.84%", isPositive: true } },
+  { symbol: "^BSESN", name: "SENSEX", shortName: "SENSEX", dhan: { exchangeSegment: "IDX_I", securityId: 51 }, fallback: { value: "79,432.18", rawValue: 79432.18, change: "-0.31%", isPositive: false } },
+  { symbol: "^NSEBANK", name: "BANK NIFTY", shortName: "BANK NIFTY", dhan: { exchangeSegment: "IDX_I", securityId: 25 }, fallback: { value: "51,843.25", rawValue: 51843.25, change: "+1.12%", isPositive: true } },
   { symbol: "^CNXIT", name: "NIFTY IT", shortName: "NIFTY IT", fallback: { value: "38,750.00", rawValue: 38750.00, change: "+1.65%", isPositive: true } },
   { symbol: "NIFTY_MIDCAP_100.NS", name: "NIFTY MIDCAP", shortName: "MIDCAP 100", fallback: { value: "13,240.50", rawValue: 13240.50, change: "+0.45%", isPositive: true } },
   { symbol: "^CNXAUTO", name: "NIFTY AUTO", shortName: "NIFTY AUTO", fallback: { value: "22,450.10", rawValue: 22450.10, change: "+0.62%", isPositive: true } },
@@ -51,6 +52,72 @@ let cache = {
 
 const CACHE_TTL_MS = 20 * 1000; // 20-second cache
 
+function formatLiveDhanQuote({ lastPrice, previousClose, exchangeSegment, securityId }) {
+  const config = INDICES_CONFIG.find((item) =>
+    item.dhan
+    && item.dhan.exchangeSegment === exchangeSegment
+    && Number(item.dhan.securityId) === Number(securityId)
+  );
+  if (!config || !Number.isFinite(Number(lastPrice))) return null;
+
+  const previous = Number(previousClose);
+  const changeValue = Number.isFinite(previous) ? Number(lastPrice) - previous : 0;
+  const percentChange = Number.isFinite(previous) && previous !== 0
+    ? (changeValue / previous) * 100
+    : 0;
+  const isPositive = changeValue >= 0;
+
+  return {
+    symbol: config.shortName,
+    rawSymbol: config.symbol,
+    name: config.name,
+    value: Number(lastPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    rawValue: Number(lastPrice),
+    changeValue: `${isPositive ? "+" : ""}${changeValue.toFixed(2)}`,
+    change: `${isPositive ? "+" : ""}${percentChange.toFixed(2)}%`,
+    percentChange,
+    isPositive,
+    marketState: "REGULAR",
+    currency: "INR",
+    provider: "dhan-live",
+    tickUpdatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Apply a Dhan WebSocket tick to the same normalized quote cache used by the
+ * existing REST endpoint. REST remains the fallback and source of any missing
+ * previous-close data.
+ */
+function applyDhanLiveTick(tick) {
+  const existing = cache.data?.find((quote) => {
+    const config = INDICES_CONFIG.find((item) => item.symbol === quote.rawSymbol);
+    return config?.dhan
+      && config.dhan.exchangeSegment === tick.exchangeSegment
+      && Number(config.dhan.securityId) === Number(tick.securityId);
+  });
+  const previousClose = Number.isFinite(Number(tick.previousClose))
+    ? Number(tick.previousClose)
+    : Number(existing?.rawValue) - Number(existing?.changeValue || 0);
+  const quote = formatLiveDhanQuote({ ...tick, previousClose });
+  if (!quote) return null;
+
+  const current = cache.data || getFallbackList();
+  cache.data = current.map((item) => item.rawSymbol === quote.rawSymbol ? quote : item);
+  cache.lastUpdated = Date.now();
+  return quote;
+}
+
+function getDhanLiveSubscriptions() {
+  return INDICES_CONFIG
+    .filter((config) => config.dhan)
+    .map((config) => ({
+      exchangeSegment: config.dhan.exchangeSegment,
+      securityId: config.dhan.securityId,
+      rawSymbol: config.symbol,
+    }));
+}
+
 function formatQuote(quote, config) {
   const currentPrice = quote?.regularMarketPrice ?? quote?.regularMarketPreviousClose ?? config.fallback.rawValue;
   const change = quote?.regularMarketChange ?? 0;
@@ -72,6 +139,25 @@ function formatQuote(quote, config) {
     isPositive: isPositive,
     marketState: quote?.marketState || "REGULAR",
     currency: quote?.currency || "INR",
+    provider: "yahoo-finance",
+  };
+}
+
+function formatDhanQuote(quote, config) {
+  const isPositive = quote.changeValue >= 0;
+  return {
+    symbol: config.shortName,
+    rawSymbol: config.symbol,
+    name: config.name,
+    value: quote.rawValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    rawValue: quote.rawValue,
+    changeValue: `${isPositive ? "+" : ""}${quote.changeValue.toFixed(2)}`,
+    change: `${isPositive ? "+" : ""}${quote.percentChange.toFixed(2)}%`,
+    percentChange: quote.percentChange,
+    isPositive,
+    marketState: "REGULAR",
+    currency: "INR",
+    provider: "dhan",
   };
 }
 
@@ -88,6 +174,7 @@ function getFallbackList() {
     isPositive: config.fallback.isPositive,
     marketState: "CLOSED",
     currency: "INR",
+    provider: "fallback",
   }));
 }
 
@@ -122,25 +209,25 @@ function findExistingQuote(instrument) {
     isPositive: config.fallback.isPositive,
     marketState: "CLOSED",
     currency: "INR",
+    provider: "fallback",
   };
 }
 
 /**
  * Search only the instruments that the current demo contest schema supports.
  * The returned instrumentCode can be passed directly to the existing admin
- * contest-create endpoint. Yahoo is used for the current value; the existing
- * safe dashboard fallback remains available if a quote lookup fails.
+ * contest-create endpoint. The configured primary market provider is used for
+ * the current value; Yahoo and the existing safe fallback remain available.
  */
 async function searchContestInstruments(query) {
   const matches = getContestInstrumentMatches(query);
   if (!matches.length) return [];
 
-  const quotes = await Promise.allSettled(matches.map((instrument) => yfInstance.quote(instrument.rawSymbol)));
+  const market = await getLiveIndices();
 
-  return matches.map((instrument, index) => {
-    const config = INDICES_CONFIG.find((item) => item.symbol === instrument.rawSymbol);
-    const quote = quotes[index].status === "fulfilled" ? quotes[index].value : null;
-    const formatted = quote && config ? formatQuote(quote, config) : findExistingQuote(instrument);
+  return matches.map((instrument) => {
+    const formatted = market.indices.find((quote) => quote.rawSymbol === instrument.rawSymbol)
+      || findExistingQuote(instrument);
 
     return {
       instrumentCode: instrument.instrumentCode,
@@ -170,20 +257,32 @@ async function getLiveIndices(forceRefresh = false) {
   }
 
   try {
-    const symbols = INDICES_CONFIG.map(i => i.symbol);
-
-    // Fetch quotes in parallel
-    const quotes = await Promise.allSettled(
-      symbols.map(sym => yfInstance.quote(sym))
-    );
+    const dhanConfigs = isDhanConfigured() ? INDICES_CONFIG.filter((config) => config.dhan) : [];
+    let dhanQuotes = new Map();
+    if (dhanConfigs.length) {
+      try {
+        dhanQuotes = await fetchDhanQuotes(dhanConfigs);
+      } catch (error) {
+        // A Dhan token/network problem must never take the existing dashboard
+        // or contest creation flow offline. Yahoo remains the safe fallback.
+        console.warn("[MarketService] Dhan quote fallback:", error.message);
+      }
+    }
+    const yahooConfigs = INDICES_CONFIG.filter((config) => !dhanQuotes.has(config.symbol));
+    const yahooResults = await Promise.allSettled(yahooConfigs.map((config) => yfInstance.quote(config.symbol)));
+    const yahooBySymbol = new Map(yahooResults.map((result, index) => [yahooConfigs[index].symbol, result]));
 
     const formattedList = [];
     const freshRawSymbols = [];
 
-    quotes.forEach((result, idx) => {
-      const config = INDICES_CONFIG[idx];
-      if (result.status === "fulfilled" && result.value) {
-        formattedList.push(formatQuote(result.value, config));
+    INDICES_CONFIG.forEach((config) => {
+      const dhanQuote = dhanQuotes.get(config.symbol);
+      const yahooResult = yahooBySymbol.get(config.symbol);
+      if (dhanQuote) {
+        formattedList.push(formatDhanQuote(dhanQuote, config));
+        freshRawSymbols.push(config.symbol);
+      } else if (yahooResult?.status === "fulfilled" && yahooResult.value) {
+        formattedList.push(formatQuote(yahooResult.value, config));
         freshRawSymbols.push(config.symbol);
       } else {
         const prev = cache.data?.find(d => d.rawSymbol === config.symbol);
@@ -203,6 +302,7 @@ async function getLiveIndices(forceRefresh = false) {
             isPositive: config.fallback.isPositive,
             marketState: "CLOSED",
             currency: "INR",
+            provider: "fallback",
           });
         }
       }
@@ -239,4 +339,6 @@ module.exports = {
   INDICES_CONFIG,
   getContestInstrumentMatches,
   searchContestInstruments,
+  getDhanLiveSubscriptions,
+  applyDhanLiveTick,
 };

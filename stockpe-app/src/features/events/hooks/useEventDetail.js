@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { fetchDashboardContest } from "../services/dashboardService";
+import { subscribeToLiveMarket } from "../../../services/liveMarketStream";
+
+function quoteMatchesEvent(quote, event) {
+  const code = String(event?.instrument?.code || "").replace(/\W/g, "").toUpperCase();
+  const name = String(quote?.name || quote?.symbol || "").replace(/\W/g, "").toUpperCase();
+  return Boolean(code && name && (code.includes(name) || name.includes(code)));
+}
 
 export function useEventDetail(eventId) {
   const [activeTab, setActiveTab] = useState("chart"); // "chart" | "orderbook" | "rules"
@@ -49,6 +56,23 @@ export function useEventDetail(eventId) {
       return () => clearInterval(timer);
     }, [refreshEvent])
   );
+
+  useEffect(() => subscribeToLiveMarket((quotes) => {
+    setEvent((current) => {
+      if (!current) return current;
+      const quote = quotes.find((item) => quoteMatchesEvent(item, current));
+      if (!quote) return current;
+      return {
+        ...current,
+        currentPrice: quote.value,
+        spotNumeric: Number(quote.rawValue),
+        change: quote.change,
+        isPositive: quote.isPositive,
+        marketProvider: quote.provider,
+        marketUpdatedAt: new Date().toISOString(),
+      };
+    });
+  }), []);
 
   return {
     event,

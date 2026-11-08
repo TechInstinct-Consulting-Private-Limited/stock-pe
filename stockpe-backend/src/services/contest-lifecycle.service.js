@@ -1,6 +1,8 @@
 const pool = require("../config/database");
 const { syncDashboardMarketPrices } = require("./market-snapshot.service");
 const { autoSettleScheduledContests } = require("./admin-contest.service");
+const { notifyContestLifecycle } = require("./profile-notification.service");
+const { sendDueCampaigns } = require("./admin-notification.service");
 
 const SCHEDULED_TRANSITIONS = [
     { previousStatus: "SOON", nextStatus: "OPEN", dueColumn: "opens_at" },
@@ -62,8 +64,17 @@ async function runScheduledContestLifecycle() {
             client.release();
         }
 
-        if (!automaticSettlementEnabled) return { transitions, settlements: [] };
-        const { settlements } = await autoSettleScheduledContests();
+        const { settlements } = automaticSettlementEnabled ? await autoSettleScheduledContests() : { settlements: [] };
+        for (const transition of transitions) {
+            try { await notifyContestLifecycle(transition.publicId, transition.status); }
+            catch (error) { console.error(`[Notifications] Lifecycle notification skipped for ${transition.publicId}:`, error.message); }
+        }
+        for (const settlement of settlements) {
+            try { await notifyContestLifecycle(settlement.publicId, "SETTLED"); }
+            catch (error) { console.error(`[Notifications] Settlement notification skipped for ${settlement.publicId}:`, error.message); }
+        }
+        try { await sendDueCampaigns(); }
+        catch (error) { console.error("[Notifications] Delivery job skipped:", error.message); }
         return { transitions, settlements };
     })();
 

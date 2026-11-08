@@ -11,6 +11,7 @@ async function getIndices(req, res, next) {
         cached: data.cached,
         stale: !!data.stale,
         lastUpdated: data.lastUpdated,
+        providers: [...new Set(data.indices.map((quote) => quote.provider).filter(Boolean))],
       },
     });
   } catch (error) {
@@ -39,7 +40,20 @@ async function searchContestInstruments(req, res, next) {
   }
 }
 
+function getLiveStatus(_req, res) {
+  // Connection state deliberately contains no provider credentials.
+  return res.status(200).json({
+    success: true,
+    data: {
+      streamEndpoint: "/api/market/live",
+      transport: "websocket",
+      fallback: "REST polling",
+    },
+  });
+}
+
 module.exports = {
   getIndices,
   searchContestInstruments,
+  getLiveStatus,
 };

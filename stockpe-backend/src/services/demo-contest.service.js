@@ -98,7 +98,7 @@ async function getMyDemoContests({ userId, status = "ALL" }) {
     const values = requested === "ALL" ? [userId] : [userId, requested];
     const clause = requested === "ALL" ? "" : "AND entry.status = $2";
     const result = await pool.query(
-        `SELECT entry.id, entry.status, entry.entry_credits, entry.prediction_value, entry.reward_credits, entry.joined_at,
+        `SELECT entry.id, entry.status, entry.entry_credits, entry.prediction_value, entry.reward_credits, entry.settlement_rank, entry.joined_at, entry.settled_at,
                 CASE WHEN demo.contest_id IS NULL THEN 'DEMO_CREDITS' ELSE 'DEMO_USDT' END AS currency,
                 COALESCE((SELECT (a.amount_atomic::numeric / 1000000)::text FROM demo_usdt_activity a
                     WHERE a.entry_id=entry.id AND a.activity_type='REWARD'), '0') AS demo_usdt_reward,

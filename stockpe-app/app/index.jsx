@@ -1,13 +1,18 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BrandLogo from "../src/components/BrandLogo";
 import { getAuthToken } from "../src/services/authStorage";
+import { registerCurrentDeviceForPush } from "../src/services/pushNotifications";
 
 export default function Index() {
   const [progress, setProgress] = useState(0);
+  const { height, width } = useWindowDimensions();
+  const isCompact = height < 680;
+  const isWide = width >= 700;
+  const logoSize = isCompact ? 112 : isWide ? 164 : 138;
 
   // Splash loading
   useEffect(() => {
@@ -31,6 +36,7 @@ export default function Index() {
       getAuthToken()
         .then((token) => {
           if (token) {
+            registerCurrentDeviceForPush().catch(() => {});
             router.replace("/(tabs)/events");
           } else {
             router.replace("/login");
@@ -51,66 +57,23 @@ export default function Index() {
       style={styles.gradient}
     >
       <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.container}>
-        {/* Logo */}
-        <BrandLogo size="large" />
+        <View style={[styles.content, isCompact && styles.contentCompact]}>
+          {/* Central brand slot: replace BrandLogo with the approved MarketPe asset when supplied. */}
+          <View style={[styles.logoSlot, { width: logoSize + 22, height: logoSize + 22, borderRadius: Math.round((logoSize + 22) * 0.29) }]}>
+            <BrandLogo size="large" dimension={logoSize} />
+          </View>
 
-        {/* Small Heading */}
-        <View style={styles.badgePill}>
-          <Text style={styles.badgePillText}>CRYPTO INDEX PREDICTIONS</Text>
+          <View style={styles.badgePill}>
+            <Text style={styles.badgePillText}>MARKET INTELLIGENCE</Text>
+          </View>
+
+          <Text style={[styles.marketPe, isCompact && styles.marketPeCompact]}>MarketPe</Text>
+          <Text style={styles.tagline}>PREDICT MARKET MOVEMENTS WITH CONFIDENCE</Text>
         </View>
 
-        {/* App Name */}
-        <Text style={styles.stockpe}>
-          STOCKPE
-        </Text>
-
-        {/* Tagline */}
-        <Text style={styles.tagline}>
-          PREDICT  •  COMPETE  •  WIN USDT
-        </Text>
-
-        {/* Statistics */}
-        <View style={styles.statsContainer}>
-
-          {/* Pool */}
-          <View style={styles.stat}>
-            <Text style={[styles.statValue, styles.green]}>
-              $50K
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Daily Pool (₮)
-            </Text>
-          </View>
-
-          {/* Traders */}
-          <View style={styles.stat}>
-            <Text style={[styles.statValue, styles.blue]}>
-              2.1M+
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Traders
-            </Text>
-          </View>
-
-          {/* Rating */}
-          <View style={styles.stat}>
-            <Text style={[styles.statValue, styles.yellow]}>
-              4.8★
-            </Text>
-
-            <Text style={styles.statLabel}>
-              Rating
-            </Text>
-          </View>
-
-        </View>
-
-        {/* Progress Bar */}
-        <View style={styles.progressWrapper}>
+        <View style={[styles.loadingArea, isCompact && styles.loadingAreaCompact]}>
+          <Text style={styles.loadingLabel}>Preparing your experience</Text>
           <View style={styles.progressBackground}>
-
             <LinearGradient
               colors={["#00C987", "#38BDF8"]}
               start={{ x: 0, y: 0 }}
@@ -122,14 +85,9 @@ export default function Index() {
                 },
               ]}
             />
-
           </View>
+          <Text style={styles.loadingHint}>Securing your session</Text>
         </View>
-
-        {/* Version */}
-        <Text style={styles.version}>
-          V 2.4.1  •  100% USDT CRYPTO SETTLEMENTS
-        </Text>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -143,7 +101,29 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 30,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  content: {
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 430,
+    marginBottom: 72,
+  },
+  contentCompact: {
+    marginBottom: 44,
+  },
+  logoSlot: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.74)",
+    borderWidth: 1,
+    borderColor: "rgba(0,201,135,0.24)",
+    shadowColor: "#00A86B",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 5,
   },
 
   badgePill: {
@@ -153,8 +133,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
-    marginTop: 36,
-    marginBottom: 12,
+    marginTop: 26,
+    marginBottom: 10,
   },
 
   badgePillText: {
@@ -165,76 +145,42 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  stockpe: {
-    fontSize: 48,
+  marketPe: {
+    fontSize: 46,
     fontWeight: "900",
-    letterSpacing: 6,
+    letterSpacing: -1.4,
     color: "#0F172A",
-    marginBottom: 8,
+    marginBottom: 9,
     textAlign: "center",
+  },
+  marketPeCompact: {
+    fontSize: 40,
   },
 
   tagline: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    color: "#64748B",
+    textAlign: "center",
+    width: "100%",
+  },
+
+  loadingArea: {
+    position: "absolute",
+    bottom: 42,
+    width: "74%",
+    maxWidth: 330,
+  },
+  loadingAreaCompact: {
+    bottom: 24,
+  },
+  loadingLabel: {
+    marginBottom: 10,
+    color: "#475569",
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 3,
-    color: "#64748B",
     textAlign: "center",
-    width: "100%",
-  },
-
-  statsContainer: {
-    flexDirection: "row",
-    width: "100%",
-    justifyContent: "space-around",
-    marginTop: 40,
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 18,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-
-  stat: {
-    alignItems: "center",
-    minWidth: 85,
-  },
-
-  statValue: {
-    fontSize: 26,
-    fontWeight: "900",
-  },
-
-  statLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#64748B",
-    marginTop: 4,
-    textAlign: "center",
-  },
-
-  green: {
-    color: "#059669",
-  },
-
-  blue: {
-    color: "#0284C7",
-  },
-
-  yellow: {
-    color: "#D97706",
-  },
-
-  progressWrapper: {
-    position: "absolute",
-    bottom: 75,
-    width: "70%",
   },
 
   progressBackground: {
@@ -250,12 +196,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
-  version: {
-    position: "absolute",
-    bottom: 38,
-    fontSize: 10.5,
-    fontWeight: "700",
-    letterSpacing: 2,
+  loadingHint: {
+    marginTop: 10,
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.3,
     color: "#94A3B8",
     textAlign: "center",
   },

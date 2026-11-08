@@ -3,18 +3,28 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { colors, shadows } from "../../../theme";
+import { getContestTiming } from "../services/contestTiming";
 
 export default function EventDetailHero({ event }) {
-  const isEntryOpen = event?.status === "OPEN";
-  const deadlineAt = isEntryOpen ? (event?.liveAt || event?.closesAt) : event?.closesAt;
+  const timing = getContestTiming(event);
   const [secondsLeft, setSecondsLeft] = useState(
-    isEntryOpen ? Number(event?.secondsUntilLive || event?.secondsUntilClose || 0) : Number(event?.secondsUntilClose || 0)
+    timing.countdownSeconds
   );
+  const [marketClock, setMarketClock] = useState(Date.now());
 
   useEffect(() => {
     const timer = setInterval(() => {
       setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    setSecondsLeft(timing.countdownSeconds);
+  }, [timing.countdownSeconds]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setMarketClock(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -32,6 +42,15 @@ export default function EventDetailHero({ event }) {
   const players = Number(event?.players || 0).toLocaleString();
   const fill = Number(event?.fillPercent || 0);
   const capacity = event?.playerCapacity ? Number(event.playerCapacity).toLocaleString("en-IN") : "--";
+  const usesDhan = String(event?.marketProvider || "").startsWith("dhan");
+  const secondsSinceMarketUpdate = event?.marketUpdatedAt
+    ? Math.max(0, Math.floor((marketClock - new Date(event.marketUpdatedAt).getTime()) / 1000))
+    : null;
+  const freshness = secondsSinceMarketUpdate === null
+    ? "Market snapshot"
+    : secondsSinceMarketUpdate < 5
+      ? "Updated just now"
+      : `Updated ${secondsSinceMarketUpdate}s ago`;
 
   return (
     <View style={styles.container}>
@@ -52,10 +71,10 @@ export default function EventDetailHero({ event }) {
               <Text style={styles.openPillText}>{status}</Text>
             </View>
           </View>
-          <Text style={styles.navSub}>{event?.instrument?.category || "Index"} • {event?.instrument?.exchange || "Market"}</Text>
+          <Text style={styles.navSub}>{event?.instrument?.category || "Index"} • {event?.instrument?.exchange || "Market"} • {timing.label}</Text>
         </View>
 
-        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7} onPress={() => router.push("/profile/notifications")}>
           <Ionicons name="notifications-outline" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
@@ -65,7 +84,12 @@ export default function EventDetailHero({ event }) {
         <View style={styles.spotLeft}>
           <Text style={styles.spotPriceText}>{spotPrice}</Text>
           <View style={styles.changeTag}>
-            <Text style={styles.changeTagText}>↗ {change} today</Text>
+            <Text style={[styles.changeTagText, !event?.isPositive && styles.negativeChangeTagText]}>{event?.isPositive ? "↗" : "↘"} {change} today</Text>
+          </View>
+          <View style={styles.marketFeedRow}>
+            <View style={[styles.marketLiveDot, usesDhan ? styles.marketLiveDotActive : styles.marketLiveDotSnapshot]} />
+            <Text style={styles.marketFeedText}>{usesDhan ? "LIVE MARKET · DHAN" : "MARKET SNAPSHOT"}</Text>
+            <Text style={styles.marketFeedTime}>· {freshness}</Text>
           </View>
         </View>
 
@@ -85,7 +109,7 @@ export default function EventDetailHero({ event }) {
       <View style={styles.timerCard}>
         <View style={styles.timerHeader}>
           <Ionicons name="time-outline" size={14} color="#D97706" />
-          <Text style={styles.timerLabel}>{isEntryOpen ? "ENTRY CLOSES IN" : "CONTEST ENDS IN"}</Text>
+          <Text style={styles.timerLabel}>{timing.countdownLabel}</Text>
         </View>
 
         <View style={styles.timerDigitsRow}>
@@ -242,6 +266,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     color: "#00C987",
+  },
+  negativeChangeTagText: {
+    color: "#EF4444",
+  },
+  marketFeedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  marketLiveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 5,
+  },
+  marketLiveDotActive: {
+    backgroundColor: "#00C987",
+  },
+  marketLiveDotSnapshot: {
+    backgroundColor: "#94A3B8",
+  },
+  marketFeedText: {
+    fontSize: 9.5,
+    fontWeight: "900",
+    color: "#059669",
+    letterSpacing: 0.45,
+  },
+  marketFeedTime: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#94A3B8",
   },
   prizeRight: {
     alignItems: "flex-end",

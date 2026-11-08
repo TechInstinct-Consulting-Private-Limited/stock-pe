@@ -82,7 +82,9 @@ export default function AadhaarVerification() {
 
     useEffect(() => {
         if (retry === "1") {
-            setFormError("For your security, enter your Aadhaar number again to request a new OTP.");
+            setFormError(
+                "For your security, enter your Aadhaar number again to request a new OTP.",
+            );
         }
     }, [retry]);
 
@@ -103,7 +105,9 @@ export default function AadhaarVerification() {
                             mobile: String(mobile || ""),
                             mode: mode === "signin" ? "signin" : "signup",
                             verified: "1",
-                            aadhaarLastFour: String(status.aadhaarLastFour || ""),
+                            aadhaarLastFour: String(
+                                status.aadhaarLastFour || "",
+                            ),
                         },
                     });
                     return;
@@ -123,10 +127,13 @@ export default function AadhaarVerification() {
     useEffect(() => {
         if (!scannerOpen || Platform.OS !== "android") return undefined;
 
-        const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-            setScannerOpen(false);
-            return true;
-        });
+        const subscription = BackHandler.addEventListener(
+            "hardwareBackPress",
+            () => {
+                setScannerOpen(false);
+                return true;
+            },
+        );
 
         return () => subscription.remove();
     }, [scannerOpen]);
@@ -159,13 +166,18 @@ export default function AadhaarVerification() {
     const openScanner = async () => {
         const textExtractor = getTextExtractor();
         if (!textExtractor?.isSupported) {
-            setFormError("Aadhaar card scanning requires the latest iOS or Android app build. Enter your details manually here.");
+            setFormError(
+                "Aadhaar card scanning requires the latest iOS or Android app build. Enter your details manually here.",
+            );
             return;
         }
         setFormError("");
         setScanError("");
         setScannerOpen(true);
-        if (!cameraPermission?.granted && cameraPermission?.canAskAgain !== false) {
+        if (
+            !cameraPermission?.granted &&
+            cameraPermission?.canAskAgain !== false
+        ) {
             await requestCameraPermission();
         }
     };
@@ -176,20 +188,26 @@ export default function AadhaarVerification() {
         const textExtractor = getTextExtractor();
         if (!textExtractor?.isSupported) {
             setScannerOpen(false);
-            setFormError("Aadhaar card scanning requires the latest app build. Enter your details manually here.");
+            setFormError(
+                "Aadhaar card scanning requires the latest app build. Enter your details manually here.",
+            );
             return;
         }
 
         setIsCapturing(true);
         setScanError("");
         try {
-            const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
+            const photo = await cameraRef.current.takePictureAsync({
+                quality: 1,
+            });
             const fields = parseAadhaarCardText(
-                await textExtractor.extractTextFromImage(photo.uri)
+                await textExtractor.extractTextFromImage(photo.uri),
             );
 
             if (!fields.aadhaarNumber) {
-                setScanError("We could not read the card. Keep the front flat inside the frame, avoid glare, and try again.");
+                setScanError(
+                    "We could not read the card. Keep the front flat inside the frame, avoid glare, and try again.",
+                );
                 return;
             }
 
@@ -197,7 +215,9 @@ export default function AadhaarVerification() {
             setScannerOpen(false);
             setFormError("");
         } catch (_error) {
-            setScanError("The photo could not be read. Please try again or enter the details manually.");
+            setScanError(
+                "The photo could not be read. Please try again or enter the details manually.",
+            );
         } finally {
             setIsCapturing(false);
         }
@@ -283,7 +303,9 @@ export default function AadhaarVerification() {
 
     const handleVerifyOtp = async () => {
         if (aadhaarOtp.length !== 6) {
-            setFormError("Enter the 6-digit OTP sent to your Aadhaar-linked mobile.");
+            setFormError(
+                "Enter the 6-digit OTP sent to your Aadhaar-linked mobile.",
+            );
             return;
         }
 
@@ -306,7 +328,9 @@ export default function AadhaarVerification() {
         return (
             <SafeAreaView style={[styles.safeArea, styles.statusCheck]}>
                 <ActivityIndicator color="#594BFF" size="large" />
-                <Text style={styles.statusCheckText}>Checking your KYC status…</Text>
+                <Text style={styles.statusCheckText}>
+                    Checking your KYC status…
+                </Text>
             </SafeAreaView>
         );
     }
@@ -314,7 +338,9 @@ export default function AadhaarVerification() {
     return (
         <SafeAreaView style={styles.safeArea}>
             {scannerOpen ? (
-                <SafeAreaView style={[styles.scannerScreen, styles.scannerOverlay]}>
+                <SafeAreaView
+                    style={[styles.scannerScreen, styles.scannerOverlay]}
+                >
                     <View style={styles.scannerHeader}>
                         <TouchableOpacity
                             onPress={() => setScannerOpen(false)}
@@ -324,7 +350,9 @@ export default function AadhaarVerification() {
                         >
                             <Ionicons name="close" size={28} color="#FFFFFF" />
                         </TouchableOpacity>
-                        <Text style={styles.scannerTitle}>Scan Aadhaar Front</Text>
+                        <Text style={styles.scannerTitle}>
+                            Scan Aadhaar Front
+                        </Text>
                         <View style={styles.scannerClose} />
                     </View>
 
@@ -337,14 +365,24 @@ export default function AadhaarVerification() {
                                 active={scannerOpen}
                                 autofocus="on"
                                 animateShutter
-                                onMountError={() => setScanError("The camera could not start. Close the scanner and try again.")}
+                                onMountError={() =>
+                                    setScanError(
+                                        "The camera could not start. Close the scanner and try again.",
+                                    )
+                                }
                             />
                             <View style={styles.scanGuideArea}>
                                 <View style={styles.scanFrame} />
                             </View>
                             <View style={styles.scanInstructions}>
-                                <Text style={styles.scanInstructionsTitle}>Place the front of the card inside the frame</Text>
-                                <Text style={styles.scanInstructionsText}>Keep all four corners visible and avoid glare. Your image is processed on this device.</Text>
+                                <Text style={styles.scanInstructionsTitle}>
+                                    Place the front of the card inside the frame
+                                </Text>
+                                <Text style={styles.scanInstructionsText}>
+                                    Keep all four corners visible and avoid
+                                    glare. Your image is processed on this
+                                    device.
+                                </Text>
                                 <TouchableOpacity
                                     style={styles.captureButton}
                                     disabled={isCapturing}
@@ -355,10 +393,14 @@ export default function AadhaarVerification() {
                                     {isCapturing ? (
                                         <ActivityIndicator color="#FFFFFF" />
                                     ) : (
-                                        <Text style={styles.captureButtonText}>CAPTURE CARD</Text>
+                                        <Text style={styles.captureButtonText}>
+                                            CAPTURE CARD
+                                        </Text>
                                     )}
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setScannerOpen(false)}>
+                                <TouchableOpacity
+                                    onPress={() => setScannerOpen(false)}
+                                >
                                     <Text style={styles.manualEntryText}>
                                         Nothing detected? Enter details manually
                                     </Text>
@@ -367,15 +409,30 @@ export default function AadhaarVerification() {
                         </View>
                     ) : (
                         <View style={styles.permissionPanel}>
-                            <Ionicons name="camera-outline" size={54} color="#8C86FF" />
-                            <Text style={styles.permissionTitle}>Camera access is needed</Text>
-                            <Text style={styles.permissionText}>StockPe uses the camera only to read the details on the front of your Aadhaar card.</Text>
+                            <Ionicons
+                                name="camera-outline"
+                                size={54}
+                                color="#8C86FF"
+                            />
+                            <Text style={styles.permissionTitle}>
+                                Camera access is needed
+                            </Text>
+                            <Text style={styles.permissionText}>
+                                StockPe uses the camera only to read the details
+                                on the front of your Aadhaar card.
+                            </Text>
                             <TouchableOpacity
                                 style={styles.permissionButton}
-                                onPress={cameraPermission?.canAskAgain === false ? Linking.openSettings : requestCameraPermission}
+                                onPress={
+                                    cameraPermission?.canAskAgain === false
+                                        ? Linking.openSettings
+                                        : requestCameraPermission
+                                }
                             >
                                 <Text style={styles.permissionButtonText}>
-                                    {cameraPermission?.canAskAgain === false ? "OPEN SETTINGS" : "ALLOW CAMERA"}
+                                    {cameraPermission?.canAskAgain === false
+                                        ? "OPEN SETTINGS"
+                                        : "ALLOW CAMERA"}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -393,7 +450,9 @@ export default function AadhaarVerification() {
                                 {scanError}
                             </Text>
                             <TouchableOpacity onPress={() => setScanError("")}>
-                                <Text style={styles.scanRetryText}>TRY AGAIN</Text>
+                                <Text style={styles.scanRetryText}>
+                                    TRY AGAIN
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     ) : null}
@@ -403,7 +462,9 @@ export default function AadhaarVerification() {
                 style={styles.container}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-                <View style={[styles.header, isCompact && styles.headerCompact]}>
+                <View
+                    style={[styles.header, isCompact && styles.headerCompact]}
+                >
                     <View style={styles.headerLeft}>
                         <TouchableOpacity
                             style={styles.backButton}
@@ -422,7 +483,9 @@ export default function AadhaarVerification() {
                             <Text style={styles.headerTitle}>
                                 Aadhaar Verification
                             </Text>
-                            <Text style={styles.headerSubtitle}>Step 2 of 4</Text>
+                            <Text style={styles.headerSubtitle}>
+                                Step 2 of 4
+                            </Text>
                         </View>
                     </View>
 
@@ -454,11 +517,18 @@ export default function AadhaarVerification() {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.notice}>
-                        <Ionicons name="finger-print" size={28} color="#594BFF" />
+                        <Ionicons
+                            name="finger-print"
+                            size={28}
+                            color="#594BFF"
+                        />
                         <View style={styles.noticeText}>
-                            <Text style={styles.noticeTitle}>Aadhaar e-KYC</Text>
+                            <Text style={styles.noticeTitle}>
+                                Aadhaar e-KYC
+                            </Text>
                             <Text style={styles.noticeSubtitle}>
-                                OTP will be sent to your Aadhaar-linked mobile for verification.
+                                OTP will be sent to your Aadhaar-linked mobile
+                                for verification.
                             </Text>
                         </View>
                     </View>
@@ -467,11 +537,11 @@ export default function AadhaarVerification() {
                         <>
                             <View style={styles.scanCard}>
                                 <View style={styles.scanHeader}>
-                                    <Text style={styles.label}>AADHAAR CARD</Text>
+                                    <Text style={styles.label}>
+                                        AADHAAR CARD
+                                    </Text>
                                     <TouchableOpacity
-                                        style={[
-                                            styles.scanButton,
-                                        ]}
+                                        style={[styles.scanButton]}
                                         onPress={openScanner}
                                         accessibilityRole="button"
                                         accessibilityLabel="Scan the front of Aadhaar card"
@@ -492,9 +562,14 @@ export default function AadhaarVerification() {
                                     onPress={openScanner}
                                     accessibilityRole="button"
                                 >
-                                    <Ionicons name="card-outline" size={26} color="#8C86FF" />
+                                    <Ionicons
+                                        name="card-outline"
+                                        size={26}
+                                        color="#8C86FF"
+                                    />
                                     <Text style={styles.scanText}>
-                                        Scan the card front to capture your Aadhaar number
+                                        Scan the card front to capture your
+                                        Aadhaar number
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -537,7 +612,8 @@ export default function AadhaarVerification() {
                                     ) : null}
                                 </View>
                                 <Text style={styles.consentText}>
-                                    I consent to OTP-based Aadhaar verification for KYC.
+                                    I consent to OTP-based Aadhaar verification
+                                    for KYC.
                                 </Text>
                             </TouchableOpacity>
                         </>
@@ -545,13 +621,19 @@ export default function AadhaarVerification() {
                         <View style={styles.otpSection}>
                             <View style={styles.otpIcon}>
                                 <Ionicons
-                                    name={isVerified ? "checkmark" : "shield-checkmark-outline"}
+                                    name={
+                                        isVerified
+                                            ? "checkmark"
+                                            : "shield-checkmark-outline"
+                                    }
                                     size={34}
                                     color={isVerified ? "#FFFFFF" : "#594BFF"}
                                 />
                             </View>
                             <Text style={styles.otpTitle}>
-                                {isVerified ? "Aadhaar Verified" : "Enter Aadhaar OTP"}
+                                {isVerified
+                                    ? "Aadhaar Verified"
+                                    : "Enter Aadhaar OTP"}
                             </Text>
                             <Text style={styles.otpSubtitle}>
                                 {isVerified
@@ -565,7 +647,9 @@ export default function AadhaarVerification() {
                                     value={aadhaarOtp}
                                     onChangeText={(value) => {
                                         setAadhaarOtp(
-                                            value.replace(/\D/g, "").slice(0, 6)
+                                            value
+                                                .replace(/\D/g, "")
+                                                .slice(0, 6),
                                         );
                                         setFormError("");
                                     }}
@@ -603,7 +687,9 @@ export default function AadhaarVerification() {
                             ]}
                             disabled={isLoading}
                             onPress={
-                                verificationId ? handleVerifyOtp : handleRequestOtp
+                                verificationId
+                                    ? handleVerifyOtp
+                                    : handleRequestOtp
                             }
                         >
                             {isLoading ? (
@@ -629,8 +715,14 @@ export default function AadhaarVerification() {
                             onPress={handleContinue}
                             accessibilityRole="button"
                         >
-                            <Text style={styles.primaryButtonText}>CONTINUE</Text>
-                            <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+                            <Text style={styles.primaryButtonText}>
+                                CONTINUE
+                            </Text>
+                            <Ionicons
+                                name="arrow-forward"
+                                size={24}
+                                color="#FFFFFF"
+                            />
                         </TouchableOpacity>
                     )}
 
@@ -643,10 +735,13 @@ export default function AadhaarVerification() {
                                 accessibilityRole="button"
                                 accessibilityLabel="Skip Aadhaar verification for now"
                             >
-                                <Text style={styles.skipButtonText}>Skip for now →</Text>
+                                <Text style={styles.skipButtonText}>
+                                    Skip for now →
+                                </Text>
                             </TouchableOpacity>
                             <Text style={styles.skipHint}>
-                                You can complete Aadhaar verification later from Profile.
+                                You can complete Aadhaar verification later from
+                                Profile.
                             </Text>
                         </>
                     ) : null}
@@ -842,8 +937,19 @@ const styles = StyleSheet.create({
         zIndex: 20,
         elevation: 20,
     },
-    scannerHeader: { height: 68, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    scannerClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+    scannerHeader: {
+        height: 68,
+        paddingHorizontal: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    scannerClose: {
+        width: 44,
+        height: 44,
+        alignItems: "center",
+        justifyContent: "center",
+    },
     scannerTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800" },
     cameraContainer: {
         flex: 1,
@@ -859,21 +965,93 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-    scanFrame: { width: "90%", aspectRatio: 1.586, borderWidth: 3, borderColor: "#FFFFFF", borderRadius: 18 },
-    scanInstructions: { width: "90%", padding: 18, borderRadius: 16, backgroundColor: "rgba(7,19,41,0.82)" },
-    scanInstructionsTitle: { color: "#FFFFFF", textAlign: "center", fontSize: 16, fontWeight: "800" },
-    scanInstructionsText: { color: "#DCE2F2", textAlign: "center", marginTop: 6, lineHeight: 19 },
-    captureButton: { minHeight: 46, marginTop: 14, borderRadius: 12, backgroundColor: "#594BFF", alignItems: "center", justifyContent: "center" },
-    captureButtonText: { color: "#FFFFFF", fontWeight: "800", letterSpacing: 0.4 },
-    manualEntryText: { color: "#8C86FF", textAlign: "center", marginTop: 14, fontWeight: "700" },
-    permissionPanel: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
-    permissionTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", marginTop: 18 },
-    permissionText: { color: "#BFC8DA", textAlign: "center", lineHeight: 21, marginTop: 10, maxWidth: 340 },
-    permissionButton: { marginTop: 24, borderRadius: 24, backgroundColor: "#665CFF", paddingHorizontal: 24, paddingVertical: 14 },
+    scanFrame: {
+        width: "90%",
+        aspectRatio: 1.586,
+        borderWidth: 3,
+        borderColor: "#FFFFFF",
+        borderRadius: 18,
+    },
+    scanInstructions: {
+        width: "90%",
+        padding: 18,
+        borderRadius: 16,
+        backgroundColor: "rgba(7,19,41,0.82)",
+    },
+    scanInstructionsTitle: {
+        color: "#FFFFFF",
+        textAlign: "center",
+        fontSize: 16,
+        fontWeight: "800",
+    },
+    scanInstructionsText: {
+        color: "#DCE2F2",
+        textAlign: "center",
+        marginTop: 6,
+        lineHeight: 19,
+    },
+    captureButton: {
+        minHeight: 46,
+        marginTop: 14,
+        borderRadius: 12,
+        backgroundColor: "#594BFF",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    captureButtonText: {
+        color: "#FFFFFF",
+        fontWeight: "800",
+        letterSpacing: 0.4,
+    },
+    manualEntryText: {
+        color: "#8C86FF",
+        textAlign: "center",
+        marginTop: 14,
+        fontWeight: "700",
+    },
+    permissionPanel: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 32,
+    },
+    permissionTitle: {
+        color: "#FFFFFF",
+        fontSize: 22,
+        fontWeight: "900",
+        marginTop: 18,
+    },
+    permissionText: {
+        color: "#BFC8DA",
+        textAlign: "center",
+        lineHeight: 21,
+        marginTop: 10,
+        maxWidth: 340,
+    },
+    permissionButton: {
+        marginTop: 24,
+        borderRadius: 24,
+        backgroundColor: "#665CFF",
+        paddingHorizontal: 24,
+        paddingVertical: 14,
+    },
     permissionButtonText: { color: "#FFFFFF", fontWeight: "800" },
-    scanErrorPanel: { position: "absolute", bottom: 28, left: 20, right: 20, borderRadius: 16, backgroundColor: "#FFF0F0", padding: 18 },
+    scanErrorPanel: {
+        position: "absolute",
+        bottom: 28,
+        left: 20,
+        right: 20,
+        borderRadius: 16,
+        backgroundColor: "#FFF0F0",
+        padding: 18,
+    },
     scanErrorText: { color: "#8E2929", textAlign: "center", lineHeight: 20 },
-    scanRetryText: { color: "#594BFF", textAlign: "center", fontWeight: "900", marginTop: 12 },
+    scanRetryText: {
+        color: "#594BFF",
+        textAlign: "center",
+        fontWeight: "900",
+        marginTop: 12,
+    },
     label: {
         color: "#657189",
         fontSize: 11,

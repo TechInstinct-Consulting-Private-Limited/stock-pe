@@ -14,5 +14,5 @@ test("dashboard snapshots include only fresh quotes for registered contest instr
         { rawSymbol: "^BSESN", rawValue: 71000, percentChange: -0.1 },
     ], ["^NSEI", "RELIANCE.NS"]);
 
-    assert.deepEqual(snapshots, [{ code: "NIFTY50", value: 22000, changePercent: 0.5 }]);
+    assert.deepEqual(snapshots, [{ code: "NIFTY50", value: 22000, changePercent: 0.5, provider: "unknown" }]);
 });

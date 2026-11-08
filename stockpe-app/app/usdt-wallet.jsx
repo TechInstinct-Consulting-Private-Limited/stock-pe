@@ -58,7 +58,7 @@ export default function UsdtWallet() {
         }
 
         router.replace({
-            pathname: "/aadhaar-kyc",
+            pathname: "/digilocker-kyc",
             params: {
                 mobile: String(mobile || ""),
                 mode: mode === "signin" ? "signin" : "signup",

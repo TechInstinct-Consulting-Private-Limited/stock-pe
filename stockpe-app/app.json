@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "stockpe-app",
+    "name": "MarketPe",
     "slug": "stockpe-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -38,9 +38,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#F6FBF9",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#F6FBF9"
           }
         }
       ],
@@ -48,14 +48,22 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow StockPe to use your camera to scan the Secure QR code on your Aadhaar.",
+          "cameraPermission": "Allow MarketPe to use your camera to scan the Secure QR code on your Aadhaar.",
           "recordAudioAndroid": false
         }
       ],
       "expo-font",
       "expo-image",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#00C987",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -64,7 +72,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "c32488dc-2ff5-4721-ac49-b46746276b81"
+        "projectId": "6a8c5f98-6246-469a-9c78-c636426926c9"
       }
     },
     "runtimeVersion": {

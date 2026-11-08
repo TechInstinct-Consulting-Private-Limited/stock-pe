@@ -2,9 +2,11 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { shadows } from "../../../theme";
+import { getContestTiming } from "../services/contestTiming";
 
 export default function ContestRulesView({ event }) {
   const entryCredits = Number(event?.entryCredits || 0).toLocaleString("en-IN");
+  const timing = getContestTiming(event);
   const unit = event?.currency === 'DEMO_USDT' ? 'Demo USDT' : 'demo credits';
   const entryCutoff = new Date(event?.liveAt || event?.closesAt);
   const entryCutoffLabel = Number.isFinite(entryCutoff.getTime())
@@ -28,7 +30,7 @@ export default function ContestRulesView({ event }) {
     {
       num: "02",
       title: "Submit Prediction",
-      desc: "Enter one predicted closing value for this contest.",
+      desc: `Enter one predicted ${timing.prediction} for this contest.`,
       icon: "locate-outline",
       iconColor: "#6366F1",
       iconBg: "#EEF2FF",
@@ -44,7 +46,7 @@ export default function ContestRulesView({ event }) {
     {
       num: "04",
       title: "Results",
-      desc: "The demo settlement value is recorded and the closest prediction wins.",
+      desc: `The market value at ${timing.target} is recorded and predictions are ranked by closeness.`,
       icon: "stats-chart-outline",
       iconColor: "#8B5CF6",
       iconBg: "#F3E8FF",
@@ -61,7 +63,7 @@ export default function ContestRulesView({ event }) {
 
   const contestRules = [
     "One prediction per user — no edits after submission",
-    "Equal closest predictions share the demo prize pool; the earlier entry receives any remainder",
+    "Final rewards follow the displayed rank-wise prize distribution. Equal predictions share the rank slots they occupy.",
     `${unit} are simulated, non-withdrawable and have no real cash or USDT value`,
     "Results are available after the contest is settled",
   ];

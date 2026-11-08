@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { DeviceEventEmitter } from "react-native";
 import { calculateOrderMetrics, calculatePricePredictionMetrics } from "../../../utils/calculations";
 import { getDemoCreditBalance, getDemoUsdtWallet, getMyDemoContests, getUserFacingError, joinDemoContest } from "../../../services/api";
 
@@ -92,6 +93,7 @@ export function useTradeExecution(event) {
       setHasJoined(true);
       setWalletBalance((prev) => prev === null ? prev : Math.max(0, prev - response.entry.entryCredits));
       setIsSuccessModalVisible(true);
+      DeviceEventEmitter.emit("contest-activity-updated");
       return trade;
     } catch (error) {
       return { error: getUserFacingError(error, "Unable to submit this demo prediction.") };

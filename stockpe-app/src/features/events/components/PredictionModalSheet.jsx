@@ -9,6 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { shadows } from "../../../theme";
+import { getContestTiming } from "../services/contestTiming";
 
 export default function PredictionModalSheet({
   event,
@@ -20,9 +21,8 @@ export default function PredictionModalSheet({
   onClose,
   bottomInset = 16,
 }) {
-  const [secondsLeft, setSecondsLeft] = useState(
-    Number(event?.secondsUntilLive || event?.secondsUntilClose || 0)
-  );
+  const timing = getContestTiming(event);
+  const [secondsLeft, setSecondsLeft] = useState(timing.countdownSeconds);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,14 +39,14 @@ export default function PredictionModalSheet({
   }, [targetPrice]);
 
   useEffect(() => {
-    const deadline = new Date(event?.liveAt || event?.closesAt).getTime();
+    const deadline = new Date(timing.countdownAt).getTime();
     const timer = setInterval(() => {
       setSecondsLeft(
         Number.isFinite(deadline) ? Math.max(0, Math.floor((deadline - Date.now()) / 1000)) : 0
       );
     }, 1000);
     return () => clearInterval(timer);
-  }, [event?.liveAt, event?.closesAt]);
+  }, [timing.countdownAt]);
 
   const hrs = String(Math.floor(secondsLeft / 3600)).padStart(2, "0");
   const mins = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0");
@@ -96,8 +96,8 @@ export default function PredictionModalSheet({
     }
   };
 
-  const cutoffLabel = event?.status === "OPEN" ? "ENTRY CLOSES IN" : "CONTEST ENDS IN";
-  const cutoffDate = new Date(event?.liveAt || event?.closesAt);
+  const cutoffLabel = timing.countdownLabel;
+  const cutoffDate = new Date(timing.countdownAt);
   const cutoffTime = Number.isFinite(cutoffDate.getTime())
     ? cutoffDate.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZoneName: "short" })
     : "Schedule unavailable";
@@ -178,7 +178,7 @@ export default function PredictionModalSheet({
       {/* Input Section: YOUR PREDICTION — CLOSING VALUE */}
       <View style={styles.predictionSection}>
         <Text style={styles.sectionLabel}>
-          YOUR PREDICTION — CLOSING VALUE
+          YOUR PREDICTION — {timing.prediction.toUpperCase()}
         </Text>
 
         <View style={styles.inputWrapper}>
@@ -212,7 +212,7 @@ export default function PredictionModalSheet({
           </View>
         </View>
 
-        <Text style={styles.rangeSubtext}>Enter your own estimated closing value.</Text>
+        <Text style={styles.rangeSubtext}>Enter your estimate for the {timing.prediction}. This target is fixed after submission.</Text>
       </View>
 
       {/* Financial & Balance Breakdown Box */}

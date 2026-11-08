@@ -14,8 +14,8 @@ import { colors, radii, shadows, spacing, typography } from "../../../theme";
 import TabPills from "../../../components/ui/TabPills";
 import AppCard from "../../../components/ui/AppCard";
 import EventFeedCard from "../components/EventFeedCard";
-import { fetchUserTrades } from "../services/eventsService";
-import { DASHBOARD_TABS, fetchDashboard, toFeedCard } from "../services/dashboardService";
+import { getMyDemoContests } from "../../../services/api";
+import { DASHBOARD_TABS, fetchDashboard, groupFeedCards, toFeedCard } from "../services/dashboardService";
 import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 
 export default function EventsFeedScreen() {
@@ -24,9 +24,7 @@ export default function EventsFeedScreen() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [clock, setClock] = useState(Date.now());
-
-  const userTrades = fetchUserTrades();
-  const activeCount = userTrades.filter((t) => t.status === "ACTIVE").length;
+  const [activeCount, setActiveCount] = useState(0);
 
   const loadDashboard = useCallback(async ({ showLoading = true } = {}) => {
     if (showLoading) setIsLoading(true);
@@ -52,9 +50,20 @@ export default function EventsFeedScreen() {
     }
   }, [activeFilter]);
 
-  const { refreshing, onRefresh } = usePullToRefresh(
-    refreshDashboard
-  );
+  const refreshActiveCount = useCallback(async () => {
+    try {
+      const response = await getMyDemoContests("ACTIVE");
+      setActiveCount(Array.isArray(response?.entries) ? response.entries.length : 0);
+    } catch (_error) {
+      // Contest feed remains available even when the authenticated summary cannot load.
+    }
+  }, []);
+
+  const refreshFeed = useCallback(async () => {
+    await Promise.all([refreshDashboard(), refreshActiveCount()]);
+  }, [refreshActiveCount, refreshDashboard]);
+
+  const { refreshing, onRefresh } = usePullToRefresh(refreshFeed);
 
   useEffect(() => {
     loadDashboard();
@@ -63,11 +72,13 @@ export default function EventsFeedScreen() {
   useFocusEffect(
     useCallback(() => {
       refreshDashboard();
+      refreshActiveCount();
       const timer = setInterval(() => {
         refreshDashboard();
+        refreshActiveCount();
       }, 30_000);
       return () => clearInterval(timer);
-    }, [refreshDashboard])
+    }, [refreshActiveCount, refreshDashboard])
   );
 
   useEffect(() => {
@@ -78,6 +89,10 @@ export default function EventsFeedScreen() {
   const feedCards = useMemo(
     () => (dashboard?.contests || []).map((contest) => toFeedCard(contest, clock)),
     [clock, dashboard]
+  );
+  const feedGroups = useMemo(
+    () => groupFeedCards(feedCards, clock),
+    [clock, feedCards]
   );
 
   const summary = dashboard?.summary;
@@ -94,7 +109,7 @@ export default function EventsFeedScreen() {
         <View style={styles.quickBar}>
           <TouchableOpacity
             style={styles.positionsPill}
-            onPress={() => router.push("/event/my-trades")}
+            onPress={() => router.push("/(tabs)/contests")}
             activeOpacity={0.7}
           >
             <Ionicons name="briefcase-outline" size={15} color={colors.primary} />
@@ -190,7 +205,17 @@ export default function EventsFeedScreen() {
             </View>
           )}
 
-          {!isLoading && !error && feedCards.map((item) => (
+          {!isLoading && !error && activeFilter === "ALL" && feedGroups.map((group) => (
+            <View key={group.id} style={styles.feedGroup}>
+              <View style={styles.groupHeading}>
+                <Text style={styles.groupTitle}>{group.title}</Text>
+                <Text style={styles.groupSubtitle}>{group.subtitle}</Text>
+              </View>
+              {group.cards.map((item) => <EventFeedCard key={item.id} item={item} />)}
+            </View>
+          ))}
+
+          {!isLoading && !error && activeFilter !== "ALL" && feedCards.map((item) => (
             <EventFeedCard key={item.id} item={item} />
           ))}
         </View>
@@ -328,6 +353,25 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: spacing.xs,
+  },
+  feedGroup: {
+    marginBottom: spacing.sm,
+  },
+  groupHeading: {
+    marginBottom: spacing.sm,
+    marginLeft: 2,
+  },
+  groupTitle: {
+    color: colors.textPrimary,
+    fontSize: typography.sm,
+    fontWeight: typography.black,
+    letterSpacing: typography.wide,
+  },
+  groupSubtitle: {
+    color: colors.textMuted,
+    fontSize: typography.xs + 1,
+    fontWeight: typography.bold,
+    marginTop: 2,
   },
   stateCard: {
     alignItems: "center",

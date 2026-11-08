@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { getDemoDashboard, getLiveIndices } from "../services/api";
+import { subscribeToLiveMarket } from "../services/liveMarketStream";
 
 const FALLBACK_INDICES = [
   {
@@ -89,6 +90,13 @@ export default function MarketTicker() {
     };
   }, []);
 
+  useEffect(() => subscribeToLiveMarket((updates) => {
+    setIndices((current) => {
+      const updateBySymbol = new Map(updates.map((item) => [item.rawSymbol || item.symbol, item]));
+      return current.map((item) => updateBySymbol.get(item.rawSymbol || item.symbol) || item);
+    });
+  }), []);
+
   // Repeat items to create an uninterrupted continuous ribbon
   const repeatCount = Math.max(6, Math.ceil(30 / (indices.length || 1)));
   const tickerItems = Array(repeatCount).fill(indices).flat();
@@ -145,6 +153,12 @@ export default function MarketTicker() {
                 {item.isPositive ? "↗" : "↘"} {item.change}
               </Text>
             </View>
+            {String(item.provider || "").startsWith("dhan") && (
+              <View style={styles.livePill}>
+                <View style={styles.liveDot} />
+                <Text style={styles.livePillText}>LIVE</Text>
+              </View>
+            )}
             <View style={styles.divider} />
           </View>
         ))}
@@ -218,5 +232,27 @@ const styles = StyleSheet.create({
     height: 14,
     backgroundColor: "#E2E8F0",
     marginHorizontal: 12,
+  },
+  livePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginLeft: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+    backgroundColor: "#E6FBF3",
+  },
+  liveDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#00C987",
+  },
+  livePillText: {
+    fontSize: 8,
+    fontWeight: "900",
+    color: "#059669",
+    letterSpacing: 0.25,
   },
 });

@@ -27,7 +27,7 @@ export default function KycScreen() {
             </View>
             <Text style={styles.section}>ONBOARDING STATUS</Text>
             <KycDocumentStepCard title="Mobile number" subtitle="OTP sign-in" icon="phone-portrait-outline" status={kycData?.mobileStatus} maskedDetail={kycData?.mobileStatus === "VERIFIED" ? "Verified" : "Pending"} />
-            <KycDocumentStepCard title="Aadhaar verification" subtitle={kycData?.aadhaarMethod ? `${kycData.aadhaarMethod} verification` : "Complete demo Aadhaar OTP flow"} icon="finger-print-outline" status={kycData?.aadhaarStatus} maskedDetail={verified ? "Verified" : "Tap to continue"} onPress={() => !verified && router.push("/aadhaar-kyc")} />
+            <KycDocumentStepCard title="Identity verification" subtitle={kycData?.aadhaarMethod ? `${kycData.aadhaarMethod} verification` : "Verify securely with DigiLocker"} icon="shield-checkmark-outline" status={kycData?.aadhaarStatus} maskedDetail={verified ? "Verified" : "Tap to continue"} onPress={() => !verified && router.push("/digilocker-kyc")} />
             <KycDocumentStepCard title="USDT wallet link" subtitle="Demo wallet connection only" icon="wallet-outline" status={kycData?.walletStatus === "LINKED" ? "VERIFIED" : "PENDING"} maskedDetail={kycData?.walletNetwork ? `${kycData.walletNetwork} linked` : "Tap to link a demo wallet"} onPress={() => router.push("/usdt-wallet")} />
             <Text style={styles.section}>COMING LATER</Text>
             <View style={styles.infoCard}><Ionicons name="lock-closed-outline" size={20} color="#64748B" /><Text style={styles.infoText}>PAN, bank account verification and withdrawal controls will be added only after the approved production providers are integrated.</Text></View>

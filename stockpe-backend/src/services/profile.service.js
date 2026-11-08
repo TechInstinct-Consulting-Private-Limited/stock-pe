@@ -1,5 +1,6 @@
 const pool = require("../config/database");
 const { getUserTestPayouts } = require("./demo-contest-test-payout.service");
+const { registerPushToken } = require("./profile-notification.service");
 
 function toNumber(value) { return Number(value || 0); }
 
@@ -39,9 +40,13 @@ async function getPredictions(userId, status = "ALL") {
     const values = [userId];
     const clause = requested === "ALL" ? "" : requested === "ACTIVE" ? "AND entry.status='ACTIVE'" : "AND entry.status IN ('WON','LOST','CANCELLED')";
     const result = await pool.query(
-        `SELECT entry.id, entry.status, entry.entry_credits, entry.prediction_value, entry.reward_credits, entry.joined_at, entry.settled_at,
-                contest.public_id, contest.title, contest.settlement_value
+        `SELECT entry.id, entry.status, entry.entry_credits, entry.prediction_value, entry.reward_credits, entry.settlement_rank, entry.joined_at, entry.settled_at,
+                contest.public_id, contest.title, contest.settlement_value,
+                CASE WHEN demo.contest_id IS NULL THEN 'DEMO_CREDITS' ELSE 'DEMO_USDT' END AS currency,
+                COALESCE((SELECT (activity.amount_atomic::numeric / 1000000)::text FROM demo_usdt_activity activity
+                    WHERE activity.entry_id=entry.id AND activity.activity_type='REWARD'), '0') AS demo_usdt_reward
          FROM demo_contest_entries entry JOIN demo_dashboard_contests contest ON contest.id=entry.contest_id
+         LEFT JOIN demo_usdt_contests demo ON demo.contest_id=contest.id
          WHERE entry.user_id=$1 ${clause} ORDER BY entry.joined_at DESC`, values,
     );
     return result.rows;
@@ -69,4 +74,21 @@ async function markNotificationRead(userId, notificationId) {
 
 async function markAllNotificationsRead(userId) { await pool.query("UPDATE profile_notifications SET read_at=NOW() WHERE user_id=$1 AND read_at IS NULL", [userId]); }
 
-module.exports = { getDemoPayouts, getMe, getPredictions, getWinnings, listNotifications, markNotificationRead, markAllNotificationsRead };
+async function getNotificationPreferences(userId) {
+    const result = await pool.query(`INSERT INTO notification_preferences (user_id) VALUES ($1) ON CONFLICT (user_id) DO UPDATE SET user_id=EXCLUDED.user_id RETURNING contest_push_enabled,wallet_push_enabled,system_push_enabled,marketing_push_enabled,updated_at`, [userId]);
+    return result.rows[0];
+}
+
+async function updateNotificationPreferences(userId, input = {}) {
+    const current = await getNotificationPreferences(userId);
+    const next = {
+        contest: typeof input.contestPushEnabled === "boolean" ? input.contestPushEnabled : current.contest_push_enabled,
+        wallet: typeof input.walletPushEnabled === "boolean" ? input.walletPushEnabled : current.wallet_push_enabled,
+        system: typeof input.systemPushEnabled === "boolean" ? input.systemPushEnabled : current.system_push_enabled,
+        marketing: typeof input.marketingPushEnabled === "boolean" ? input.marketingPushEnabled : current.marketing_push_enabled,
+    };
+    const result = await pool.query(`UPDATE notification_preferences SET contest_push_enabled=$2,wallet_push_enabled=$3,system_push_enabled=$4,marketing_push_enabled=$5,updated_at=NOW() WHERE user_id=$1 RETURNING contest_push_enabled,wallet_push_enabled,system_push_enabled,marketing_push_enabled,updated_at`, [userId, next.contest, next.wallet, next.system, next.marketing]);
+    return result.rows[0];
+}
+
+module.exports = { getDemoPayouts, getMe, getPredictions, getWinnings, getNotificationPreferences, listNotifications, markNotificationRead, markAllNotificationsRead, registerPushToken, updateNotificationPreferences };

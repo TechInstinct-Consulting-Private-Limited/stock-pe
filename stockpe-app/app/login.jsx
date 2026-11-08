@@ -1,8 +1,9 @@
-import { DefaultWidget } from "@msg91comm/sendotp-react-native";
+import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 
 import {
+    Alert,
     Keyboard,
     KeyboardAvoidingView,
     Platform,
@@ -16,9 +17,22 @@ import AlternativeAuth from "../src/components/AlternativeAuth";
 import AuthForm from "../src/components/AuthForm";
 import AuthHeader from "../src/components/AuthHeader.jsx";
 import AuthTabs from "../src/components/AuthTabs";
-import { authenticateWithMsg91 } from "../src/services/api";
+import {
+    authenticateWithMsg91,
+    getUserFacingError,
+    signIn,
+    signUp,
+} from "../src/services/api";
 import { setAuthToken } from "../src/services/authStorage";
 import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID } from "../src/services/msg91";
+
+// MSG91's widget is a native module. Expo Go does not include that module,
+// so keep the existing backend OTP route available for local Expo Go testing.
+const isExpoGo = Constants.appOwnership === "expo"
+    || Constants.executionEnvironment === "storeClient";
+const DefaultWidget = isExpoGo
+    ? null
+    : require("@msg91comm/sendotp-react-native").DefaultWidget;
 
 export default function Login() {
 
@@ -46,7 +60,26 @@ export default function Login() {
 
     const openMsg91Widget = () => {
         Keyboard.dismiss();
+
+        if (isExpoGo) {
+            requestBackendOtp();
+            return;
+        }
+
         setShowMsg91Widget(true);
+    };
+
+    const requestBackendOtp = async () => {
+        try {
+            const requestOtp = activeTab === "signup" ? signUp : signIn;
+            await requestOtp(mobile, password);
+            router.push({
+                pathname: "/otp",
+                params: { mobile, mode: activeTab },
+            });
+        } catch (error) {
+            Alert.alert("Unable to continue", getUserFacingError(error));
+        }
     };
 
     const handleMsg91Completion = async (result) => {
@@ -252,15 +285,17 @@ export default function Login() {
                 MSG91 OTP WIDGET (drop-in modal)
                 ======================================== */}
 
-            <DefaultWidget
-                visible={showMsg91Widget}
-                onClose={() => setShowMsg91Widget(false)}
-                onCompletion={handleMsg91Completion}
-                widgetId={MSG91_WIDGET_ID}
-                tokenAuth={MSG91_TOKEN_AUTH}
-                theme="light"
-                primaryColor="#00C987"
-            />
+            {DefaultWidget ? (
+                <DefaultWidget
+                    visible={showMsg91Widget}
+                    onClose={() => setShowMsg91Widget(false)}
+                    onCompletion={handleMsg91Completion}
+                    widgetId={MSG91_WIDGET_ID}
+                    tokenAuth={MSG91_TOKEN_AUTH}
+                    theme="light"
+                    primaryColor="#00C987"
+                />
+            ) : null}
 
         </SafeAreaView>
     );

@@ -68,7 +68,7 @@ export default function PredictionItemCard({ prediction }) {
       <View style={styles.bottomRow}>
         <View>
           <Text style={styles.metaLabel}>ENTRY</Text>
-          <Text style={styles.metaVal}>{prediction.entryCredits} credits</Text>
+          <Text style={styles.metaVal}>{prediction.entryCredits} {prediction.currency === "DEMO_USDT" ? "Demo USDT" : "credits"}</Text>
         </View>
 
         <View>
@@ -76,7 +76,7 @@ export default function PredictionItemCard({ prediction }) {
             {isLive ? "STATUS" : "CLOSING VALUE"}
           </Text>
           <Text style={styles.metaVal}>
-            {isLive ? "Active" : prediction.settlementValue ?? "—"}
+            {isLive ? "Active" : prediction.rank ? `Rank #${prediction.rank}` : prediction.settlementValue ?? "—"}
           </Text>
         </View>
 
@@ -94,7 +94,7 @@ export default function PredictionItemCard({ prediction }) {
                 { color: isWon ? "#00C987" : "#64748B" },
               ]}
             >
-              +{prediction.rewardCredits} credits
+              +{prediction.rewardCredits} {prediction.currency === "DEMO_USDT" ? "Demo USDT" : "credits"}
             </Text>
           </View>
         </View>

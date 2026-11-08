@@ -42,6 +42,10 @@ function resolveApiBaseUrl() {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+export function getApiBaseUrl() {
+    return API_BASE_URL;
+}
+
 class ApiError extends Error {}
 
 export function getUserFacingError(
@@ -156,6 +160,18 @@ export function getAadhaarKycStatus() {
     return authenticatedRequest("/kyc/aadhaar/status");
 }
 
+export function initiateDigiLockerKyc() {
+    return authenticatedRequest("/kyc/digilocker/initiate", { method: "POST" });
+}
+
+export function getDigiLockerKycStatus(verificationId) {
+    return authenticatedRequest(`/kyc/digilocker/${encodeURIComponent(verificationId)}/status`);
+}
+
+export function getDigiLockerSessionStatus(sessionId) {
+    return authenticatedRequest(`/kyc/digilocker/session/${encodeURIComponent(sessionId)}/status`);
+}
+
 export function getDemoDashboard(status = "ALL") {
     return request(`/dashboard?status=${encodeURIComponent(status)}`, {
         headers: { "Cache-Control": "no-store" },
@@ -182,6 +198,24 @@ export function getDemoCreditBalance() {
 
 export function getDemoUsdtWallet() {
     return authenticatedRequest('/demo-contests/demo-usdt-wallet', { headers: { 'Cache-Control': 'no-store' } });
+}
+
+export function getLeaderboard(instrument = "ALL") {
+    return authenticatedRequest(`/leaders?instrument=${encodeURIComponent(instrument)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function getContestLeaderboard(publicId) {
+    return authenticatedRequest(`/leaders?contest=${encodeURIComponent(publicId)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
+export function getLeaderProfile(userId) {
+    return authenticatedRequest(`/leaders/${encodeURIComponent(userId)}`, {
+        headers: { "Cache-Control": "no-store" },
+    });
 }
 
 export function joinDemoContest(publicId, predictionValue) {
@@ -257,6 +291,18 @@ export function getProfileDemoPayouts() {
 
 export function getProfileNotifications() {
     return authenticatedRequest("/profile/notifications", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function getNotificationPreferences() {
+    return authenticatedRequest("/profile/notifications/preferences", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function updateNotificationPreferences(payload) {
+    return authenticatedRequest("/profile/notifications/preferences", { method: "PUT", body: JSON.stringify(payload) });
+}
+
+export function registerExpoPushToken(token, platform) {
+    return authenticatedRequest("/profile/notifications/push-token", { method: "POST", body: JSON.stringify({ token, platform }) });
 }
 
 export function markProfileNotificationRead(notificationId) {

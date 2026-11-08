@@ -1,9 +1,12 @@
 const pool = require("../config/database");
-const { createNotification } = require("./profile-notification.service");
+const { createNotification, notifyContestCreated, notifyContestLifecycle } = require("./profile-notification.service");
 const { toAtomicUsdt } = require('./wallet-ledger.service');
-const { settleDemoUsdtEntry, refundDemoUsdtEntry, splitDemoUsdtPool, atomicToDemoUsdt } = require('./demo-usdt.service');
+const { settleDemoUsdtEntry, refundDemoUsdtEntry, atomicToDemoUsdt } = require('./demo-usdt.service');
+const { buildTradingSchedule, makePublicId, CONTEST_TEMPLATE_RULES } = require('./contest-bulk-schedule.service');
+const { calculateRankRewards, normalizePrizeDistribution } = require('./prize-distribution.service');
 
 const CONTEST_STATUSES = new Set(["DRAFT", "SOON", "OPEN", "LIVE", "CLOSED", "SETTLED", "CANCELLED"]);
+const CONTEST_TYPES = new Set(["CUSTOM", "DAY_OPEN", "ONE_HOUR", "MIDDAY", "CLOSING", "NEXT_DAY_CLOSE"]);
 const TRANSITIONS = {
     DRAFT: new Set(["SOON", "CANCELLED"]),
     SOON: new Set(["OPEN", "CANCELLED"]),
@@ -38,7 +41,9 @@ function validateContestInput(input) {
     const opensAt = asDate(input.opensAt, "opensAt");
     const closesAt = asDate(input.closesAt, "closesAt");
     const lifecycleMode = String(input.lifecycleMode || "MANUAL").trim().toUpperCase();
+    const contestType = String(input.contestType || "CUSTOM").trim().toUpperCase();
     const liveAt = lifecycleMode === "SCHEDULED" ? asDate(input.liveAt, "liveAt") : null;
+    const prizeDistribution = normalizePrizeDistribution(input.prizeDistribution);
 
     if (!title || !question || !instrumentCode || !/^[a-z0-9-]{3,80}$/.test(publicId)) {
         throw operationalError(400, "title, question, instrumentCode, and a valid publicId are required");
@@ -47,10 +52,11 @@ function validateContestInput(input) {
         throw operationalError(400, "entryCredits, prizePoolCredits, and playerCapacity must be positive integers");
     }
     if (!["MANUAL", "SCHEDULED"].includes(lifecycleMode)) throw operationalError(400, "lifecycleMode must be MANUAL or SCHEDULED");
+    if (!CONTEST_TYPES.has(contestType)) throw operationalError(400, "Invalid contestType");
     if (closesAt <= opensAt) throw operationalError(400, "closesAt must be after opensAt");
     if (lifecycleMode === "SCHEDULED" && (liveAt <= opensAt || liveAt >= closesAt)) throw operationalError(400, "liveAt must be after opensAt and before closesAt");
 
-    return { title, question, publicId, instrumentCode, entryCredits, prizePoolCredits, playerCapacity, opensAt, liveAt, closesAt, lifecycleMode };
+    return { title, question, publicId, instrumentCode, entryCredits, prizePoolCredits, playerCapacity, opensAt, liveAt, closesAt, lifecycleMode, contestType, prizeDistribution };
 }
 
 async function audit(client, adminUserId, action, contestId, metadata = {}) {
@@ -69,9 +75,9 @@ async function listContests({ status = "ALL" }) {
     const result = await pool.query(
         `SELECT contest.public_id, contest.title, contest.question, contest.status, contest.entry_credits,
                 EXISTS (SELECT 1 FROM demo_usdt_contests d WHERE d.contest_id=contest.id) AS is_demo_usdt,
-                contest.prize_pool_credits, contest.player_capacity,
+                contest.prize_pool_credits, contest.prize_distribution, contest.player_capacity,
                 (SELECT COUNT(*)::INTEGER FROM demo_contest_entries entry WHERE entry.contest_id=contest.id) AS player_count, contest.opens_at,
-                contest.live_at, contest.closes_at, contest.lifecycle_mode, contest.settlement_source, contest.cancelled_at, contest.cancelled_reason,
+                contest.live_at, contest.closes_at, contest.lifecycle_mode, contest.contest_type, contest.settlement_source, contest.cancelled_at, contest.cancelled_reason,
                 contest.settled_at, contest.settlement_value, instrument.code AS instrument_code, instrument.display_name AS instrument_name
          FROM demo_dashboard_contests contest
          JOIN market_instruments instrument ON instrument.id = contest.instrument_id
@@ -99,12 +105,12 @@ async function createContest({ adminUserId, input }) {
         const result = await client.query(
             `INSERT INTO demo_dashboard_contests (
                 public_id, instrument_id, title, question, status, entry_credits, prize_pool_credits,
-                player_capacity, opens_at, live_at, closes_at, lifecycle_mode, settlement_source, display_order
-             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+                player_capacity, opens_at, live_at, closes_at, lifecycle_mode, contest_type, settlement_source, prize_distribution, display_order
+             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
              RETURNING id, public_id, status`,
             [contest.publicId, instrument.rows[0].id, contest.title, contest.question, status, contest.entryCredits,
-                contest.prizePoolCredits, contest.playerCapacity, contest.opensAt, contest.liveAt, contest.closesAt, contest.lifecycleMode, settlementSource,
-                Number.isInteger(input.displayOrder) ? input.displayOrder : 0]
+                contest.prizePoolCredits, contest.playerCapacity, contest.opensAt, contest.liveAt, contest.closesAt, contest.lifecycleMode, contest.contestType, settlementSource,
+                JSON.stringify(contest.prizeDistribution), Number.isInteger(input.displayOrder) ? input.displayOrder : 0]
         );
         if (input.currency === 'DEMO_USDT') {
             await client.query(
@@ -113,6 +119,9 @@ async function createContest({ adminUserId, input }) {
             );
         }
         await audit(client, adminUserId, "CONTEST_CREATED", result.rows[0].id, { publicId: contest.publicId, status });
+        if (status === "SOON") {
+            await notifyContestCreated(client, { publicId: contest.publicId, title: contest.title, opensAt: contest.opensAt });
+        }
         await client.query("COMMIT");
         return result.rows[0];
     } catch (error) {
@@ -124,23 +133,100 @@ async function createContest({ adminUserId, input }) {
     }
 }
 
+async function createBulkScheduledContests({ adminUserId, input }) {
+    const instrumentCode = String(input.instrumentCode || "").trim().toUpperCase();
+    const entryCredits = Number(input.entryCredits);
+    const prizePoolCredits = Number(input.prizePoolCredits);
+    const playerCapacity = Number(input.playerCapacity);
+    if (!instrumentCode || ![entryCredits, prizePoolCredits, playerCapacity].every(Number.isInteger)
+        || entryCredits <= 0 || prizePoolCredits <= 0 || playerCapacity <= 0) {
+        throw operationalError(400, "instrumentCode, entryCredits, prizePoolCredits, and playerCapacity are required");
+    }
+
+    const excludedDates = Array.isArray(input.excludedDates) ? input.excludedDates : [];
+    let schedule;
+    try {
+        schedule = buildTradingSchedule({
+            startDate: input.startDate,
+            tradingDays: input.tradingDays,
+            contestType: input.contestType,
+            opensTime: input.opensTime || "09:15",
+            liveTime: input.liveTime || "15:15",
+            closesTime: input.closesTime || "15:35",
+            excludedDates,
+        });
+    } catch (error) {
+        throw operationalError(error.statusCode || 400, error.message);
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        const instrument = await client.query(
+            "SELECT id, display_name FROM market_instruments WHERE code=$1 AND is_active=TRUE FOR SHARE",
+            [instrumentCode]
+        );
+        if (!instrument.rowCount) throw operationalError(400, "Active instrument was not found");
+
+        const created = [];
+        for (const [index, slot] of schedule.items.entries()) {
+            // Contest type is part of the public identity. One index can therefore
+            // have Day Open, 10 AM, Midday, and Closing contests for the same
+            // target date, while an identical index + type + date remains unique.
+            const publicId = makePublicId(instrumentCode, slot.date, index + 1, slot.contestType);
+            const rule = slot.contestType ? CONTEST_TEMPLATE_RULES[slot.contestType] : null;
+            const title = `${instrument.rows[0].display_name} ${rule?.label || "Daily Prediction"}`;
+            const targetLabel = rule?.targetTime ? `${rule.targetTime} IST` : "scheduled close";
+            const question = `Predict the ${instrument.rows[0].display_name} value at ${targetLabel} for ${slot.date}.`;
+            const result = await client.query(
+                `INSERT INTO demo_dashboard_contests (
+                    public_id, instrument_id, title, question, status, entry_credits, prize_pool_credits,
+                    player_capacity, opens_at, live_at, closes_at, lifecycle_mode, contest_type, settlement_source, prize_distribution, display_order
+                 ) VALUES ($1,$2,$3,$4,'SOON',$5,$6,$7,$8,$9,$10,'SCHEDULED',$11,$12,$13,$14)
+                 RETURNING id, public_id, opens_at, live_at, closes_at`,
+                [publicId, instrument.rows[0].id, title, question, entryCredits, prizePoolCredits, playerCapacity,
+                    slot.opensAt, slot.liveAt, slot.closesAt, slot.contestType || "CUSTOM",
+                    String(input.settlementSource || "Automatic market snapshot near scheduled close").trim(),
+                    JSON.stringify(normalizePrizeDistribution(input.prizeDistribution)), index]
+            );
+            if (input.currency === "DEMO_USDT") {
+                await client.query(
+                    "INSERT INTO demo_usdt_contests (contest_id, entry_atomic, prize_pool_atomic) VALUES ($1,$2,$3)",
+                    [result.rows[0].id, toAtomicUsdt(entryCredits).toString(), toAtomicUsdt(prizePoolCredits).toString()]
+                );
+            }
+            await audit(client, adminUserId, "BULK_CONTEST_SCHEDULED", result.rows[0].id, { publicId, date: slot.date, contestType: slot.contestType || "CUSTOM" });
+            await notifyContestCreated(client, { publicId, title, opensAt: slot.opensAt });
+            created.push({ publicId, date: slot.date, opensAt: slot.opensAt, liveAt: slot.liveAt, closesAt: slot.closesAt });
+        }
+        await client.query("COMMIT");
+        return { created, skipped: schedule.skipped };
+    } catch (error) {
+        await client.query("ROLLBACK");
+        if (error.code === "23505") throw operationalError(409, "A scheduled contest already exists for at least one selected date");
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 async function updateContest({ adminUserId, publicId, input }) {
     const client = await pool.connect();
     try {
         await client.query("BEGIN");
-        const existing = await client.query("SELECT id, status, lifecycle_mode, live_at FROM demo_dashboard_contests WHERE public_id = $1 FOR UPDATE", [publicId]);
+        const existing = await client.query("SELECT id, status, lifecycle_mode, live_at, contest_type, prize_distribution FROM demo_dashboard_contests WHERE public_id = $1 FOR UPDATE", [publicId]);
         if (!existing.rowCount) throw operationalError(404, "Demo contest was not found");
         if (!["DRAFT", "SOON"].includes(existing.rows[0].status)) throw operationalError(409, "Only DRAFT or SOON contests can be edited");
-        const contest = validateContestInput({ ...input, publicId, lifecycleMode: input.lifecycleMode || existing.rows[0].lifecycle_mode, liveAt: input.liveAt || existing.rows[0].live_at });
+        const contest = validateContestInput({ ...input, publicId, lifecycleMode: input.lifecycleMode || existing.rows[0].lifecycle_mode, contestType: input.contestType || existing.rows[0].contest_type, liveAt: input.liveAt || existing.rows[0].live_at, prizeDistribution: input.prizeDistribution || existing.rows[0].prize_distribution });
         const instrument = await client.query("SELECT id FROM market_instruments WHERE code = $1 AND is_active = TRUE", [contest.instrumentCode]);
         if (!instrument.rowCount) throw operationalError(400, "Active instrument was not found");
         await client.query(
             `UPDATE demo_dashboard_contests SET instrument_id=$1,title=$2,question=$3,entry_credits=$4,
-             prize_pool_credits=$5,player_capacity=$6,opens_at=$7,live_at=$8,closes_at=$9,lifecycle_mode=$10,settlement_source=$11,
-             display_order=$12,updated_at=NOW() WHERE id=$13`,
+             prize_pool_credits=$5,player_capacity=$6,opens_at=$7,live_at=$8,closes_at=$9,lifecycle_mode=$10,contest_type=$11,settlement_source=$12,
+             prize_distribution=$13,display_order=$14,updated_at=NOW() WHERE id=$15`,
             [instrument.rows[0].id, contest.title, contest.question, contest.entryCredits, contest.prizePoolCredits,
-                contest.playerCapacity, contest.opensAt, contest.liveAt, contest.closesAt, contest.lifecycleMode,
-                String(input.settlementSource || "Demo market reference").trim(), Number.isInteger(input.displayOrder) ? input.displayOrder : 0,
+                contest.playerCapacity, contest.opensAt, contest.liveAt, contest.closesAt, contest.lifecycleMode, contest.contestType,
+                String(input.settlementSource || "Demo market reference").trim(), JSON.stringify(contest.prizeDistribution), Number.isInteger(input.displayOrder) ? input.displayOrder : 0,
                 existing.rows[0].id]
         );
         await audit(client, adminUserId, "CONTEST_UPDATED", existing.rows[0].id, { publicId });
@@ -154,24 +240,9 @@ async function updateContest({ adminUserId, publicId, input }) {
     }
 }
 
-function calculateWinnerRewards(entries, finalValue, prizePoolCredits) {
-    const predictedEntries = entries.filter((entry) => entry.prediction_value !== null);
-    const closestDistance = predictedEntries.length
-        ? Math.min(...predictedEntries.map((entry) => Math.abs(Number(entry.prediction_value) - finalValue)))
-        : null;
-    const winnerIds = new Set(
-        predictedEntries
-            .filter((entry) => Math.abs(Number(entry.prediction_value) - finalValue) === closestDistance)
-            .map((entry) => entry.id)
-    );
-    const baseReward = winnerIds.size ? Math.floor(Number(prizePoolCredits) / winnerIds.size) : 0;
-    let remainder = winnerIds.size ? Number(prizePoolCredits) % winnerIds.size : 0;
-
-    return entries.map((entry) => {
-        const isWinner = winnerIds.has(entry.id);
-        const rewardCredits = isWinner ? baseReward + (remainder-- > 0 ? 1 : 0) : 0;
-        return { entry, isWinner, rewardCredits };
-    });
+function calculateWinnerRewards(entries, finalValue, prizePoolCredits, prizeDistribution) {
+    return calculateRankRewards(entries, finalValue, prizePoolCredits, prizeDistribution)
+        .map((result) => ({ ...result, rewardCredits: Number(result.reward) }));
 }
 
 async function settleLockedContest({ client, contest, publicId, finalValue, settlementNotes, notificationPrefix = "" }) {
@@ -181,17 +252,19 @@ async function settleLockedContest({ client, contest, publicId, finalValue, sett
          FROM demo_contest_entries WHERE contest_id=$1 AND status='ACTIVE'
          ORDER BY joined_at ASC FOR UPDATE`, [contest.id]
     );
-    const rewards = calculateWinnerRewards(entriesResult.rows, finalValue, contest.prize_pool_credits);
+    const rewards = calculateWinnerRewards(entriesResult.rows, finalValue, contest.prize_pool_credits, contest.prize_distribution);
     const winnerCount = rewards.filter((reward) => reward.isWinner).length;
-    const demoShares = demoCurrency.rowCount && winnerCount ? splitDemoUsdtPool(demoCurrency.rows[0].prize_pool_atomic, winnerCount) : [];
-    let demoWinnerIndex = 0;
+    const demoRewards = demoCurrency.rowCount
+        ? calculateRankRewards(entriesResult.rows, finalValue, demoCurrency.rows[0].prize_pool_atomic, contest.prize_distribution)
+        : [];
+    const demoRewardByEntryId = new Map(demoRewards.map((reward) => [reward.entry.id, reward.reward.toString()]));
     const totalRewardCredits = rewards.reduce((total, reward) => total + reward.rewardCredits, 0);
 
-    for (const { entry, isWinner, rewardCredits } of rewards) {
-        const demoReward = demoCurrency.rowCount && isWinner ? demoShares[demoWinnerIndex++] : '0';
+    for (const { entry, rank, isWinner, rewardCredits } of rewards) {
+        const demoReward = demoCurrency.rowCount ? (demoRewardByEntryId.get(entry.id) || '0') : '0';
         await client.query(
-            "UPDATE demo_contest_entries SET status=$1,reward_credits=$2,settled_at=NOW() WHERE id=$3",
-            [isWinner ? "WON" : "LOST", rewardCredits, entry.id]
+            "UPDATE demo_contest_entries SET status=$1,reward_credits=$2,settlement_rank=$3,settled_at=NOW() WHERE id=$4",
+            [isWinner ? "WON" : "LOST", rewardCredits, rank, entry.id]
         );
         if (demoCurrency.rowCount) {
             await settleDemoUsdtEntry(client, { userId: entry.user_id, contestId: contest.id, entryId: entry.id, entryAtomic: demoCurrency.rows[0].entry_atomic, rewardAtomic: demoReward });
@@ -213,7 +286,7 @@ async function settleLockedContest({ client, contest, publicId, finalValue, sett
             message: isWinner
                 ? demoCurrency.rowCount ? `${notificationPrefix}Your reward is ${atomicToDemoUsdt(demoReward)} Demo USDT.` : `${notificationPrefix}${contest.prize_pool_credits} demo-credit pool was settled. Your reward is ${rewardCredits} credits.`
                 : `${notificationPrefix}Your contest prediction has been settled.`,
-            metadata: { publicId, rewardCredits, closingValue: finalValue, environment: "DEMO_ONLY" },
+            metadata: { publicId, rank, rewardCredits, closingValue: finalValue, environment: "DEMO_ONLY" },
         });
     }
 
@@ -241,7 +314,7 @@ async function settleContest({ adminUserId, publicId, closingValue, settlementNo
     try {
         await client.query("BEGIN");
         const contestResult = await client.query(
-            `SELECT id, status, prize_pool_credits FROM demo_dashboard_contests
+            `SELECT id, status, prize_pool_credits, prize_distribution FROM demo_dashboard_contests
              WHERE public_id=$1 FOR UPDATE`, [publicId]
         );
         if (!contestResult.rowCount) throw operationalError(404, "Demo contest was not found");
@@ -253,6 +326,8 @@ async function settleContest({ adminUserId, publicId, closingValue, settlementNo
             publicId, closingValue: finalValue, winnerCount: settlement.winnerCount,
         });
         await client.query("COMMIT");
+        try { await notifyContestLifecycle(publicId, "SETTLED"); }
+        catch (notificationError) { console.error(`[Notifications] Settlement notification skipped for ${publicId}:`, notificationError.message); }
         return { publicId, closingValue: finalValue, winnerCount: settlement.winnerCount, status: "SETTLED" };
     } catch (error) {
         await client.query("ROLLBACK");
@@ -276,7 +351,7 @@ async function autoSettleScheduledContests() {
         try {
             await client.query("BEGIN");
             const contestResult = await client.query(
-                `SELECT id, public_id, status, prize_pool_credits, instrument_id, closes_at
+            `SELECT id, public_id, status, prize_pool_credits, prize_distribution, instrument_id, closes_at
                  FROM demo_dashboard_contests
                  WHERE public_id=$1 AND lifecycle_mode='SCHEDULED'
                  FOR UPDATE`,
@@ -348,7 +423,7 @@ async function changeContestStatus({ adminUserId, publicId, status, reason, sett
     const client = await pool.connect();
     try {
         await client.query("BEGIN");
-        const contest = await client.query("SELECT id, status, lifecycle_mode FROM demo_dashboard_contests WHERE public_id=$1 FOR UPDATE", [publicId]);
+        const contest = await client.query("SELECT id, status, lifecycle_mode, title, opens_at FROM demo_dashboard_contests WHERE public_id=$1 FOR UPDATE", [publicId]);
         if (!contest.rowCount) throw operationalError(404, "Demo contest was not found");
         const current = contest.rows[0].status;
         if (contest.rows[0].lifecycle_mode === "SCHEDULED") {
@@ -394,6 +469,30 @@ async function changeContestStatus({ adminUserId, publicId, status, reason, sett
             outcomeCount: nextStatus === "SETTLED" ? outcomes.length : undefined,
         });
         await client.query("COMMIT");
+        try {
+            if (nextStatus === "SOON") {
+                const notificationClient = await pool.connect();
+                try {
+                    await notificationClient.query("BEGIN");
+                    await notifyContestCreated(notificationClient, {
+                        publicId,
+                        title: contest.rows[0].title,
+                        opensAt: contest.rows[0].opens_at,
+                    });
+                    await notificationClient.query("COMMIT");
+                } catch (notificationError) {
+                    await notificationClient.query("ROLLBACK");
+                    throw notificationError;
+                } finally {
+                    notificationClient.release();
+                }
+            } else if (["OPEN", "LIVE", "CLOSED"].includes(nextStatus)) {
+                await notifyContestLifecycle(publicId, nextStatus);
+            }
+        } catch (notificationError) {
+            // The contest transition is already durable; a delivery problem must not undo it.
+            console.error(`[Notifications] Lifecycle notification skipped for ${publicId}:`, notificationError.message);
+        }
         return { publicId, previousStatus: current, status: nextStatus };
     } catch (error) {
         await client.query("ROLLBACK");
@@ -405,7 +504,7 @@ async function changeContestStatus({ adminUserId, publicId, status, reason, sett
 
 async function getContestEntries(publicId) {
     const result = await pool.query(
-        `SELECT entry.id, entry.status, entry.entry_credits, entry.prediction_value, entry.reward_credits, entry.joined_at, users.mobile,
+        `SELECT entry.id, entry.status, entry.entry_credits, entry.prediction_value, entry.reward_credits, entry.settlement_rank, entry.joined_at, users.mobile,
                 EXISTS (SELECT 1 FROM demo_usdt_contests d WHERE d.contest_id=contest.id) AS is_demo_usdt,
                 (SELECT (a.amount_atomic::numeric / 1000000)::text FROM demo_usdt_activity a WHERE a.entry_id=entry.id AND a.activity_type='REWARD') AS demo_usdt_reward
          FROM demo_contest_entries entry
@@ -418,9 +517,9 @@ async function getContestEntries(publicId) {
 
 async function getContestDetails(publicId) {
     const contestResult = await pool.query(
-        `SELECT contest.public_id, contest.title, contest.question, contest.status, contest.lifecycle_mode,
+        `SELECT contest.public_id, contest.title, contest.question, contest.status, contest.lifecycle_mode, contest.contest_type,
                 EXISTS (SELECT 1 FROM demo_usdt_contests d WHERE d.contest_id=contest.id) AS is_demo_usdt,
-                contest.entry_credits, contest.prize_pool_credits, contest.player_capacity,
+                contest.entry_credits, contest.prize_pool_credits, contest.prize_distribution, contest.player_capacity,
                 (SELECT COUNT(*)::INTEGER FROM demo_contest_entries entry WHERE entry.contest_id=contest.id) AS player_count,
                 contest.created_at, contest.opens_at, contest.live_at, contest.closes_at, contest.settled_at,
                 contest.settlement_value::TEXT AS settlement_value, contest.settlement_source, contest.settlement_notes,
@@ -449,4 +548,4 @@ async function getContestDetails(publicId) {
     return { contest: contestResult.rows[0], timeline: timelineResult.rows, entries: await getContestEntries(publicId) };
 }
 
-module.exports = { autoSettleScheduledContests, calculateWinnerRewards, changeContestStatus, createContest, getContestDetails, getContestEntries, listContests, settleContest, updateContest };
+module.exports = { autoSettleScheduledContests, calculateWinnerRewards, changeContestStatus, createBulkScheduledContests, createContest, getContestDetails, getContestEntries, listContests, settleContest, updateContest };
