@@ -1,12 +1,39 @@
-import React from "react";
-import { StatusBar, StyleSheet, Text, View } from "react-native";
-import { Tabs } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { DeviceEventEmitter, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Tabs, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import MarketTicker from "../../src/components/MarketTicker";
+import { getMyDemoContests } from "../../src/services/api";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const [activeContestCount, setActiveContestCount] = useState(0);
+
+  const refreshActiveContestCount = useCallback(async () => {
+    try {
+      const response = await getMyDemoContests("ACTIVE");
+      setActiveContestCount(Array.isArray(response?.entries) ? response.entries.length : 0);
+    } catch (_error) {
+      // Keep navigation available if the authenticated summary is temporarily unavailable.
+      setActiveContestCount(0);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshActiveContestCount();
+      const timer = setInterval(() => void refreshActiveContestCount(), 30_000);
+      const subscription = DeviceEventEmitter.addListener(
+        "contest-activity-updated",
+        refreshActiveContestCount,
+      );
+      return () => {
+        clearInterval(timer);
+        subscription.remove();
+      };
+    }, [refreshActiveContestCount]),
+  );
 
   return (
     <SafeAreaView edges={["top"]} style={styles.shellContainer}>
@@ -64,9 +91,11 @@ export default function TabLayout() {
                   size={22}
                   color={focused ? "#00C987" : "#94A3B8"}
                 />
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>2</Text>
-                </View>
+                {activeContestCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{activeContestCount > 99 ? "99+" : activeContestCount}</Text>
+                  </View>
+                )}
                 {focused && <View style={styles.activeLine} />}
               </View>
             ),
