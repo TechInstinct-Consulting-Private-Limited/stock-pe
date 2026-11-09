@@ -83,6 +83,11 @@ router.post(
     verifyOtp
 );
 router.post("/resend-otp", otpRequestLimiter, otpRequestMobileIpLimiter, resendOtp);
-router.post("/msg91-session", createMsg91Session);
+router.post(
+    "/msg91-session",
+    otpVerificationLimiter,
+    otpVerificationMobileIpLimiter,
+    createMsg91Session
+);
 
 module.exports = router;

@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
 const { createOtpVerification } = require("../services/otp.service");
+const { Msg91AccessTokenService } = require("../services/msg91-access-token.service");
 
 const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 const MAX_OTP_ATTEMPTS = 5;
@@ -252,12 +253,17 @@ async function resendOtp(req, res, next) {
 
 async function createMsg91Session(req, res, next) {
     try {
-        const { mobile, password, purpose } = req.body;
+        const { mobile, password, purpose, msg91Token } = req.body;
         const cleanMobile = String(mobile || "").replace(/\D/g, "").slice(-10);
 
         if (!validateMobile(cleanMobile)) {
             return validationError(res, "Enter a valid 10-digit Indian mobile number");
         }
+
+        // Never trust a client-side "success" callback alone. MSG91 must
+        // confirm that this exact mobile number owns the returned token.
+        const msg91 = new Msg91AccessTokenService();
+        await msg91.verify({ accessToken: msg91Token, expectedMobile: cleanMobile });
 
         let userResult = await pool.query(
             "SELECT id, mobile, mobile_verified FROM users WHERE mobile = $1",
