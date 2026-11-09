@@ -7,6 +7,8 @@ const {
 const {
     createMsg91Session,
     prepareMsg91Otp,
+    verifyMsg91Otp,
+    retryMsg91Otp,
     resendOtp,
     signIn,
     signUp,
@@ -85,6 +87,8 @@ router.post(
 );
 router.post("/resend-otp", otpRequestLimiter, otpRequestMobileIpLimiter, resendOtp);
 router.post("/msg91/start", otpRequestLimiter, otpRequestMobileIpLimiter, prepareMsg91Otp);
+router.post("/msg91/verify", otpVerificationLimiter, otpVerificationMobileIpLimiter, verifyMsg91Otp);
+router.post("/msg91/retry", otpRequestLimiter, otpRequestMobileIpLimiter, retryMsg91Otp);
 router.post(
     "/msg91-session",
     otpVerificationLimiter,

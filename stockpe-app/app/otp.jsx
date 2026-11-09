@@ -22,19 +22,17 @@ import {
     getUserFacingError,
     resendOtp,
     verifyOtp,
+    verifyMsg91Otp,
+    retryMsg91Otp,
 } from "../src/services/api";
 import { clearPendingMsg91Password, getPendingMsg91Password, setAuthToken } from "../src/services/authStorage";
-import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID } from "../src/services/msg91";
+import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID, Msg91WidgetClient } from "../src/services/msg91";
 import { completeMsg91Authentication, getPostAuthenticationRoute } from "../src/services/msg91Auth";
 import { registerCurrentDeviceForPush } from "../src/services/pushNotifications";
 
 // Both the MSG91 custom UI flow and the Expo Go backend fallback use six digits.
 const OTP_LENGTH = 6;
-const isExpoGo = Constants.appOwnership === "expo" || Constants.executionEnvironment === "storeClient";
-const NativeMsg91OtpWidget = !isExpoGo && Platform.OS !== "web"
-    ? require("@msg91comm/sendotp-react-native").OTPWidget
-    : null;
-const MSG91_RETRY_CHANNELS = { sms: 11, whatsapp: 12, voice: 4 };
+const MSG91_RETRY_CHANNELS = { sms: 11, whatsapp: 12 };
 
 export default function OTP() {
 
@@ -174,7 +172,7 @@ export default function OTP() {
 
         try {
             if (isMsg91) {
-                if (!NativeMsg91OtpWidget || !msg91RequestId) {
+                if (!msg91RequestId) {
                     throw new Error("This OTP session is unavailable. Please start again.");
                 }
 
@@ -183,9 +181,8 @@ export default function OTP() {
                     throw new Error("Your verification session expired. Please start again.");
                 }
 
-                await NativeMsg91OtpWidget.initializeWidget(MSG91_WIDGET_ID, MSG91_TOKEN_AUTH);
-                const verification = await NativeMsg91OtpWidget.verifyOTP({ reqId: msg91RequestId, otp: enteredOtp });
-                const accessToken = verification?.["access-token"];
+                const verification = await verifyMsg91Otp(msg91RequestId, enteredOtp);
+                const accessToken = verification?.["access-token"] || (verification?.type === "success" && typeof verification?.message === "string" && verification.message.startsWith("ey") ? verification.message : null);
                 if (verification?.type !== "success" || !accessToken) {
                     throw new Error(verification?.message || "OTP is invalid or expired. Please request a new OTP.");
                 }
@@ -233,6 +230,7 @@ export default function OTP() {
                 });
             }, 500);
         } catch (error) {
+            console.error("[OTP verify error]:", error);
             setApiError(getUserFacingError(error));
             setIsVerifying(false);
         }
@@ -252,15 +250,14 @@ export default function OTP() {
         try {
             setApiError("");
             if (isMsg91) {
-                if (!NativeMsg91OtpWidget || !msg91RequestId) {
+                if (!msg91RequestId) {
                     throw new Error("This OTP session is unavailable. Please start again.");
                 }
 
-                await NativeMsg91OtpWidget.initializeWidget(MSG91_WIDGET_ID, MSG91_TOKEN_AUTH);
-                const retry = await NativeMsg91OtpWidget.retryOTP({
-                    reqId: msg91RequestId,
-                    retryChannel: MSG91_RETRY_CHANNELS[channel] || MSG91_RETRY_CHANNELS.sms,
-                });
+                const retry = await retryMsg91Otp(
+                    msg91RequestId,
+                    MSG91_RETRY_CHANNELS[channel] || MSG91_RETRY_CHANNELS.sms
+                );
                 if (retry?.type !== "success") {
                     throw new Error(retry?.message || "MSG91 could not resend the OTP. Please try again.");
                 }
@@ -519,7 +516,6 @@ export default function OTP() {
                             <View style={styles.channelActions}>
                                 <TouchableOpacity onPress={() => handleResend("sms")}><Text style={styles.channelAction}>SMS</Text></TouchableOpacity>
                                 <TouchableOpacity onPress={() => handleResend("whatsapp")}><Text style={styles.channelAction}>WhatsApp</Text></TouchableOpacity>
-                                <TouchableOpacity onPress={() => handleResend("voice")}><Text style={styles.channelAction}>Voice call</Text></TouchableOpacity>
                             </View>
                         ) : null}
 

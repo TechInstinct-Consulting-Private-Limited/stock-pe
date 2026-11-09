@@ -13,7 +13,7 @@ function normalizeIndianMobile(value) {
 }
 
 function readConfiguration(env) {
-    const authKey = String(env.MSG91_AUTH_KEY || env.MSG91_AUTHKEY || "").trim();
+    const authKey = String(env.MSG91_AUTH_KEY || env.MSG91_AUTHKEY || env.MSG91_TOKEN_AUTH || "").trim();
     if (!authKey) {
         throw operationalError(503, "Mobile verification is not configured. Please try again later.");
     }

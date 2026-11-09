@@ -15,6 +15,9 @@ export default function AuthForm({
     activeTab,
 
     onRequestOtp,
+    isLoading = false,
+    apiError: externalApiError = "",
+    setApiError: externalSetApiError,
 
     mobile,
     setMobile,
@@ -35,9 +38,6 @@ export default function AuthForm({
     setAgreeTerms,
 }) {
 
-    // The MSG91 widget opens instantly, so there's no async loading state here.
-    const isLoading = false;
-    
     // ============================================
     // ERROR STATES
     // ============================================
@@ -54,7 +54,12 @@ export default function AuthForm({
     const [confirmPasswordError, setConfirmPasswordError] =
         useState("");
     const [termsError, setTermsError] = useState("");
-    const [apiError, setApiError] = useState("");
+    const [internalApiError, setInternalApiError] = useState("");
+    const apiError = externalApiError || internalApiError;
+    const setApiError = (msg) => {
+        setInternalApiError(msg);
+        externalSetApiError?.(msg);
+    };
 
 
     // ============================================

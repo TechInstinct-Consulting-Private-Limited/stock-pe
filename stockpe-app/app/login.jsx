@@ -24,16 +24,8 @@ import {
     signUp,
 } from "../src/services/api";
 import { clearPendingMsg91Password, setPendingMsg91Password } from "../src/services/authStorage";
-import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID } from "../src/services/msg91";
+import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID, Msg91WidgetClient } from "../src/services/msg91";
 import { completeMsg91Authentication, getPostAuthenticationRoute } from "../src/services/msg91Auth";
-
-// MSG91's widget is a native module. Expo Go does not include that module,
-// so keep the existing backend OTP route available for local Expo Go testing.
-const isExpoGo = Constants.appOwnership === "expo"
-    || Constants.executionEnvironment === "storeClient";
-const OTPWidget = !isExpoGo && Platform.OS !== "web"
-    ? require("@msg91comm/sendotp-react-native").OTPWidget
-    : null;
 
 export default function Login() {
 
@@ -48,6 +40,8 @@ export default function Login() {
         useState(false);
 
     const [agreeTerms, setAgreeTerms] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [apiError, setApiError] = useState("");
 
     const scrollRef = useRef(null);
 
@@ -69,37 +63,18 @@ export default function Login() {
 
     const openMsg91Widget = async () => {
         Keyboard.dismiss();
-
-        if (isExpoGo) {
-            requestBackendOtp();
-            return;
-        }
-
-        if (!OTPWidget) {
-            Alert.alert("Mobile verification unavailable", "This build does not include the MSG91 mobile verification module. Please install the latest review build.");
-            return;
-        }
+        setIsLoading(true);
+        setApiError("");
 
         try {
-            // Validates sign-in/sign-up requirements before an OTP is sent.
-            await prepareMsg91Otp(mobile, activeTab, password);
+            console.log("[Login] Sending OTP for", mobile);
+            // Validates sign-in/sign-up requirements and triggers MSG91 OTP from backend (avoids CORS)
+            const result = await prepareMsg91Otp(mobile, activeTab, password);
             await setPendingMsg91Password(password);
-            await OTPWidget.initializeWidget(MSG91_WIDGET_ID, MSG91_TOKEN_AUTH);
 
-            const result = await OTPWidget.sendOTP({ identifier: `91${mobile}` });
-            const accessToken = result?.["access-token"];
-            if (result?.type !== "success") {
-                throw new Error(result?.message || "MSG91 could not send an OTP. Please try again.");
-            }
-
-            if (accessToken && result?.invisibleVerified) {
-                await completeInvisibleMsg91Otp(accessToken);
-                return;
-            }
-
-            const requestId = String(result?.message || "");
+            const requestId = String(result?.requestId || "");
             if (!requestId) {
-                throw new Error("MSG91 did not return an OTP request. Please try again.");
+                throw new Error("MSG91 did not return an OTP request. Please check credentials or try again.");
             }
 
             router.push({
@@ -108,7 +83,12 @@ export default function Login() {
             });
         } catch (error) {
             await clearPendingMsg91Password();
-            Alert.alert("Unable to send OTP", getUserFacingError(error));
+            const message = getUserFacingError(error);
+            console.error("[Login] OTP error:", message);
+            setApiError(message);
+            Alert.alert("Unable to send OTP", message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -232,6 +212,9 @@ export default function Login() {
                                 activeTab={activeTab}
 
                                 onRequestOtp={openMsg91Widget}
+                                isLoading={isLoading}
+                                apiError={apiError}
+                                setApiError={setApiError}
 
                                 mobile={mobile}
                                 setMobile={setMobile}

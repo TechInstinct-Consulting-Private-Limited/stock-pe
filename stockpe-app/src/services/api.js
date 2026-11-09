@@ -19,10 +19,17 @@ function resolveApiBaseUrl() {
         const usesLoopbackHost =
             /^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(configuredUrl);
 
-        if (Platform.OS !== "web" && usesLoopbackHost && host) {
+        if (Platform.OS !== "web" && usesLoopbackHost && host && !host.includes("exp.direct")) {
             return configuredUrl.replace(
                 /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
                 `$1${host}`,
+            );
+        }
+
+        if (Platform.OS !== "web" && usesLoopbackHost) {
+            return configuredUrl.replace(
+                /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
+                "$110.126.15.237",
             );
         }
 
@@ -113,6 +120,20 @@ export function prepareMsg91Otp(mobile, purpose, password) {
     return request("/auth/msg91/start", {
         method: "POST",
         body: JSON.stringify({ mobile, purpose, password }),
+    });
+}
+
+export function verifyMsg91Otp(reqId, otp) {
+    return request("/auth/msg91/verify", {
+        method: "POST",
+        body: JSON.stringify({ reqId, otp }),
+    });
+}
+
+export function retryMsg91Otp(reqId, retryChannel) {
+    return request("/auth/msg91/retry", {
+        method: "POST",
+        body: JSON.stringify({ reqId, retryChannel }),
     });
 }
 
