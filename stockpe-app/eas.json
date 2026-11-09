@@ -18,9 +18,11 @@
         "EXPO_PUBLIC_MSG91_TOKEN_AUTH": "587477TIEvgOCzMA6aec04cbP1"
       },
       "android": {
+        "image": "latest",
         "buildType": "apk"
       },
       "ios": {
+        "image": "latest",
         "simulator": false
       }
     },
