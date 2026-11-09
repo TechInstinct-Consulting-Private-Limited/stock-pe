@@ -18,22 +18,22 @@ import AuthForm from "../src/components/AuthForm";
 import AuthHeader from "../src/components/AuthHeader.jsx";
 import AuthTabs from "../src/components/AuthTabs";
 import {
-    authenticateWithMsg91,
-    getOnboardingStatus,
     getUserFacingError,
+    prepareMsg91Otp,
     signIn,
     signUp,
 } from "../src/services/api";
-import { setAuthToken } from "../src/services/authStorage";
+import { clearPendingMsg91Password, setPendingMsg91Password } from "../src/services/authStorage";
 import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID } from "../src/services/msg91";
+import { completeMsg91Authentication, getPostAuthenticationRoute } from "../src/services/msg91Auth";
 
 // MSG91's widget is a native module. Expo Go does not include that module,
 // so keep the existing backend OTP route available for local Expo Go testing.
 const isExpoGo = Constants.appOwnership === "expo"
     || Constants.executionEnvironment === "storeClient";
-const DefaultWidget = isExpoGo
-    ? null
-    : require("@msg91comm/sendotp-react-native").DefaultWidget;
+const OTPWidget = !isExpoGo && Platform.OS !== "web"
+    ? require("@msg91comm/sendotp-react-native").OTPWidget
+    : null;
 
 export default function Login() {
 
@@ -49,17 +49,25 @@ export default function Login() {
 
     const [agreeTerms, setAgreeTerms] = useState(false);
 
-    // MSG91 OTP widget: handles the full send + verify flow in a modal.
-    const [showMsg91Widget, setShowMsg91Widget] = useState(false);
-
     const scrollRef = useRef(null);
 
 
     // ============================================
-    // MSG91 OTP WIDGET
+    // MSG91 OTP
     // ============================================
 
-    const openMsg91Widget = () => {
+    const completeInvisibleMsg91Otp = async (accessToken) => {
+        const onboarding = await completeMsg91Authentication({
+            mobile,
+            mode: activeTab,
+            password,
+            accessToken,
+        });
+        await clearPendingMsg91Password();
+        router.replace(getPostAuthenticationRoute({ onboarding, mobile, mode: activeTab }));
+    };
+
+    const openMsg91Widget = async () => {
         Keyboard.dismiss();
 
         if (isExpoGo) {
@@ -67,7 +75,41 @@ export default function Login() {
             return;
         }
 
-        setShowMsg91Widget(true);
+        if (!OTPWidget) {
+            Alert.alert("Mobile verification unavailable", "This build does not include the MSG91 mobile verification module. Please install the latest review build.");
+            return;
+        }
+
+        try {
+            // Validates sign-in/sign-up requirements before an OTP is sent.
+            await prepareMsg91Otp(mobile, activeTab, password);
+            await setPendingMsg91Password(password);
+            await OTPWidget.initializeWidget(MSG91_WIDGET_ID, MSG91_TOKEN_AUTH);
+
+            const result = await OTPWidget.sendOTP({ identifier: `91${mobile}` });
+            const accessToken = result?.["access-token"];
+            if (result?.type !== "success") {
+                throw new Error(result?.message || "MSG91 could not send an OTP. Please try again.");
+            }
+
+            if (accessToken && result?.invisibleVerified) {
+                await completeInvisibleMsg91Otp(accessToken);
+                return;
+            }
+
+            const requestId = String(result?.message || "");
+            if (!requestId) {
+                throw new Error("MSG91 did not return an OTP request. Please try again.");
+            }
+
+            router.push({
+                pathname: "/otp",
+                params: { mobile, mode: activeTab, provider: "msg91", requestId },
+            });
+        } catch (error) {
+            await clearPendingMsg91Password();
+            Alert.alert("Unable to send OTP", getUserFacingError(error));
+        }
     };
 
     const requestBackendOtp = async () => {
@@ -82,64 +124,6 @@ export default function Login() {
             Alert.alert("Unable to continue", getUserFacingError(error));
         }
     };
-
-    const handleMsg91Completion = async (result) => {
-        setShowMsg91Widget(false);
-
-        // result.success === true on verified OTP.
-        // result.message holds the access token, result.identifier the number.
-        if (result?.success) {
-            const rawMobile = String(result.identifier || mobile || "");
-            const cleanMobile = rawMobile.replace(/\D/g, "").slice(-10);
-
-            try {
-                const authData = await authenticateWithMsg91(
-                    cleanMobile,
-                    activeTab,
-                    password,
-                    result.message
-                );
-                if (!authData?.token) {
-                    throw new Error("Could not create your secure session. Please try again.");
-                }
-
-                await setAuthToken(authData.token);
-
-                // Route from the authenticated onboarding state rather than
-                // returning users through the legacy Aadhaar OTP screens.
-                const onboarding = await getOnboardingStatus();
-
-                if (onboarding?.onboardingCompleted) {
-                    router.replace("/(tabs)/events");
-                    return;
-                }
-
-                if (onboarding?.aadhaarKyc?.completed) {
-                    router.replace({
-                        pathname: "/usdt-wallet",
-                        params: {
-                            mobile: cleanMobile,
-                            mode: activeTab === "signup" ? "signup" : "signin",
-                            verified: "1",
-                        },
-                    });
-                    return;
-                }
-
-                router.replace({
-                    pathname: "/digilocker-kyc",
-                    params: {
-                        mobile: cleanMobile,
-                        mode: activeTab === "signup" ? "signup" : "signin",
-                    },
-                });
-            } catch (err) {
-                console.warn("MSG91 onboarding routing failed:", err?.message || err);
-                Alert.alert("Unable to continue", getUserFacingError(err));
-            }
-        }
-    };
-
 
     // ============================================
     // SIGN IN <-> SIGN UP
@@ -305,22 +289,6 @@ export default function Login() {
                 </View>
 
             </KeyboardAvoidingView>
-
-            {/* ========================================
-                MSG91 OTP WIDGET (drop-in modal)
-                ======================================== */}
-
-            {DefaultWidget ? (
-                <DefaultWidget
-                    visible={showMsg91Widget}
-                    onClose={() => setShowMsg91Widget(false)}
-                    onCompletion={handleMsg91Completion}
-                    widgetId={MSG91_WIDGET_ID}
-                    tokenAuth={MSG91_TOKEN_AUTH}
-                    theme="light"
-                    primaryColor="#00C987"
-                />
-            ) : null}
 
         </SafeAreaView>
     );

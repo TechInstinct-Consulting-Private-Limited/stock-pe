@@ -16,23 +16,29 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Constants from "expo-constants";
 import {
     getOnboardingStatus,
     getUserFacingError,
     resendOtp,
     verifyOtp,
 } from "../src/services/api";
-import { setAuthToken } from "../src/services/authStorage";
+import { clearPendingMsg91Password, getPendingMsg91Password, setAuthToken } from "../src/services/authStorage";
+import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID } from "../src/services/msg91";
+import { completeMsg91Authentication, getPostAuthenticationRoute } from "../src/services/msg91Auth";
 import { registerCurrentDeviceForPush } from "../src/services/pushNotifications";
 
-// Backend review OTP and production mobile OTPs use the standard six digits.
-// The MSG91 widget completes its own verification, so this screen is used by
-// the backend OTP fallback only (including Expo Go local testing).
+// Both the MSG91 custom UI flow and the Expo Go backend fallback use six digits.
 const OTP_LENGTH = 6;
+const isExpoGo = Constants.appOwnership === "expo" || Constants.executionEnvironment === "storeClient";
+const NativeMsg91OtpWidget = !isExpoGo && Platform.OS !== "web"
+    ? require("@msg91comm/sendotp-react-native").OTPWidget
+    : null;
+const MSG91_RETRY_CHANNELS = { sms: 11, whatsapp: 12, voice: 4 };
 
 export default function OTP() {
 
-    const { mobile, mode } = useLocalSearchParams();
+    const { mobile, mode, provider, requestId } = useLocalSearchParams();
     const { width, height } = useWindowDimensions();
     const isCompact = width < 600 || height < 800;
 
@@ -40,7 +46,9 @@ export default function OTP() {
         Array(OTP_LENGTH).fill("")
     );
 
-    const [seconds, setSeconds] = useState(23);
+    const isMsg91 = provider === "msg91";
+    const [seconds, setSeconds] = useState(isMsg91 ? 10 : 23);
+    const [msg91RequestId, setMsg91RequestId] = useState(String(requestId || ""));
 
     const inputRefs = useRef([]);
 
@@ -165,15 +173,35 @@ export default function OTP() {
         setApiError("");
 
         try {
-            const result = await verifyOtp(
-                String(mobile),
-                enteredOtp,
-                mode === "signin" ? "signin" : "signup"
-            );
+            if (isMsg91) {
+                if (!NativeMsg91OtpWidget || !msg91RequestId) {
+                    throw new Error("This OTP session is unavailable. Please start again.");
+                }
+
+                const password = await getPendingMsg91Password();
+                if (!password) {
+                    throw new Error("Your verification session expired. Please start again.");
+                }
+
+                await NativeMsg91OtpWidget.initializeWidget(MSG91_WIDGET_ID, MSG91_TOKEN_AUTH);
+                const verification = await NativeMsg91OtpWidget.verifyOTP({ reqId: msg91RequestId, otp: enteredOtp });
+                const accessToken = verification?.["access-token"];
+                if (verification?.type !== "success" || !accessToken) {
+                    throw new Error(verification?.message || "OTP is invalid or expired. Please request a new OTP.");
+                }
+
+                const onboarding = await completeMsg91Authentication({ mobile, mode, password, accessToken });
+                await clearPendingMsg91Password();
+                setIsVerifying(false);
+                setIsVerified(true);
+                setTimeout(() => router.replace(getPostAuthenticationRoute({ onboarding, mobile, mode })), 500);
+                return;
+            }
+
+            const result = await verifyOtp(String(mobile), enteredOtp, mode === "signin" ? "signin" : "signup");
 
             if (result?.token) {
                 await setAuthToken(result.token);
-                // Push permission/token errors must never interrupt sign-in.
                 registerCurrentDeviceForPush().catch(() => {});
             }
             setIsVerifying(false);
@@ -215,7 +243,7 @@ export default function OTP() {
        RESEND OTP
     ========================================= */
 
-    const handleResend = async () => {
+    const handleResend = async (channel = "sms") => {
 
         if (seconds > 0) {
             return;
@@ -223,6 +251,26 @@ export default function OTP() {
 
         try {
             setApiError("");
+            if (isMsg91) {
+                if (!NativeMsg91OtpWidget || !msg91RequestId) {
+                    throw new Error("This OTP session is unavailable. Please start again.");
+                }
+
+                await NativeMsg91OtpWidget.initializeWidget(MSG91_WIDGET_ID, MSG91_TOKEN_AUTH);
+                const retry = await NativeMsg91OtpWidget.retryOTP({
+                    reqId: msg91RequestId,
+                    retryChannel: MSG91_RETRY_CHANNELS[channel] || MSG91_RETRY_CHANNELS.sms,
+                });
+                if (retry?.type !== "success") {
+                    throw new Error(retry?.message || "MSG91 could not resend the OTP. Please try again.");
+                }
+                if (retry?.message) setMsg91RequestId(String(retry.message));
+                setOtp(Array(OTP_LENGTH).fill(""));
+                setSeconds(10);
+                inputRefs.current[0]?.focus();
+                return;
+            }
+
             await resendOtp(
                 String(mobile),
                 mode === "signin" ? "signin" : "signup"
@@ -245,6 +293,7 @@ export default function OTP() {
     const handleBack = () => {
 
         Keyboard.dismiss();
+        if (isMsg91) clearPendingMsg91Password().catch(() => {});
         router.replace("/login");
 
     };
@@ -435,7 +484,7 @@ export default function OTP() {
 
                         <TouchableOpacity
                             disabled={seconds > 0}
-                            onPress={handleResend}
+                            onPress={() => handleResend("sms")}
                             accessibilityRole="button"
                             accessibilityState={{
                                 disabled: seconds > 0,
@@ -465,6 +514,14 @@ export default function OTP() {
                             </Text>
 
                         </TouchableOpacity>
+
+                        {isMsg91 && seconds === 0 ? (
+                            <View style={styles.channelActions}>
+                                <TouchableOpacity onPress={() => handleResend("sms")}><Text style={styles.channelAction}>SMS</Text></TouchableOpacity>
+                                <TouchableOpacity onPress={() => handleResend("whatsapp")}><Text style={styles.channelAction}>WhatsApp</Text></TouchableOpacity>
+                                <TouchableOpacity onPress={() => handleResend("voice")}><Text style={styles.channelAction}>Voice call</Text></TouchableOpacity>
+                            </View>
+                        ) : null}
 
                     </View>
 
@@ -682,6 +739,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 28,
     },
+    channelActions: { flexDirection: "row", gap: 16, marginTop: 12, justifyContent: "center" },
+    channelAction: { color: "#059669", fontSize: 13, fontWeight: "800", textDecorationLine: "underline" },
 
     /* ================= PHONE ================= */
     phoneIconContainer: {

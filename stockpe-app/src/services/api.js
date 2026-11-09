@@ -109,6 +109,13 @@ export function authenticateWithMsg91(mobile, purpose, password, msg91Token) {
     });
 }
 
+export function prepareMsg91Otp(mobile, purpose, password) {
+    return request("/auth/msg91/start", {
+        method: "POST",
+        body: JSON.stringify({ mobile, purpose, password }),
+    });
+}
+
 export function resendOtp(mobile, purpose) {
     return request("/auth/resend-otp", {
         method: "POST",

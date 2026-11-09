@@ -256,8 +256,22 @@ async function createMsg91Session(req, res, next) {
         const { mobile, password, purpose, msg91Token } = req.body;
         const cleanMobile = String(mobile || "").replace(/\D/g, "").slice(-10);
 
-        if (!validateMobile(cleanMobile)) {
-            return validationError(res, "Enter a valid 10-digit Indian mobile number");
+        if (!validateMobile(cleanMobile) || !validatePassword(password) || !["signup", "signin"].includes(purpose)) {
+            return validationError(res, "Invalid mobile verification request");
+        }
+
+        let userResult = await pool.query(
+            "SELECT id, mobile, password_hash, mobile_verified FROM users WHERE mobile = $1",
+            [cleanMobile]
+        );
+        let user = userResult.rows[0];
+
+        if (purpose === "signin") {
+            if (!user || !user.mobile_verified || !(await bcrypt.compare(password, user.password_hash))) {
+                return res.status(401).json({ success: false, message: "Invalid mobile number or password" });
+            }
+        } else if (user?.mobile_verified) {
+            return res.status(409).json({ success: false, message: "An account already exists for this mobile number" });
         }
 
         // Never trust a client-side "success" callback alone. MSG91 must
@@ -265,26 +279,18 @@ async function createMsg91Session(req, res, next) {
         const msg91 = new Msg91AccessTokenService();
         await msg91.verify({ accessToken: msg91Token, expectedMobile: cleanMobile });
 
-        let userResult = await pool.query(
-            "SELECT id, mobile, mobile_verified FROM users WHERE mobile = $1",
-            [cleanMobile]
-        );
-        let user = userResult.rows[0];
-
-        if (!user) {
-            const passwordHash = password && password.length >= 8
-                ? await bcrypt.hash(password, 12)
-                : await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 12);
-
+        if (purpose === "signup" && !user) {
+            const passwordHash = await bcrypt.hash(password, 12);
             const insertResult = await pool.query(
                 "INSERT INTO users (mobile, password_hash, mobile_verified) VALUES ($1, $2, TRUE) RETURNING id, mobile",
                 [cleanMobile, passwordHash]
             );
             user = insertResult.rows[0];
-        } else {
+        } else if (purpose === "signup") {
+            const passwordHash = await bcrypt.hash(password, 12);
             await pool.query(
-                "UPDATE users SET mobile_verified = TRUE, updated_at = NOW() WHERE id = $1",
-                [user.id]
+                "UPDATE users SET password_hash = $1, mobile_verified = TRUE, updated_at = NOW() WHERE id = $2",
+                [passwordHash, user.id]
             );
         }
 
@@ -313,4 +319,35 @@ async function createMsg91Session(req, res, next) {
     }
 }
 
-module.exports = { createMsg91Session, resendOtp, signIn, signUp, verifyOtp };
+async function prepareMsg91Otp(req, res, next) {
+    try {
+        const { mobile, password, purpose } = req.body;
+        const cleanMobile = String(mobile || "").replace(/\D/g, "").slice(-10);
+
+        if (!validateMobile(cleanMobile) || !validatePassword(password) || !["signup", "signin"].includes(purpose)) {
+            return validationError(res, "Invalid mobile verification request");
+        }
+
+        const result = await pool.query(
+            "SELECT password_hash, mobile_verified FROM users WHERE mobile = $1",
+            [cleanMobile]
+        );
+        const user = result.rows[0];
+
+        if (purpose === "signup" && user?.mobile_verified) {
+            return res.status(409).json({ success: false, message: "An account already exists for this mobile number" });
+        }
+
+        if (purpose === "signin") {
+            if (!user || !user.mobile_verified || !(await bcrypt.compare(password, user.password_hash))) {
+                return res.status(401).json({ success: false, message: "Invalid mobile number or password" });
+            }
+        }
+
+        return res.status(200).json({ success: true, message: "You can verify this mobile number." });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+module.exports = { createMsg91Session, prepareMsg91Otp, resendOtp, signIn, signUp, verifyOtp };
