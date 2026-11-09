@@ -19,6 +19,7 @@ import AuthHeader from "../src/components/AuthHeader.jsx";
 import AuthTabs from "../src/components/AuthTabs";
 import {
     authenticateWithMsg91,
+    getOnboardingStatus,
     getUserFacingError,
     signIn,
     signUp,
@@ -98,20 +99,44 @@ export default function Login() {
                     password,
                     result.message
                 );
-                if (authData?.token) {
-                    await setAuthToken(authData.token);
+                if (!authData?.token) {
+                    throw new Error("Could not create your secure session. Please try again.");
                 }
-            } catch (err) {
-                console.warn("Backend session creation warning:", err?.message || err);
-            }
 
-            router.replace({
-                pathname: "/aadhaar",
-                params: {
-                    mobile: cleanMobile,
-                    mode: activeTab === "signup" ? "signup" : "signin",
-                },
-            });
+                await setAuthToken(authData.token);
+
+                // Route from the authenticated onboarding state rather than
+                // returning users through the legacy Aadhaar OTP screens.
+                const onboarding = await getOnboardingStatus();
+
+                if (onboarding?.onboardingCompleted) {
+                    router.replace("/(tabs)/events");
+                    return;
+                }
+
+                if (onboarding?.aadhaarKyc?.completed) {
+                    router.replace({
+                        pathname: "/usdt-wallet",
+                        params: {
+                            mobile: cleanMobile,
+                            mode: activeTab === "signup" ? "signup" : "signin",
+                            verified: "1",
+                        },
+                    });
+                    return;
+                }
+
+                router.replace({
+                    pathname: "/digilocker-kyc",
+                    params: {
+                        mobile: cleanMobile,
+                        mode: activeTab === "signup" ? "signup" : "signin",
+                    },
+                });
+            } catch (err) {
+                console.warn("MSG91 onboarding routing failed:", err?.message || err);
+                Alert.alert("Unable to continue", getUserFacingError(err));
+            }
         }
     };
 
