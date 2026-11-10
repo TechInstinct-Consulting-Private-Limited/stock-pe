@@ -16,7 +16,6 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Constants from "expo-constants";
 import {
     getOnboardingStatus,
     getUserFacingError,
@@ -26,7 +25,6 @@ import {
     retryMsg91Otp,
 } from "../src/services/api";
 import { clearPendingMsg91Password, getPendingMsg91Password, setAuthToken } from "../src/services/authStorage";
-import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID, Msg91WidgetClient } from "../src/services/msg91";
 import { completeMsg91Authentication, getPostAuthenticationRoute } from "../src/services/msg91Auth";
 import { registerCurrentDeviceForPush } from "../src/services/pushNotifications";
 

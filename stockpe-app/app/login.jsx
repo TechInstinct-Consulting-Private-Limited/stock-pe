@@ -1,4 +1,3 @@
-import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 
@@ -20,12 +19,8 @@ import AuthTabs from "../src/components/AuthTabs";
 import {
     getUserFacingError,
     prepareMsg91Otp,
-    signIn,
-    signUp,
 } from "../src/services/api";
 import { clearPendingMsg91Password, setPendingMsg91Password } from "../src/services/authStorage";
-import { MSG91_TOKEN_AUTH, MSG91_WIDGET_ID, Msg91WidgetClient } from "../src/services/msg91";
-import { completeMsg91Authentication, getPostAuthenticationRoute } from "../src/services/msg91Auth";
 
 export default function Login() {
 
@@ -49,17 +44,6 @@ export default function Login() {
     // ============================================
     // MSG91 OTP
     // ============================================
-
-    const completeInvisibleMsg91Otp = async (accessToken) => {
-        const onboarding = await completeMsg91Authentication({
-            mobile,
-            mode: activeTab,
-            password,
-            accessToken,
-        });
-        await clearPendingMsg91Password();
-        router.replace(getPostAuthenticationRoute({ onboarding, mobile, mode: activeTab }));
-    };
 
     const openMsg91Widget = async () => {
         Keyboard.dismiss();
@@ -89,19 +73,6 @@ export default function Login() {
             Alert.alert("Unable to send OTP", message);
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const requestBackendOtp = async () => {
-        try {
-            const requestOtp = activeTab === "signup" ? signUp : signIn;
-            await requestOtp(mobile, password);
-            router.push({
-                pathname: "/otp",
-                params: { mobile, mode: activeTab },
-            });
-        } catch (error) {
-            Alert.alert("Unable to continue", getUserFacingError(error));
         }
     };
 
