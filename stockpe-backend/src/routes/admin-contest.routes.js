@@ -4,6 +4,7 @@ const { requireAdmin } = require("../middleware/adminAuth");
 const controller = require("../controllers/admin-contest.controller");
 
 router.use(requireAuth, requireAdmin());
+router.get("/dashboard/overview", controller.dashboardOverview);
 router.get("/users", controller.listUsers);
 router.get("/wallets", controller.listWallets);
 router.get("/users/:userId/overview", controller.userOverview);
