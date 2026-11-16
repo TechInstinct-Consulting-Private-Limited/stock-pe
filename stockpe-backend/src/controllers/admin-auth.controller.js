@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
 const pool = require("../config/database");
-const { issueSession } = require("../services/auth-session.service");
+const { issueSession, refreshAdminSession } = require("../services/auth-session.service");
 
 function publicError(statusCode, message) {
     const error = new Error(message);
@@ -85,4 +85,13 @@ async function login(req, res, next) {
     }
 }
 
-module.exports = { login };
+async function refresh(req, res, next) {
+    try {
+        const session = await refreshAdminSession(req.body || {});
+        return res.status(200).json({ success: true, ...session });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+module.exports = { login, refresh };

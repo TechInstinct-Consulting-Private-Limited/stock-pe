@@ -17,7 +17,7 @@ const {
 } = require("../controllers/auth.controller");
 const { requireAuth } = require("../middleware/auth");
 const { setupMpin, unlockWithMpin, refreshAuthSession, logoutCurrentDevice, revokeCurrentDevice } = require("../controllers/mpin.controller");
-const { login: adminLogin } = require("../controllers/admin-auth.controller");
+const { login: adminLogin, refresh: refreshAdminLogin } = require("../controllers/admin-auth.controller");
 
 const router = express.Router();
 
@@ -106,6 +106,7 @@ router.use(authIpLimiter);
 // Admin Console sign-in is intentionally separate from the mobile app's
 // password/OTP/MPIN journey. It never sends an OTP.
 router.post("/admin/login", mobileContinueLimiter, adminLogin);
+router.post("/admin/refresh", mpinLimiter, refreshAdminLogin);
 router.post("/signup", otpRequestLimiter, otpRequestMobileIpLimiter, signUp);
 router.post("/signin", otpRequestLimiter, otpRequestMobileIpLimiter, signIn);
 router.post("/mobile/continue", mobileContinueLimiter, continueWithMobile);

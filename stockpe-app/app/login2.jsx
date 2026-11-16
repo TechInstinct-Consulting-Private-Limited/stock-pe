@@ -95,7 +95,7 @@ export default function Login() {
             </Text>
 
             <Text style={styles.subtitle}>
-              India's #1 Stock Prediction Market
+              India&apos;s #1 Stock Prediction Market
             </Text>
 
             {/* Stats */}

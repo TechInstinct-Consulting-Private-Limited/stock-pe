@@ -95,6 +95,32 @@ async function refreshSession({ refreshToken, deviceId }) {
     return issueSession({ userId: session.user_id, mobile: session.mobile, deviceId });
 }
 
+// Admin Console sessions are browser sessions, not mobile-device sessions.
+// Keep their refresh path separate so it never depends on an MPIN device row.
+async function refreshAdminSession({ refreshToken }) {
+    if (typeof refreshToken !== "string" || !refreshToken) {
+        throw operationalError(401, "Your administrator session has expired. Please sign in again.");
+    }
+
+    const sessionResult = await pool.query(
+        `SELECT session.id, session.user_id, app_user.mobile
+           FROM sessions session
+           JOIN users app_user ON app_user.id = session.user_id
+           JOIN admin_accounts admin_account ON admin_account.user_id = session.user_id
+          WHERE session.refresh_token_hash = $1
+            AND session.device_id IS NULL
+            AND session.revoked_at IS NULL
+            AND session.refresh_expires_at > NOW()
+          LIMIT 1`,
+        [hashRefreshToken(refreshToken)],
+    );
+    const session = sessionResult.rows[0];
+    if (!session) throw operationalError(401, "Your administrator session has expired. Please sign in again.");
+
+    await pool.query("UPDATE sessions SET revoked_at = NOW() WHERE id = $1", [session.id]);
+    return issueSession({ userId: session.user_id, mobile: session.mobile });
+}
+
 async function requireActiveSession(tokenJti) {
     const result = await pool.query(
         "SELECT id FROM sessions WHERE token_jti = $1 AND revoked_at IS NULL AND expires_at > NOW() LIMIT 1",
@@ -106,6 +132,7 @@ async function requireActiveSession(tokenJti) {
 module.exports = {
     getJwtSecret,
     issueSession,
+    refreshAdminSession,
     refreshSession,
     requireActiveSession,
     operationalError,

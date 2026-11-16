@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 const MPIN_LENGTH = 6;
 
@@ -28,11 +28,20 @@ export default function MpinInput({
         if (digits.length === MPIN_LENGTH) onComplete?.(digits);
     };
 
+    // Android can leave an invisible TextInput focused after the user dismisses
+    // the keypad. Blur first, then focus again, so tapping the PIN boxes always
+    // reopens the numeric keyboard.
+    const focusInput = () => {
+        Keyboard.dismiss();
+        resolvedInputRef.current?.blur?.();
+        setTimeout(() => resolvedInputRef.current?.focus?.(), 50);
+    };
+
     return (
         <Pressable
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel}
-            onPress={() => resolvedInputRef.current?.focus()}
+            onPress={focusInput}
             onLayout={(event) => {
                 const available = event.nativeEvent.layout.width;
                 setBoxWidth(Math.max(38, Math.min(54, Math.floor((available - 40) / MPIN_LENGTH))));

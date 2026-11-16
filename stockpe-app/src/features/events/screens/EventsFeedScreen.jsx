@@ -30,7 +30,6 @@ export default function EventsFeedScreen({ initialFilter = "ALL" }) {
   const [isLoading, setIsLoading] = useState(true);
   const [clock, setClock] = useState(Date.now());
   const [activeCount, setActiveCount] = useState(0);
-  const [showingUpcomingFallback, setShowingUpcomingFallback] = useState(false);
 
   const loadDashboard = useCallback(async ({ showLoading = true, filter = activeFilter } = {}) => {
     if (showLoading) setIsLoading(true);
@@ -38,34 +37,20 @@ export default function EventsFeedScreen({ initialFilter = "ALL" }) {
 
     try {
       const response = await fetchDashboard(filter);
-      const hasOpenContests = Array.isArray(response?.contests) && response.contests.length > 0;
-
-      if (filter === "OPEN" && !hasOpenContests) {
-        const upcomingResponse = await fetchDashboard("SOON");
-        setDashboard(upcomingResponse);
-        setShowingUpcomingFallback(true);
-        setActiveFilter("SOON");
-        return;
-      }
-
       setDashboard(response);
-      if (!(filter === "SOON" && showingUpcomingFallback)) {
-        setShowingUpcomingFallback(false);
-      }
-      if (filter === "OPEN" && activeFilter !== "OPEN") setActiveFilter("OPEN");
     } catch (_error) {
       setError("Dashboard data is unavailable. Please try again.");
     } finally {
       if (showLoading) setIsLoading(false);
     }
-  }, [activeFilter, showingUpcomingFallback]);
+  }, [activeFilter]);
 
   const refreshDashboard = useCallback(async () => {
     await loadDashboard({
       showLoading: false,
-      filter: showingUpcomingFallback ? "OPEN" : activeFilter,
+      filter: activeFilter,
     });
-  }, [activeFilter, loadDashboard, showingUpcomingFallback]);
+  }, [activeFilter, loadDashboard]);
 
   const refreshActiveCount = useCallback(async () => {
     try {
@@ -195,21 +180,10 @@ export default function EventsFeedScreen({ initialFilter = "ALL" }) {
           tabs={DASHBOARD_TABS}
           activeTab={activeFilter}
           onTabChange={(filter) => {
-            setShowingUpcomingFallback(false);
             setActiveFilter(filter);
           }}
           style={{ marginBottom: spacing.md }}
         />
-
-        {!isLoading && !error && showingUpcomingFallback && (
-          <View style={styles.upcomingNotice}>
-            <Ionicons name="time-outline" size={19} color={colors.primary} />
-            <View style={styles.upcomingNoticeCopy}>
-              <Text style={styles.upcomingNoticeTitle}>No active predictions right now</Text>
-              <Text style={styles.upcomingNoticeText}>Upcoming contests are shown below. You can join when entries open.</Text>
-            </View>
-          </View>
-        )}
 
         {/* Event Cards List */}
         <View style={styles.list}>
@@ -231,7 +205,7 @@ export default function EventsFeedScreen({ initialFilter = "ALL" }) {
 
           {!isLoading && !error && feedCards.length === 0 && (
             <View style={styles.stateCard}>
-              <Text style={styles.stateText}>No demo contests are available in this tab.</Text>
+              <Text style={styles.stateText}>{activeFilter === "OPEN" ? "No active predictions are open right now. Check SOON for upcoming contests." : "No demo contests are available in this tab."}</Text>
             </View>
           )}
 
