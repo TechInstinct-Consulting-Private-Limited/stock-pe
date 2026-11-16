@@ -59,6 +59,14 @@ export default function ProfileScreen() {
       route: "/profile/kyc",
     },
     {
+      id: "tutorials",
+      title: "Help & Tutorials",
+      icon: "play-circle-outline",
+      iconColor: "#0F766E",
+      bgColor: "#F0FDFA",
+      route: "/profile/tutorials",
+    },
+    {
       id: "refer",
       title: "Refer & Earn (Coming soon)",
       icon: "gift-outline",
