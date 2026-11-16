@@ -91,7 +91,7 @@ export default function Login() {
             {/* Brand */}
 
             <Text style={styles.brand}>
-              STOCKPE
+              MARKETPE
             </Text>
 
             <Text style={styles.subtitle}>

@@ -10,6 +10,13 @@ export const profileTutorials = [
     accent: "#00A971",
     background: "#ECFDF5",
     videoUrl: null,
+    duration: "2 min",
+    steps: [
+      "Open the Events tab and choose an OPEN prediction contest.",
+      "Review the contest timing, entry amount, prize distribution and rules.",
+      "Tap Join Contest, enter one prediction value and submit it before the entry deadline.",
+      "Track the result in My Predictions after the contest is settled.",
+    ],
   },
   {
     id: "demo-usdt",
@@ -19,6 +26,13 @@ export const profileTutorials = [
     accent: "#2563EB",
     background: "#EFF6FF",
     videoUrl: null,
+    duration: "2 min",
+    steps: [
+      "Demo USDT is a simulated, non-withdrawable balance for the review environment.",
+      "A contest entry amount is debited when a prediction is submitted.",
+      "A reward is credited automatically after a settled contest when your rank is eligible.",
+      "Review every entry and reward in Wallet and Transaction History.",
+    ],
   },
   {
     id: "winners-rankings",
@@ -28,6 +42,13 @@ export const profileTutorials = [
     accent: "#D97706",
     background: "#FFFBEB",
     videoUrl: null,
+    duration: "3 min",
+    steps: [
+      "The system records your prediction before the prediction lock time.",
+      "After the scheduled market value is captured, predictions are ranked by closeness.",
+      "Prize ranks and percentages are applied from the contest Prize tab.",
+      "Equal predictions share the applicable rank reward according to the configured rules.",
+    ],
   },
   {
     id: "kyc",
@@ -37,6 +58,13 @@ export const profileTutorials = [
     accent: "#7C3AED",
     background: "#F5F3FF",
     videoUrl: null,
+    duration: "2 min",
+    steps: [
+      "Choose Continue with DigiLocker from the KYC screen.",
+      "Complete identity consent and verification on the secure provider journey.",
+      "Return to MarketPe and wait for the verification status to refresh.",
+      "You may skip the KYC step in the review environment where permitted.",
+    ],
   },
   {
     id: "wallet-history",
@@ -46,5 +74,12 @@ export const profileTutorials = [
     accent: "#0891B2",
     background: "#ECFEFF",
     videoUrl: null,
+    duration: "2 min",
+    steps: [
+      "Open Wallet to view your current Demo USDT balance.",
+      "Open Transaction History to see entries, rewards and starting balance records.",
+      "Each contest entry is shown as a debit and each eligible reward as a credit.",
+      "Demo USDT remains separate from a future real wallet integration.",
+    ],
   },
 ];
