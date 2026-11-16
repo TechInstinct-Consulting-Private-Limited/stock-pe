@@ -4,6 +4,7 @@ export { default as MyPredictionsScreen } from "./screens/MyPredictionsScreen";
 export { default as MyWinningsScreen } from "./screens/MyWinningsScreen";
 export { default as NotificationsScreen } from "./screens/NotificationsScreen";
 export { default as TutorialsScreen } from "./screens/TutorialsScreen";
+export { default as TutorialDetailScreen } from "./screens/TutorialDetailScreen";
 
 export * from "./hooks/useProfileKyc";
 export * from "./hooks/useUserPredictions";

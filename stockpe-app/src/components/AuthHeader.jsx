@@ -13,7 +13,7 @@ export default function AuthHeader() {
 
             {/* Brand */}
             <Text style={styles.brand}>
-                STOCKPE
+                MARKETPE
             </Text>
 
             <View style={styles.badgePill}>

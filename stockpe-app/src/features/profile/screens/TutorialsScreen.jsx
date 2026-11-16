@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,20 +20,10 @@ export default function TutorialsScreen() {
     return () => { active = false; };
   }, []);
 
-  const openTutorial = async (tutorial) => {
-    if (!tutorial.videoUrl) {
-      Alert.alert(
-        "Video coming soon",
-        "This MarketPe tutorial will be available here soon. Tutorial links can be updated by the admin without changing this screen.",
-      );
-      return;
-    }
-
-    try {
-      await Linking.openURL(tutorial.videoUrl);
-    } catch (_error) {
-      Alert.alert("Unable to open video", "Please try again in a moment.");
-    }
+  const openTutorial = (tutorial) => {
+    const key = tutorial.key || tutorial.id;
+    if (!key) return;
+    router.push({ pathname: "/profile/tutorial/[key]", params: { key } });
   };
 
   return (
@@ -59,7 +49,7 @@ export default function TutorialsScreen() {
           <Text style={styles.sectionLabel}>GET STARTED</Text>
           {loading ? <ActivityIndicator color="#00A971" style={styles.loader} /> : null}
           {tutorials.map((tutorial) => (
-            <TouchableOpacity key={tutorial.id} style={styles.card} activeOpacity={0.78} onPress={() => openTutorial(tutorial)}>
+            <TouchableOpacity key={tutorial.key || tutorial.id} style={styles.card} activeOpacity={0.78} onPress={() => openTutorial(tutorial)}>
               <View style={[styles.iconBox, { backgroundColor: tutorial.background }]}>
                 <Ionicons name={tutorial.icon} size={22} color={tutorial.accent} />
               </View>
