@@ -8,6 +8,7 @@ router.get("/predictions", controller.predictions);
 router.get("/winnings", controller.winnings);
 router.get("/demo-payouts", controller.demoPayouts);
 router.get("/notifications", controller.notifications);
+router.get("/tutorials", controller.tutorials);
 router.get("/notifications/preferences", controller.notificationPreferences);
 router.put("/notifications/preferences", controller.updateNotificationPreferences);
 router.post("/notifications/push-token", controller.registerPushToken);

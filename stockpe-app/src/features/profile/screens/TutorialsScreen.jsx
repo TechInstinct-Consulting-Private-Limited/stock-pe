@@ -1,12 +1,24 @@
-import React from "react";
-import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { profileTutorials } from "../content/tutorials";
+import { fetchProfileTutorials } from "../services/profileService";
 
 export default function TutorialsScreen() {
   const router = useRouter();
+  const [tutorials, setTutorials] = useState(profileTutorials);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetchProfileTutorials().then((response) => {
+      if (active && response.success && response.data.length) setTutorials(response.data);
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
 
   const openTutorial = async (tutorial) => {
     if (!tutorial.videoUrl) {
@@ -45,7 +57,8 @@ export default function TutorialsScreen() {
           </View>
 
           <Text style={styles.sectionLabel}>GET STARTED</Text>
-          {profileTutorials.map((tutorial, index) => (
+          {loading ? <ActivityIndicator color="#00A971" style={styles.loader} /> : null}
+          {tutorials.map((tutorial) => (
             <TouchableOpacity key={tutorial.id} style={styles.card} activeOpacity={0.78} onPress={() => openTutorial(tutorial)}>
               <View style={[styles.iconBox, { backgroundColor: tutorial.background }]}>
                 <Ionicons name={tutorial.icon} size={22} color={tutorial.accent} />
@@ -87,6 +100,7 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 14, fontWeight: "900", color: "#064E3B" },
   heroText: { marginTop: 3, fontSize: 11.5, lineHeight: 16, color: "#047857" },
   sectionLabel: { marginBottom: 9, fontSize: 11, fontWeight: "900", letterSpacing: 0.8, color: "#64748B" },
+  loader: { marginVertical: 20 },
   card: { flexDirection: "row", alignItems: "center", padding: 14, gap: 11, borderRadius: 18, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", marginBottom: 10 },
   iconBox: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   cardCopy: { flex: 1, minWidth: 0 },

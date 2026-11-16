@@ -17,6 +17,8 @@ router.get("/notifications", controller.listNotifications);
 router.get("/notifications/metrics", controller.notificationMetrics);
 router.get("/notifications/templates", controller.notificationTemplates);
 router.post("/notifications/campaigns", controller.createNotificationCampaign);
+router.get("/tutorials", controller.listTutorials);
+router.put("/tutorials/:key", controller.updateTutorial);
 router.get("/contests", controller.list);
 router.get("/contests/:publicId/details", controller.details);
 router.post("/contests", controller.create);

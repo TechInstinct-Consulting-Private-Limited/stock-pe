@@ -1,6 +1,7 @@
 const pool = require("../config/database");
 const { getUserTestPayouts } = require("./demo-contest-test-payout.service");
 const { registerPushToken } = require("./profile-notification.service");
+const tutorials = require("./profile-tutorial.service");
 
 function toNumber(value) { return Number(value || 0); }
 
@@ -67,6 +68,10 @@ async function listNotifications(userId) {
     return result.rows;
 }
 
+async function listTutorials() {
+    return tutorials.listPublishedTutorials();
+}
+
 async function markNotificationRead(userId, notificationId) {
     const result = await pool.query(`UPDATE profile_notifications SET read_at=COALESCE(read_at, NOW()) WHERE id=$1 AND user_id=$2 RETURNING id`, [notificationId, userId]);
     if (!result.rowCount) throw Object.assign(new Error("Notification was not found"), { statusCode: 404, isOperational: true });
@@ -91,4 +96,4 @@ async function updateNotificationPreferences(userId, input = {}) {
     return result.rows[0];
 }
 
-module.exports = { getDemoPayouts, getMe, getPredictions, getWinnings, getNotificationPreferences, listNotifications, markNotificationRead, markAllNotificationsRead, registerPushToken, updateNotificationPreferences };
+module.exports = { getDemoPayouts, getMe, getPredictions, getWinnings, getNotificationPreferences, listNotifications, listTutorials, markNotificationRead, markAllNotificationsRead, registerPushToken, updateNotificationPreferences };

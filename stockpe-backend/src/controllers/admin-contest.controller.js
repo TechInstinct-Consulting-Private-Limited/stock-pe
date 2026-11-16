@@ -3,6 +3,7 @@ const payouts = require("../services/demo-contest-test-payout.service");
 const users = require("../services/admin-user.service");
 const notifications = require("../services/admin-notification.service");
 const dashboard = require("../services/admin-dashboard.service");
+const tutorials = require("../services/profile-tutorial.service");
 
 function respond(handler) {
     return async (req, res, next) => {
@@ -37,5 +38,7 @@ const notificationMetrics = respond(async () => ({ metrics: await notifications.
 const notificationTemplates = respond(async () => ({ templates: await notifications.listTemplates() }));
 const createNotificationCampaign = respond(async (req) => ({ campaign: await notifications.createCampaign({ adminUserId: req.admin.userId, input: req.body || {} }) }));
 const dashboardOverview = respond(async () => ({ overview: await dashboard.getOverview() }));
+const listTutorials = respond(async () => ({ tutorials: await tutorials.listTutorialsForAdmin() }));
+const updateTutorial = respond(async (req) => ({ tutorial: await tutorials.updateTutorial({ key: req.params.key, input: req.body || {} }) }));
 
-module.exports = { approvePayout, changeStatus, completePayout, create, createBulkSchedule, createNotificationCampaign, createPayout, dashboardOverview, details, entries, list, listNotifications, listPayouts, listUsers, listWallets, notificationMetrics, notificationTemplates, rejectPayout, settle, update, userActivity, userContests, userKyc, userNotifications, userOverview, userWallet };
+module.exports = { approvePayout, changeStatus, completePayout, create, createBulkSchedule, createNotificationCampaign, createPayout, dashboardOverview, details, entries, list, listNotifications, listPayouts, listTutorials, listUsers, listWallets, notificationMetrics, notificationTemplates, rejectPayout, settle, update, updateTutorial, userActivity, userContests, userKyc, userNotifications, userOverview, userWallet };

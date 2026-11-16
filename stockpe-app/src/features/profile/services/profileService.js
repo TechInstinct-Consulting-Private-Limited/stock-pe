@@ -2,6 +2,7 @@ import {
   getOnboardingStatus,
   getProfileMe,
   getProfileNotifications,
+  getProfileTutorials,
   getProfilePredictions,
   getProfileWinnings,
   getNotificationPreferences,
@@ -94,6 +95,10 @@ export function fetchNotifications() {
       ...(notificationPresentation[notification.type] || { icon: "notifications", iconColor: "#2563EB", iconBg: "#DBEAFE" }),
     }));
   });
+}
+
+export function fetchProfileTutorials() {
+  return result(async () => (await getProfileTutorials()).tutorials || []);
 }
 
 export function readNotification(id) {

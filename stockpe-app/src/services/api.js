@@ -321,6 +321,12 @@ export function getProfileNotifications() {
     return authenticatedRequest("/profile/notifications", { headers: { "Cache-Control": "no-store" } });
 }
 
+export function getProfileTutorials() {
+    return authenticatedRequest("/profile/tutorials", {
+        headers: { "Cache-Control": "no-store" },
+    });
+}
+
 export function getNotificationPreferences() {
     return authenticatedRequest("/profile/notifications/preferences", { headers: { "Cache-Control": "no-store" } });
 }

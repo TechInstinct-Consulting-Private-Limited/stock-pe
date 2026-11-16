@@ -7,6 +7,7 @@ module.exports = {
     winnings: respond(async (req) => ({ ...(await service.getWinnings(req.auth.sub)) })),
     demoPayouts: respond(async (req) => ({ ...(await service.getDemoPayouts(req.auth.sub)) })),
     notifications: respond(async (req) => ({ notifications: await service.listNotifications(req.auth.sub) })),
+    tutorials: respond(async () => ({ tutorials: await service.listTutorials() })),
     markRead: respond(async (req) => { await service.markNotificationRead(req.auth.sub, req.params.notificationId); return {}; }),
     markAllRead: respond(async (req) => { await service.markAllNotificationsRead(req.auth.sub); return {}; }),
     notificationPreferences: respond(async (req) => ({ preferences: await service.getNotificationPreferences(req.auth.sub) })),
