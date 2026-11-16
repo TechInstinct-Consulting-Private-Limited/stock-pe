@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTransactionHistory } from "../hooks/useTransactionHistory";
 import TransactionItemCard from "../components/TransactionItemCard";
+import { formatAmount, formatINR } from "../../../utils/formatters";
 
 export default function TransactionHistoryScreen() {
   const router = useRouter();
@@ -161,10 +162,10 @@ export default function TransactionHistoryScreen() {
                     },
                   ]}
                 >
-                  {selectedTxn.simulated ? `${selectedTxn.type === "CREDIT" ? "+" : "-"}${selectedTxn.amountUsdtText} USDT` : `${selectedTxn.type === "CREDIT" ? "+" : "-"}₹${selectedTxn.amountInr.toLocaleString("en-IN")}`}
+                  {selectedTxn.simulated ? `${selectedTxn.type === "CREDIT" ? "+" : "-"}${formatAmount(selectedTxn.amountUsdtText ?? selectedTxn.amountUsdt, "0.00")} USDT` : `${selectedTxn.type === "CREDIT" ? "+" : "-"}${formatINR(selectedTxn.amountInr)}`}
                 </Text>
                 <Text style={styles.modalUsdtText}>
-                  {selectedTxn.simulated ? "Simulated · no blockchain transfer" : `~${selectedTxn.amountUsdt} USDT`}
+                  {selectedTxn.simulated ? "Simulated · no blockchain transfer" : `~${formatAmount(selectedTxn.amountUsdt, "0.00")} USDT`}
                 </Text>
               </View>
 

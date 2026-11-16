@@ -5,6 +5,7 @@ const {
     mobileOrIpKey,
 } = require("../middleware/authRateLimitKey");
 const {
+    continueWithMobile,
     createMsg91Session,
     prepareMsg91Otp,
     verifyMsg91Otp,
@@ -14,6 +15,9 @@ const {
     signUp,
     verifyOtp,
 } = require("../controllers/auth.controller");
+const { requireAuth } = require("../middleware/auth");
+const { setupMpin, unlockWithMpin, refreshAuthSession, logoutCurrentDevice, revokeCurrentDevice } = require("../controllers/mpin.controller");
+const { login: adminLogin } = require("../controllers/admin-auth.controller");
 
 const router = express.Router();
 
@@ -64,6 +68,20 @@ const otpRequestMobileIpLimiter = rateLimit({
     },
 });
 
+// Checking whether a device can use MPIN is not an OTP send. Keep this
+// separately rate-limited so normal Continue taps never exhaust OTP quota.
+const mobileContinueLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    keyGenerator: mobileOrIpKey,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: "Too many sign-in attempts. Please try again later.",
+    },
+});
+
 const otpVerificationMobileIpLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 5,
@@ -76,15 +94,32 @@ const otpVerificationMobileIpLimiter = rateLimit({
     },
 });
 
+const mpinLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { success: false, message: "Too many MPIN attempts. Please try again later." },
+});
+
 router.use(authIpLimiter);
+// Admin Console sign-in is intentionally separate from the mobile app's
+// password/OTP/MPIN journey. It never sends an OTP.
+router.post("/admin/login", mobileContinueLimiter, adminLogin);
 router.post("/signup", otpRequestLimiter, otpRequestMobileIpLimiter, signUp);
 router.post("/signin", otpRequestLimiter, otpRequestMobileIpLimiter, signIn);
+router.post("/mobile/continue", mobileContinueLimiter, continueWithMobile);
 router.post(
     "/verify-otp",
     otpVerificationLimiter,
     otpVerificationMobileIpLimiter,
     verifyOtp
 );
+router.post("/mpin/setup", requireAuth, setupMpin);
+router.post("/mpin/unlock", mpinLimiter, unlockWithMpin);
+router.post("/refresh", mpinLimiter, refreshAuthSession);
+router.post("/device/logout", requireAuth, logoutCurrentDevice);
+router.post("/device/revoke", requireAuth, revokeCurrentDevice);
 router.post("/resend-otp", otpRequestLimiter, otpRequestMobileIpLimiter, resendOtp);
 router.post("/msg91/start", otpRequestLimiter, otpRequestMobileIpLimiter, prepareMsg91Otp);
 router.post("/msg91/verify", otpVerificationLimiter, otpVerificationMobileIpLimiter, verifyMsg91Otp);

@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { fetchTransactionHistory, fetchWalletSummary, WALLET_SUMMARY_DATA } from "../../src/features/wallet/services/walletService";
 import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 import { getDemoUsdtWallet } from "../../src/services/api";
+import { formatAmount, formatINR } from "../../src/utils/formatters";
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -82,8 +83,8 @@ export default function WalletScreen() {
     status: item.status,
     statusBg: "#F1F5F9",
     statusColor: "#64748B",
-    amountInr: item.simulated ? 'Test only' : `${item.type === "CREDIT" ? "+" : "-"}₹${item.amountInr.toLocaleString("en-IN")}`,
-    amountUsdt: `${item.type === "CREDIT" ? "+" : "-"}${item.amountUsdtText ?? item.amountUsdt.toFixed(2)} USDT${item.simulated ? ' · simulated' : ''}`,
+    amountInr: item.simulated ? 'Test only' : `${item.type === "CREDIT" ? "+" : "-"}${formatINR(item.amountInr)}`,
+    amountUsdt: `${item.type === "CREDIT" ? "+" : "-"}${formatAmount(item.amountUsdtText ?? item.amountUsdt, "0.00")} USDT${item.simulated ? ' · simulated' : ''}`,
     isCredit: item.type === "CREDIT",
     icon: item.type === "CREDIT" ? "arrow-down-outline" : "arrow-up-outline",
   }));
@@ -106,7 +107,7 @@ export default function WalletScreen() {
           <View style={styles.heroTopRow}>
             <View>
               <Text style={styles.balanceLabel}>WALLET BALANCE · TEST</Text>
-              <Text style={styles.balanceAmount}>₹{wallet.totalBalanceInr.toLocaleString("en-IN")}</Text>
+              <Text style={styles.balanceAmount}>{formatINR(wallet.totalBalanceInr)}</Text>
             </View>
 
             {/* USDT Card */}
@@ -114,7 +115,7 @@ export default function WalletScreen() {
               <View style={styles.usdtHeroIcon}>
                 <Text style={styles.usdtHeroIconText}>₮</Text>
               </View>
-              <Text style={styles.usdtHeroValue}>{wallet.totalBalanceUsdt.toFixed(2)}</Text>
+              <Text style={styles.usdtHeroValue}>{formatAmount(wallet.totalBalanceUsdt, "0.00")}</Text>
               <Text style={styles.usdtHeroUnit}>USDT</Text>
             </View>
           </View>
@@ -148,7 +149,7 @@ export default function WalletScreen() {
         <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginTop: 16 }}>
           <Text style={{ fontWeight: '700', color: '#102c25' }}>USDT test balance</Text>
           <Text style={{ fontSize: 24, fontWeight: '800', color: '#008A5E', marginTop: 6 }}>
-            {demoWalletError ? 'Unavailable' : demoWallet ? `${demoWallet.available} USDT` : 'Loading…'}
+            {demoWalletError ? 'Unavailable' : demoWallet ? `${formatAmount(demoWallet.available, "0.00")} USDT` : 'Loading…'}
           </Text>
           <Text style={{ color: '#64748B', marginTop: 4 }}>For contest testing only · separate from wallet balance · not withdrawable · no blockchain transfer</Text>
         </View>

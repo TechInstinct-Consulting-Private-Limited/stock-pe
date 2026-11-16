@@ -100,7 +100,7 @@ export default function DigiLockerKyc() {
     const skip = () => {
         Alert.alert("Skip KYC for now?", "You can complete DigiLocker verification later from Profile. Some future wallet features may require KYC.", [
             { text: "Continue verification", style: "cancel" },
-            { text: "Skip for now", onPress: () => router.replace("/(tabs)/events") },
+            { text: "Skip for now", onPress: () => router.replace({ pathname: "/(tabs)/events", params: { tab: "OPEN" } }) },
         ]);
     };
 

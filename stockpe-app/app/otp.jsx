@@ -17,15 +17,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-    getOnboardingStatus,
     getUserFacingError,
     resendOtp,
     verifyOtp,
     verifyMsg91Otp,
     retryMsg91Otp,
 } from "../src/services/api";
-import { clearPendingMsg91Password, getPendingMsg91Password, setAuthToken } from "../src/services/authStorage";
-import { completeMsg91Authentication, getPostAuthenticationRoute } from "../src/services/msg91Auth";
+import { setAuthSession } from "../src/services/authStorage";
+import { completeMsg91Authentication } from "../src/services/msg91Auth";
 import { registerCurrentDeviceForPush } from "../src/services/pushNotifications";
 
 // Both the MSG91 custom UI flow and the Expo Go backend fallback use six digits.
@@ -174,59 +173,29 @@ export default function OTP() {
                     throw new Error("This OTP session is unavailable. Please start again.");
                 }
 
-                const password = await getPendingMsg91Password();
-                if (!password) {
-                    throw new Error("Your verification session expired. Please start again.");
-                }
-
                 const verification = await verifyMsg91Otp(msg91RequestId, enteredOtp);
                 const accessToken = verification?.["access-token"] || (verification?.type === "success" && typeof verification?.message === "string" && verification.message.startsWith("ey") ? verification.message : null);
                 if (verification?.type !== "success" || !accessToken) {
                     throw new Error(verification?.message || "OTP is invalid or expired. Please request a new OTP.");
                 }
 
-                const onboarding = await completeMsg91Authentication({ mobile, mode, password, accessToken });
-                await clearPendingMsg91Password();
+                await completeMsg91Authentication({ mobile, mode, accessToken });
                 setIsVerifying(false);
                 setIsVerified(true);
-                setTimeout(() => router.replace(getPostAuthenticationRoute({ onboarding, mobile, mode })), 500);
+                setTimeout(() => router.replace("/mpin-setup"), 500);
                 return;
             }
 
             const result = await verifyOtp(String(mobile), enteredOtp, mode === "signin" ? "signin" : "signup");
 
             if (result?.token) {
-                await setAuthToken(result.token);
+                await setAuthSession({ ...result, mobile });
                 registerCurrentDeviceForPush().catch(() => {});
             }
             setIsVerifying(false);
             setIsVerified(true);
 
-            // A returning user who has already completed both setup steps
-            // should not be sent through Aadhaar KYC and wallet linking again.
-            // New and incomplete users keep the existing onboarding route.
-            let onboardingCompleted = false;
-            if (mode === "signin") {
-                try {
-                    const onboarding = await getOnboardingStatus();
-                    onboardingCompleted = onboarding?.onboardingCompleted === true;
-                } catch (_onboardingError) {
-                    // Keep the safe existing route when status cannot be read.
-                    onboardingCompleted = false;
-                }
-            }
-
-            setTimeout(() => {
-                if (onboardingCompleted) {
-                    router.replace("/(tabs)/events");
-                    return;
-                }
-
-                router.replace({
-                    pathname: "/digilocker-kyc",
-                    params: { mobile: String(mobile), mode: mode || "signin" },
-                });
-            }, 500);
+            setTimeout(() => router.replace("/mpin-setup"), 500);
         } catch (error) {
             console.error("[OTP verify error]:", error);
             setApiError(getUserFacingError(error));
@@ -288,7 +257,6 @@ export default function OTP() {
     const handleBack = () => {
 
         Keyboard.dismiss();
-        if (isMsg91) clearPendingMsg91Password().catch(() => {});
         router.replace("/login");
 
     };

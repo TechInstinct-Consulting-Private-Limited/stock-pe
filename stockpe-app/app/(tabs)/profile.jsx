@@ -10,7 +10,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-import { removeAuthToken } from "../../src/services/authStorage";
+import { clearAuthSession } from "../../src/services/authStorage";
+import { logoutCurrentDevice } from "../../src/services/api";
 import { useProfileSummary } from "../../src/features/profile/hooks/useProfileSummary";
 import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 
@@ -29,7 +30,12 @@ export default function ProfileScreen() {
       : "Demo wallet link is pending. Link your wallet to finish setup.";
 
   const handleLogout = async () => {
-    await removeAuthToken();
+    try {
+      await logoutCurrentDevice();
+    } catch (_error) {
+      // Local credentials still must be removed if the device is offline.
+    }
+    await clearAuthSession();
     router.replace("/login");
   };
 
@@ -57,6 +63,14 @@ export default function ProfileScreen() {
       iconColor: "#00C987",
       bgColor: "#E6FBF3",
       route: "/profile/kyc",
+    },
+    {
+      id: "tutorials",
+      title: "Help & Tutorials",
+      icon: "play-circle-outline",
+      iconColor: "#0F766E",
+      bgColor: "#F0FDFA",
+      route: "/profile/tutorials",
     },
     {
       id: "refer",

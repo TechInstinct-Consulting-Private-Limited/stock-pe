@@ -1,285 +1,46 @@
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-
-import {
-    Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    View,
-} from "react-native";
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
 import AlternativeAuth from "../src/components/AlternativeAuth";
 import AuthForm from "../src/components/AuthForm";
 import AuthHeader from "../src/components/AuthHeader.jsx";
-import AuthTabs from "../src/components/AuthTabs";
-import {
-    getUserFacingError,
-    prepareMsg91Otp,
-} from "../src/services/api";
-import { clearPendingMsg91Password, setPendingMsg91Password } from "../src/services/authStorage";
+import { continueMobileAuth, getUserFacingError, prepareMsg91Otp } from "../src/services/api";
+import { ensureDeviceId, setLastActiveMobile } from "../src/services/authStorage";
 
 export default function Login() {
-
-    const [activeTab, setActiveTab] = useState("signin");
-
     const [mobile, setMobile] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] =
-        useState(false);
-
-    const [agreeTerms, setAgreeTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [apiError, setApiError] = useState("");
-
     const scrollRef = useRef(null);
 
-
-    // ============================================
-    // MSG91 OTP
-    // ============================================
-
-    const openMsg91Widget = async () => {
-        Keyboard.dismiss();
-        setIsLoading(true);
-        setApiError("");
-
+    const continueWithMobile = async () => {
+        Keyboard.dismiss(); setIsLoading(true); setApiError("");
         try {
-            console.log("[Login] Sending OTP for", mobile);
-            // Validates sign-in/sign-up requirements and triggers MSG91 OTP from backend (avoids CORS)
-            const result = await prepareMsg91Otp(mobile, activeTab, password);
-            await setPendingMsg91Password(password);
-
-            const requestId = String(result?.requestId || "");
-            if (!requestId) {
-                throw new Error("MSG91 did not return an OTP request. Please check credentials or try again.");
+            const deviceId = await ensureDeviceId();
+            const decision = await continueMobileAuth(mobile, deviceId);
+            if (decision?.next === "MPIN") {
+                await setLastActiveMobile(mobile);
+                router.push({ pathname: "/mpin-unlock", params: { mobile } });
+                return;
             }
-
-            router.push({
-                pathname: "/otp",
-                params: { mobile, mode: activeTab, provider: "msg91", requestId },
-            });
+            const result = await prepareMsg91Otp(mobile, decision?.purpose || "signup");
+            const requestId = String(result?.requestId || "");
+            if (!requestId) throw new Error("OTP service did not return a verification request. Please try again.");
+            router.push({ pathname: "/otp", params: { mobile, mode: decision?.purpose || "signup", provider: "msg91", requestId } });
         } catch (error) {
-            await clearPendingMsg91Password();
-            const message = getUserFacingError(error);
-            console.error("[Login] OTP error:", message);
-            setApiError(message);
-            Alert.alert("Unable to send OTP", message);
-        } finally {
-            setIsLoading(false);
-        }
+            const message = getUserFacingError(error); setApiError(message); Alert.alert("Unable to continue", message);
+        } finally { setIsLoading(false); }
     };
 
-    // ============================================
-    // SIGN IN <-> SIGN UP
-    // ============================================
-
-    const switchTab = (tab) => {
-
-        // Close keyboard
-        Keyboard.dismiss();
-
-        // Change tab
-        setActiveTab(tab);
-
-        // Clear all form values
-        setMobile("");
-        setPassword("");
-        setConfirmPassword("");
-
-        // Reset password visibility
-        setShowPassword(false);
-        setShowConfirmPassword(false);
-
-        // Reset terms checkbox
-        setAgreeTerms(false);
-
-        // Scroll form back to top
-        requestAnimationFrame(() => {
-            scrollRef.current?.scrollTo({
-                y: 0,
-                animated: false,
-            });
-        });
-    };
-
-
-    return (
-        <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.container}>
-
-            {/* ========================================
-                FIXED BRAND / HEADER
-                ======================================== */}
-
-            <AuthHeader />
-
-
-            {/* ========================================
-                ONLY FORM AREA HANDLES KEYBOARD
-                ======================================== */}
-
-            <KeyboardAvoidingView
-                style={styles.formContainer}
-                behavior={
-                    Platform.OS === "ios"
-                        ? "padding"
-                        : "height"
-                }
-            >
-
-                {/* ====================================
-                    WHITE SCROLLABLE AREA
-                    ==================================== */}
-
-                <View style={styles.formSheet}>
-
-                    <ScrollView
-                        ref={scrollRef}
-
-                        style={styles.scrollView}
-
-                        contentContainerStyle={
-                            styles.scrollContent
-                        }
-
-                        showsVerticalScrollIndicator={false}
-
-                        keyboardShouldPersistTaps="handled"
-
-                        keyboardDismissMode={
-                            Platform.OS === "ios"
-                                ? "interactive"
-                                : "on-drag"
-                        }
-
-                        automaticallyAdjustKeyboardInsets={
-                            Platform.OS === "ios"
-                        }
-                    >
-
-                        {/* =================================
-                            AUTH CONTENT
-                            ================================= */}
-
-                        <View style={styles.loginSection}>
-
-                            {/* SIGN IN / SIGN UP TABS */}
-
-                            <AuthTabs
-                                activeTab={activeTab}
-                                onChange={switchTab}
-                            />
-
-
-                            {/* SIGN IN / SIGN UP FORM */}
-
-                            <AuthForm
-                                activeTab={activeTab}
-
-                                onRequestOtp={openMsg91Widget}
-                                isLoading={isLoading}
-                                apiError={apiError}
-                                setApiError={setApiError}
-
-                                mobile={mobile}
-                                setMobile={setMobile}
-
-                                password={password}
-                                setPassword={setPassword}
-
-                                confirmPassword={
-                                    confirmPassword
-                                }
-
-                                setConfirmPassword={
-                                    setConfirmPassword
-                                }
-
-                                showPassword={
-                                    showPassword
-                                }
-
-                                setShowPassword={
-                                    setShowPassword
-                                }
-
-                                showConfirmPassword={
-                                    showConfirmPassword
-                                }
-
-                                setShowConfirmPassword={
-                                    setShowConfirmPassword
-                                }
-
-                                agreeTerms={
-                                    agreeTerms
-                                }
-
-                                setAgreeTerms={
-                                    setAgreeTerms
-                                }
-                            />
-
-
-                            {/* =================================
-                                ALWAYS VISIBLE
-
-                                Sign In + Sign Up
-                                BOTH screens
-                                ================================= */}
-
-                            <AlternativeAuth />
-
-                        </View>
-
-                    </ScrollView>
-
-                </View>
-
-            </KeyboardAvoidingView>
-
-        </SafeAreaView>
-    );
+    return <SafeAreaView edges={["top", "bottom", "left", "right"]} style={styles.container}>
+        <AuthHeader />
+        <KeyboardAvoidingView style={styles.formContainer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+            <View style={styles.formSheet}><ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"} automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}>
+                <View style={styles.loginSection}><AuthForm onContinue={continueWithMobile} isLoading={isLoading} apiError={apiError} mobile={mobile} setMobile={(value) => { setMobile(value); setApiError(""); }} /><AlternativeAuth /></View>
+            </ScrollView></View>
+        </KeyboardAvoidingView>
+    </SafeAreaView>;
 }
 
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-    },
-
-    formContainer: {
-        flex: 1,
-    },
-
-    formSheet: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-        overflow: "hidden",
-    },
-
-    scrollView: {
-        flex: 1,
-    },
-
-    scrollContent: {
-        flexGrow: 1,
-        paddingBottom: 30,
-    },
-
-    loginSection: {
-        backgroundColor: "#FFFFFF",
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 30,
-    },
-});
+const styles = StyleSheet.create({ container:{flex:1,backgroundColor:"#FFFFFF"},formContainer:{flex:1},formSheet:{flex:1,backgroundColor:"#FFFFFF",borderTopLeftRadius:28,borderTopRightRadius:28,overflow:"hidden"},scrollView:{flex:1},scrollContent:{flexGrow:1,paddingBottom:30},loginSection:{backgroundColor:"#FFFFFF",paddingHorizontal:24,paddingTop:26,paddingBottom:8} });

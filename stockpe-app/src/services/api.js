@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import { getAuthToken } from "./authStorage";
+import { getAuthToken, getDeviceId, getRefreshToken, setAuthSession } from "./authStorage";
 
 function resolveApiBaseUrl() {
     const configuredUrl = (
@@ -109,17 +109,46 @@ export function verifyOtp(mobile, otp, purpose) {
     });
 }
 
-export function authenticateWithMsg91(mobile, purpose, password, msg91Token) {
+export function continueMobileAuth(mobile, deviceId) {
+    return request("/auth/mobile/continue", { method: "POST", body: JSON.stringify({ mobile, deviceId }) });
+}
+
+export function authenticateWithMsg91(mobile, purpose, msg91Token) {
     return request("/auth/msg91-session", {
         method: "POST",
-        body: JSON.stringify({ mobile, purpose, password, msg91Token }),
+        body: JSON.stringify({ mobile, purpose, msg91Token }),
     });
 }
 
-export function prepareMsg91Otp(mobile, purpose, password) {
+export function setupMpin(deviceId, mpin, biometricEnabled = false) {
+    return authenticatedRequest("/auth/mpin/setup", { method: "POST", body: JSON.stringify({ deviceId, mpin, biometricEnabled }) });
+}
+
+export function unlockWithMpin(deviceId, mpin, mobile) {
+    return request("/auth/mpin/unlock", { method: "POST", body: JSON.stringify({ deviceId, mpin, mobile }) });
+}
+
+export async function refreshAuthSession() {
+    const [deviceId, refreshToken] = await Promise.all([getDeviceId(), getRefreshToken()]);
+    if (!deviceId || !refreshToken) throw new ApiError("Your session has expired. Please sign in again.");
+    const session = await request("/auth/refresh", { method: "POST", body: JSON.stringify({ deviceId, refreshToken }) });
+    await setAuthSession(session);
+    return session;
+}
+
+export async function logoutCurrentDevice() {
+    const deviceId = await getDeviceId();
+    if (!deviceId) return;
+    return authenticatedRequest("/auth/device/logout", {
+        method: "POST",
+        body: JSON.stringify({ deviceId }),
+    });
+}
+
+export function prepareMsg91Otp(mobile, purpose) {
     return request("/auth/msg91/start", {
         method: "POST",
-        body: JSON.stringify({ mobile, purpose, password }),
+        body: JSON.stringify({ mobile, purpose }),
     });
 }
 
@@ -151,13 +180,13 @@ async function authenticatedRequest(path, options = {}) {
         throw new ApiError("Your session has expired. Please sign in again.");
     }
 
-    return request(path, {
-        ...options,
-        headers: {
-            ...options.headers,
-            Authorization: `Bearer ${token}`,
-        },
-    });
+    try {
+        return await request(path, { ...options, headers: { ...options.headers, Authorization: `Bearer ${token}` } });
+    } catch (error) {
+        if (!(error instanceof ApiError) || !/session|token|auth/i.test(error.message)) throw error;
+        const refreshed = await refreshAuthSession();
+        return request(path, { ...options, headers: { ...options.headers, Authorization: `Bearer ${refreshed.token}` } });
+    }
 }
 
 export function requestAadhaarOtp(aadhaarNumber, consent) {
@@ -319,6 +348,12 @@ export function getProfileDemoPayouts() {
 
 export function getProfileNotifications() {
     return authenticatedRequest("/profile/notifications", { headers: { "Cache-Control": "no-store" } });
+}
+
+export function getProfileTutorials() {
+    return authenticatedRequest("/profile/tutorials", {
+        headers: { "Cache-Control": "no-store" },
+    });
 }
 
 export function getNotificationPreferences() {

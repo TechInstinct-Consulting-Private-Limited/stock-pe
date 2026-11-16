@@ -2,8 +2,15 @@ const router = require("express").Router();
 const { requireAuth } = require("../middleware/auth");
 const { requireAdmin } = require("../middleware/adminAuth");
 const controller = require("../controllers/admin-contest.controller");
+const adminAccess = require("../controllers/admin-access.controller");
 
 router.use(requireAuth, requireAdmin());
+// Access administration is limited to Super Admins. Contest operators cannot
+// grant themselves or anyone else elevated console access.
+router.get("/access/administrators", requireAdmin(["SUPER_ADMIN"]), adminAccess.list);
+router.post("/access/administrators", requireAdmin(["SUPER_ADMIN"]), adminAccess.grant);
+router.put("/access/administrators/:userId", requireAdmin(["SUPER_ADMIN"]), adminAccess.changeRole);
+router.delete("/access/administrators/:userId", requireAdmin(["SUPER_ADMIN"]), adminAccess.revoke);
 router.get("/dashboard/overview", controller.dashboardOverview);
 router.get("/users", controller.listUsers);
 router.get("/wallets", controller.listWallets);
@@ -17,6 +24,8 @@ router.get("/notifications", controller.listNotifications);
 router.get("/notifications/metrics", controller.notificationMetrics);
 router.get("/notifications/templates", controller.notificationTemplates);
 router.post("/notifications/campaigns", controller.createNotificationCampaign);
+router.get("/tutorials", controller.listTutorials);
+router.put("/tutorials/:key", controller.updateTutorial);
 router.get("/contests", controller.list);
 router.get("/contests/:publicId/details", controller.details);
 router.post("/contests", controller.create);

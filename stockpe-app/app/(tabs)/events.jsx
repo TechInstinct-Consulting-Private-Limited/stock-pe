@@ -1,6 +1,8 @@
 import React from "react";
+import { useLocalSearchParams } from "expo-router";
 import EventsFeedScreen from "../../src/features/events/screens/EventsFeedScreen";
 
 export default function EventsTabRoute() {
-  return <EventsFeedScreen />;
+  const { tab } = useLocalSearchParams();
+  return <EventsFeedScreen key={String(tab || "ALL")} initialFilter={tab} />;
 }

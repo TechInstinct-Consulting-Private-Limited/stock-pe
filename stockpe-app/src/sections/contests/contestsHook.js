@@ -5,6 +5,7 @@ import {
   fetchContestById,
   fetchStockCatalog,
 } from "./contestsService";
+import { formatAmount } from "../../utils/formatters";
 
 export function useContestDetail(contestId) {
   const [activeTab, setActiveTab] = useState("prizes"); // "prizes" | "rules" | "leaderboard"
@@ -180,7 +181,8 @@ export function useMyContests() {
       status: entry.status,
       timestamp: new Date(entry.joined_at).toLocaleString("en-IN"),
       currency: entry.currency || "DEMO_CREDITS",
-      entryFeeInr: `${entry.entry_credits} ${entry.currency === "DEMO_USDT" ? "Demo USDT" : "Credits"}`,
+      entryAmount: Number(entry.entry_credits || 0),
+      entryFeeInr: `${formatAmount(entry.entry_credits, "0.00")} ${entry.currency === "DEMO_USDT" ? "Demo USDT" : "Credits"}`,
       entryFeeUsdt: entry.currency === "DEMO_USDT" ? "Simulated" : "Demo credits",
       predictionValue: entry.prediction_value === null ? null : Number(entry.prediction_value),
       rewardCredits: Number(entry.currency === "DEMO_USDT" ? entry.demo_usdt_reward : entry.reward_credits || 0),
@@ -188,8 +190,8 @@ export function useMyContests() {
       settlementValue: entry.settlement_value === null || entry.settlement_value === undefined ? null : Number(entry.settlement_value),
       prediction: entry.prediction_value === null
         ? "Not submitted"
-        : Number(entry.prediction_value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      prizeInr: Number(entry.currency === "DEMO_USDT" ? entry.demo_usdt_reward : entry.reward_credits || 0) > 0 ? `${entry.currency === "DEMO_USDT" ? entry.demo_usdt_reward : entry.reward_credits} ${entry.currency === "DEMO_USDT" ? "Demo USDT" : "Credits"}` : null,
+        : formatAmount(entry.prediction_value),
+      prizeInr: Number(entry.currency === "DEMO_USDT" ? entry.demo_usdt_reward : entry.reward_credits || 0) > 0 ? `${formatAmount(entry.currency === "DEMO_USDT" ? entry.demo_usdt_reward : entry.reward_credits, "0.00")} ${entry.currency === "DEMO_USDT" ? "Demo USDT" : "Credits"}` : null,
       prizeUsdt: entry.status === "WON" ? "Demo reward" : null,
       accuracy: null,
     })));
@@ -224,9 +226,9 @@ export function useMyContests() {
       active,
       won,
       lost,
-      totalSpent: unit ? `${joinedList.reduce((total, item) => total + Number(String(item.entryFeeInr).split(" ")[0]), 0)} ${unit}` : "Mixed demo units",
-      totalWon: unit ? `${joinedList.reduce((total, item) => total + item.rewardCredits, 0)} ${unit}` : "Mixed demo units",
-      netPnl: unit ? `${joinedList.reduce((total, item) => total + item.rewardCredits - Number(String(item.entryFeeInr).split(" ")[0]), 0)} ${unit}` : "Mixed demo units",
+      totalSpent: unit ? `${formatAmount(joinedList.reduce((total, item) => total + item.entryAmount, 0), "0.00")} ${unit}` : "Mixed demo units",
+      totalWon: unit ? `${formatAmount(joinedList.reduce((total, item) => total + item.rewardCredits, 0), "0.00")} ${unit}` : "Mixed demo units",
+      netPnl: unit ? `${formatAmount(joinedList.reduce((total, item) => total + item.rewardCredits - item.entryAmount, 0), "0.00")} ${unit}` : "Mixed demo units",
     };
   }, [joinedList]);
 

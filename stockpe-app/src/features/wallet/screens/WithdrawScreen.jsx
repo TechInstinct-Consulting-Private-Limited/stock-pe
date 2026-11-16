@@ -17,6 +17,7 @@ import { useWalletWithdraw } from "../hooks/useWalletWithdraw";
 import WithdrawalAccountCard from "../components/WithdrawalAccountCard";
 import TdsSummaryCard from "../components/TdsSummaryCard";
 import WalletSuccessModal from "../components/WalletSuccessModal";
+import { formatAmount, formatINR } from "../../../utils/formatters";
 
 export default function WithdrawScreen() {
   const router = useRouter();
@@ -82,7 +83,7 @@ export default function WithdrawScreen() {
               <View>
                 <Text style={styles.balanceLabel}>WITHDRAWABLE WINNINGS</Text>
                 <Text style={styles.balanceAmount}>
-                  ${wallet.winningsBalanceUsdt.toFixed(2)} USDT
+                  ${formatAmount(wallet.winningsBalanceUsdt, "0.00")} USDT
                 </Text>
               </View>
               <TouchableOpacity
@@ -96,10 +97,10 @@ export default function WithdrawScreen() {
             <View style={styles.balanceDivider} />
             <View style={styles.balanceBreakdown}>
               <Text style={styles.breakdownItem}>
-                Deposit Balance: ${wallet.depositBalanceUsdt.toFixed(2)} USDT
+                Deposit Balance: ${formatAmount(wallet.depositBalanceUsdt, "0.00")} USDT
               </Text>
               <Text style={styles.breakdownItem}>
-                Bonus: ${wallet.bonusBalanceUsdt.toFixed(2)} USDT
+                Bonus: ${formatAmount(wallet.bonusBalanceUsdt, "0.00")} USDT
               </Text>
             </View>
           </View>
@@ -108,7 +109,7 @@ export default function WithdrawScreen() {
           <View style={styles.inputCard}>
             <View style={styles.inputHeader}>
               <Text style={styles.cardLabel}>ENTER WITHDRAWAL AMOUNT</Text>
-              <Text style={styles.usdtEquiv}>≈ ₹{parseFloat(amount || 0).toLocaleString("en-IN")}</Text>
+              <Text style={styles.usdtEquiv}>≈ {formatINR(amount || 0)}</Text>
             </View>
 
             <View style={styles.inputBox}>
@@ -130,7 +131,7 @@ export default function WithdrawScreen() {
 
             <View style={styles.limitsRow}>
               <Text style={styles.limitsText}>
-                Min: ${wallet.minDepositUsdt || 10} USDT • Max Daily: ${wallet.maxWithdrawDailyUsdt?.toLocaleString() || "10,000"} USDT
+                Min: ${formatAmount(wallet.minDepositUsdt || 10, "10.00")} USDT • Max Daily: ${formatAmount(wallet.maxWithdrawDailyUsdt || 10000, "10,000.00")} USDT
               </Text>
             </View>
           </View>
@@ -167,7 +168,7 @@ export default function WithdrawScreen() {
           <View style={styles.summaryLeft}>
             <Text style={styles.summaryLabel}>YOU RECEIVE (NET)</Text>
             <Text style={styles.summaryAmount}>
-              ${netPayoutUsdt} USDT
+              ${formatAmount(netPayoutUsdt, "0.00")} USDT
             </Text>
           </View>
 

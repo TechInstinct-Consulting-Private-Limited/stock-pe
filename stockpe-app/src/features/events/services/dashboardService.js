@@ -1,10 +1,10 @@
 import { getDemoContest, getDemoDashboard } from "../../../services/api";
 
 export const DASHBOARD_TABS = [
-  { id: "ALL", label: "ALL" },
-  { id: "LIVE", label: "• LIVE" },
   { id: "OPEN", label: "OPEN" },
   { id: "SOON", label: "SOON" },
+  { id: "LIVE", label: "• LIVE" },
+  { id: "ALL", label: "ALL" },
 ];
 
 const IST_TIME_ZONE = "Asia/Kolkata";

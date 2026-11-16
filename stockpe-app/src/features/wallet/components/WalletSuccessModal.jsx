@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { formatAmount, formatINR } from "../../../utils/formatters";
 
 export default function WalletSuccessModal({
   visible,
@@ -47,10 +48,10 @@ export default function WalletSuccessModal({
               {isDeposit ? "AMOUNT CREDITED" : "NET PAYOUT"}
             </Text>
             <Text style={styles.amountValue}>
-              ${(isDeposit ? data.amountUsdt : data.netPayoutUsdt || data.amountUsdt)?.toFixed(2)} USDT
+              ${formatAmount(isDeposit ? data.amountUsdt : data.netPayoutUsdt || data.amountUsdt, "0.00")} USDT
             </Text>
             <Text style={styles.amountUsdt}>
-              ≈ ₹{(isDeposit ? data.amountInr : data.netPayoutInr || data.amountInr)?.toLocaleString("en-IN")}
+              ≈ {formatINR(isDeposit ? data.amountInr : data.netPayoutInr || data.amountInr, "0.00")}
             </Text>
           </View>
 
@@ -81,7 +82,7 @@ export default function WalletSuccessModal({
               <View style={styles.metaRow}>
                 <Text style={styles.metaLabel}>Bonus USDT Credited</Text>
                 <Text style={[styles.metaVal, { color: "#00C987" }]}>
-                  +${data.bonusCreditedUsdt} USDT
+                  +${formatAmount(data.bonusCreditedUsdt, "0.00")} USDT
                 </Text>
               </View>
             )}

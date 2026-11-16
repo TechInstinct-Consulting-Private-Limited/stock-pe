@@ -17,6 +17,7 @@ import DepositAmountInput from "../components/DepositAmountInput";
 import PaymentMethodSelector from "../components/PaymentMethodSelector";
 import PromoCouponCard from "../components/PromoCouponCard";
 import WalletSuccessModal from "../components/WalletSuccessModal";
+import { formatAmount, formatINR } from "../../../utils/formatters";
 
 export default function DepositScreen() {
   const router = useRouter();
@@ -93,12 +94,12 @@ export default function DepositScreen() {
             <View>
               <Text style={styles.balanceLabel}>CURRENT WALLET BALANCE</Text>
               <Text style={styles.balanceAmount}>
-                ${wallet.totalBalanceUsdt.toFixed(2)} USDT
+                ${formatAmount(wallet.totalBalanceUsdt, "0.00")} USDT
               </Text>
             </View>
             <View style={styles.balanceUsdtPill}>
               <Text style={styles.balanceUsdtText}>
-                ≈ ₹{wallet.totalBalanceInr.toLocaleString("en-IN")}
+                ≈ {formatINR(wallet.totalBalanceInr)}
               </Text>
             </View>
           </View>
@@ -154,10 +155,10 @@ export default function DepositScreen() {
           <View style={styles.summaryLeft}>
             <Text style={styles.summaryLabel}>TOTAL DEPOSIT CREDIT</Text>
             <Text style={styles.summaryAmount}>
-              ${totalEffectiveCreditUsdt} USDT
+              ${formatAmount(totalEffectiveCreditUsdt, "0.00")} USDT
             </Text>
             <Text style={styles.summaryBonusText}>
-              ≈ ₹{totalEffectiveCredit.toLocaleString("en-IN")} {calculatedBonus > 0 ? `(+${calculatedBonusUsdt} USDT Bonus)` : ""}
+              ≈ {formatINR(totalEffectiveCredit)} {calculatedBonus > 0 ? `(+${formatAmount(calculatedBonusUsdt, "0.00")} USDT Bonus)` : ""}
             </Text>
           </View>
 

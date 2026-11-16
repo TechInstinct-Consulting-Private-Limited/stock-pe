@@ -84,7 +84,7 @@ export default function UsdtWallet() {
 
         try {
             await linkUsdtWallet(network, trimmedAddress);
-            router.replace("/(tabs)/events");
+            router.replace({ pathname: "/(tabs)/events", params: { tab: "OPEN" } });
         } catch (linkError) {
             setError(getUserFacingError(linkError));
         } finally {
@@ -260,7 +260,7 @@ export default function UsdtWallet() {
 
                     <TouchableOpacity
                         style={{ marginTop: 14, alignItems: "center", paddingVertical: 8 }}
-                        onPress={() => router.replace("/(tabs)/events")}
+                        onPress={() => router.replace({ pathname: "/(tabs)/events", params: { tab: "OPEN" } })}
                     >
                         <Text style={{ color: "#657189", fontSize: 14, fontWeight: "700" }}>
                             Skip for now →

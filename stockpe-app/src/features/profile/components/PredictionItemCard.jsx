@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { formatAmount } from "../../../utils/formatters";
 
 export default function PredictionItemCard({ prediction }) {
   const isLive = prediction.status === "ACTIVE";
@@ -68,7 +69,7 @@ export default function PredictionItemCard({ prediction }) {
       <View style={styles.bottomRow}>
         <View>
           <Text style={styles.metaLabel}>ENTRY</Text>
-          <Text style={styles.metaVal}>{prediction.entryCredits} {prediction.currency === "DEMO_USDT" ? "Demo USDT" : "credits"}</Text>
+          <Text style={styles.metaVal}>{formatAmount(prediction.entryCredits, "0.00")} {prediction.currency === "DEMO_USDT" ? "Demo USDT" : "credits"}</Text>
         </View>
 
         <View>
@@ -76,7 +77,7 @@ export default function PredictionItemCard({ prediction }) {
             {isLive ? "STATUS" : "CLOSING VALUE"}
           </Text>
           <Text style={styles.metaVal}>
-            {isLive ? "Active" : prediction.rank ? `Rank #${prediction.rank}` : prediction.settlementValue ?? "—"}
+            {isLive ? "Active" : prediction.rank ? `Rank #${prediction.rank}` : prediction.settlementValue === null || prediction.settlementValue === undefined ? "—" : formatAmount(prediction.settlementValue)}
           </Text>
         </View>
 
@@ -94,7 +95,7 @@ export default function PredictionItemCard({ prediction }) {
                 { color: isWon ? "#00C987" : "#64748B" },
               ]}
             >
-              +{prediction.rewardCredits} {prediction.currency === "DEMO_USDT" ? "Demo USDT" : "credits"}
+              +{formatAmount(prediction.rewardCredits, "0.00")} {prediction.currency === "DEMO_USDT" ? "Demo USDT" : "credits"}
             </Text>
           </View>
         </View>

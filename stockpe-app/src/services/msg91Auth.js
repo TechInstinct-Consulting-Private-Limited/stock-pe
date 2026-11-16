@@ -1,12 +1,11 @@
 import { authenticateWithMsg91, getOnboardingStatus } from "./api";
-import { setAuthToken } from "./authStorage";
+import { setAuthSession } from "./authStorage";
 import { registerCurrentDeviceForPush } from "./pushNotifications";
 
-export async function completeMsg91Authentication({ mobile, mode, password, accessToken }) {
+export async function completeMsg91Authentication({ mobile, mode, accessToken }) {
     const authData = await authenticateWithMsg91(
         String(mobile),
         mode === "signup" ? "signup" : "signin",
-        password,
         accessToken,
     );
 
@@ -14,7 +13,7 @@ export async function completeMsg91Authentication({ mobile, mode, password, acce
         throw new Error("Could not create your secure session. Please try again.");
     }
 
-    await setAuthToken(authData.token);
+    await setAuthSession({ ...authData, mobile });
     registerCurrentDeviceForPush().catch(() => {});
 
     return getOnboardingStatus();
@@ -27,7 +26,7 @@ export function getPostAuthenticationRoute({ onboarding, mobile, mode }) {
     };
 
     if (onboarding?.onboardingCompleted) {
-        return "/(tabs)/events";
+        return { pathname: "/(tabs)/events", params: { tab: "OPEN" } };
     }
 
     if (onboarding?.aadhaarKyc?.completed) {

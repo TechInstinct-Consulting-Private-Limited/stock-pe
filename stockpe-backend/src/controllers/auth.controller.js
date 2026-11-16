@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
 const { createOtpVerification } = require("../services/otp.service");
 const { Msg91AccessTokenService } = require("../services/msg91-access-token.service");
+const { issueSession } = require("../services/auth-session.service");
 
 const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 const MAX_OTP_ATTEMPTS = 5;
@@ -18,14 +19,6 @@ function validatePassword(password) {
 
 function validationError(res, message) {
     return res.status(400).json({ success: false, message });
-}
-
-function getJwtSecret() {
-    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-        throw new Error("JWT_SECRET must be set to a value of at least 32 characters");
-    }
-
-    return process.env.JWT_SECRET;
 }
 
 async function signUp(req, res, next) {
@@ -187,24 +180,12 @@ async function verifyOtp(req, res, next) {
             );
         }
 
-        const tokenJti = crypto.randomUUID();
-        const token = jwt.sign(
-            { sub: user.id, mobile: user.mobile, jti: tokenJti },
-            getJwtSecret(),
-            { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-        );
-        const tokenPayload = jwt.decode(token);
-        const expiresAt = new Date(tokenPayload.exp * 1000);
-
-        await pool.query(
-            "INSERT INTO sessions (user_id, token_jti, expires_at) VALUES ($1, $2, $3)",
-            [user.id, tokenJti, expiresAt]
-        );
+        const session = await issueSession({ userId: user.id, mobile: user.mobile });
 
         return res.status(200).json({
             success: true,
             message: "Mobile verified successfully",
-            token,
+            ...session,
             user: { id: user.id, mobile: user.mobile },
         });
     } catch (error) {
@@ -253,10 +234,10 @@ async function resendOtp(req, res, next) {
 
 async function createMsg91Session(req, res, next) {
     try {
-        const { mobile, password, purpose, msg91Token } = req.body;
+        const { mobile, purpose, msg91Token } = req.body;
         const cleanMobile = String(mobile || "").replace(/\D/g, "").slice(-10);
 
-        if (!validateMobile(cleanMobile) || !validatePassword(password) || !["signup", "signin"].includes(purpose)) {
+        if (!validateMobile(cleanMobile) || !["signup", "signin"].includes(purpose)) {
             return validationError(res, "Invalid mobile verification request");
         }
 
@@ -265,14 +246,6 @@ async function createMsg91Session(req, res, next) {
             [cleanMobile]
         );
         let user = userResult.rows[0];
-
-        if (purpose === "signin") {
-            if (!user || !user.mobile_verified || !(await bcrypt.compare(password, user.password_hash))) {
-                return res.status(401).json({ success: false, message: "Invalid mobile number or password" });
-            }
-        } else if (user?.mobile_verified) {
-            return res.status(409).json({ success: false, message: "An account already exists for this mobile number" });
-        }
 
         // Verify the token with MSG91 server. If control.msg91.com requires master
         // AuthKey (and fails with widget token), gracefully fallback to validating MSG91 JWT token structure.
@@ -288,39 +261,28 @@ async function createMsg91Session(req, res, next) {
             console.log("[createMsg91Session] Accepted verified MSG91 token for request:", decoded.requestId);
         }
 
-        if (purpose === "signup" && !user) {
-            const passwordHash = await bcrypt.hash(password, 12);
+        if (!user) {
+            // Primary mobile login is OTP + device MPIN. A random unavailable
+            // password preserves compatibility with the legacy schema/routes.
+            const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString("base64url"), 12);
             const insertResult = await pool.query(
                 "INSERT INTO users (mobile, password_hash, mobile_verified) VALUES ($1, $2, TRUE) RETURNING id, mobile",
                 [cleanMobile, passwordHash]
             );
             user = insertResult.rows[0];
-        } else if (purpose === "signup") {
-            const passwordHash = await bcrypt.hash(password, 12);
+        } else if (!user.mobile_verified) {
             await pool.query(
-                "UPDATE users SET password_hash = $1, mobile_verified = TRUE, updated_at = NOW() WHERE id = $2",
-                [passwordHash, user.id]
+                "UPDATE users SET mobile_verified = TRUE, updated_at = NOW() WHERE id = $1",
+                [user.id]
             );
         }
 
-        const tokenJti = crypto.randomUUID();
-        const token = jwt.sign(
-            { sub: user.id, mobile: user.mobile, jti: tokenJti },
-            getJwtSecret(),
-            { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-        );
-        const tokenPayload = jwt.decode(token);
-        const expiresAt = new Date(tokenPayload.exp * 1000);
-
-        await pool.query(
-            "INSERT INTO sessions (user_id, token_jti, expires_at) VALUES ($1, $2, $3)",
-            [user.id, tokenJti, expiresAt]
-        );
+        const session = await issueSession({ userId: user.id, mobile: user.mobile });
 
         return res.status(200).json({
             success: true,
             message: "Authenticated successfully",
-            token,
+            ...session,
             user: { id: user.id, mobile: user.mobile },
         });
     } catch (error) {
@@ -330,27 +292,11 @@ async function createMsg91Session(req, res, next) {
 
 async function prepareMsg91Otp(req, res, next) {
     try {
-        const { mobile, password, purpose } = req.body;
+        const { mobile, purpose } = req.body;
         const cleanMobile = String(mobile || "").replace(/\D/g, "").slice(-10);
 
-        if (!validateMobile(cleanMobile) || !validatePassword(password) || !["signup", "signin"].includes(purpose)) {
+        if (!validateMobile(cleanMobile) || !["signup", "signin"].includes(purpose)) {
             return validationError(res, "Invalid mobile verification request");
-        }
-
-        const result = await pool.query(
-            "SELECT password_hash, mobile_verified FROM users WHERE mobile = $1",
-            [cleanMobile]
-        );
-        const user = result.rows[0];
-
-        if (purpose === "signup" && user?.mobile_verified) {
-            return res.status(409).json({ success: false, message: "An account already exists for this mobile number" });
-        }
-
-        if (purpose === "signin") {
-            if (!user || !user.mobile_verified || !(await bcrypt.compare(password, user.password_hash))) {
-                return res.status(401).json({ success: false, message: "Invalid mobile number or password" });
-            }
         }
 
         // Send OTP directly via MSG91 SendOTP API from backend (prevents browser CORS blocks)
@@ -386,6 +332,37 @@ async function prepareMsg91Otp(req, res, next) {
             success: true,
             message: "OTP sent successfully",
             requestId,
+        });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+async function continueWithMobile(req, res, next) {
+    try {
+        const { mobile, deviceId } = req.body;
+        const cleanMobile = String(mobile || "").replace(/\D/g, "").slice(-10);
+        if (!validateMobile(cleanMobile) || typeof deviceId !== "string" || deviceId.length < 16 || deviceId.length > 160) {
+            return validationError(res, "Enter a valid mobile number and try again.");
+        }
+
+        const result = await pool.query(
+            `SELECT app_user.mobile_verified,
+                    EXISTS (
+                        SELECT 1 FROM user_auth_devices device
+                        WHERE device.user_id = app_user.id
+                          AND device.device_id = $2
+                          AND device.revoked_at IS NULL
+                    ) AS known_device
+             FROM users app_user WHERE app_user.mobile = $1 LIMIT 1`,
+            [cleanMobile, deviceId],
+        );
+        const record = result.rows[0];
+        const knownDevice = Boolean(record?.mobile_verified && record?.known_device);
+        return res.status(200).json({
+            success: true,
+            next: knownDevice ? "MPIN" : "OTP",
+            purpose: record?.mobile_verified ? "signin" : "signup",
         });
     } catch (error) {
         return next(error);
@@ -452,4 +429,4 @@ async function retryMsg91Otp(req, res, next) {
     }
 }
 
-module.exports = { createMsg91Session, prepareMsg91Otp, retryMsg91Otp, verifyMsg91Otp, resendOtp, signIn, signUp, verifyOtp };
+module.exports = { continueWithMobile, createMsg91Session, prepareMsg91Otp, retryMsg91Otp, verifyMsg91Otp, resendOtp, signIn, signUp, verifyOtp };

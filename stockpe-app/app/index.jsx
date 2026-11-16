@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BrandLogo from "../src/components/BrandLogo";
-import { getAuthToken } from "../src/services/authStorage";
-import { registerCurrentDeviceForPush } from "../src/services/pushNotifications";
+import { getAuthToken, getDeviceId, getLastActiveMobile, getRefreshToken } from "../src/services/authStorage";
 
 export default function Index() {
   const [progress, setProgress] = useState(0);
@@ -33,11 +32,16 @@ export default function Index() {
   // Check auth and route appropriately
   useEffect(() => {
     if (progress >= 100) {
-      getAuthToken()
-        .then((token) => {
-          if (token) {
-            registerCurrentDeviceForPush().catch(() => {});
-            router.replace("/(tabs)/events");
+      Promise.all([getAuthToken(), getRefreshToken(), getDeviceId(), getLastActiveMobile()])
+        .then(([token, refreshToken, deviceId, lastMobile]) => {
+          if (deviceId && lastMobile && (token || refreshToken)) {
+            router.replace({ pathname: "/mpin-unlock", params: { mobile: lastMobile } });
+          } else if (token) {
+            // Existing signed-in devices are upgraded to the safer MPIN flow once.
+            router.replace("/mpin-setup");
+          } else if (deviceId && lastMobile) {
+            // A normal logout clears sessions but keeps this device enrolled for MPIN.
+            router.replace({ pathname: "/mpin-unlock", params: { mobile: lastMobile } });
           } else {
             router.replace("/login");
           }

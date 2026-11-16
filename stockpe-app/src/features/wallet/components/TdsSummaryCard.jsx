@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { formatAmount, formatINR } from "../../../utils/formatters";
 
 export default function TdsSummaryCard({ tdsCalculation }) {
   const { grossAmount, grossUsdt, gasFeeUsdt, netPayoutUsdt, netPayoutInr, network } =
@@ -15,7 +16,7 @@ export default function TdsSummaryCard({ tdsCalculation }) {
 
       <View style={styles.row}>
         <Text style={styles.rowLabel}>Gross Withdrawal Amount</Text>
-        <Text style={styles.rowValue}>${grossUsdt} USDT (₹{grossAmount.toLocaleString("en-IN")})</Text>
+        <Text style={styles.rowValue}>${formatAmount(grossUsdt, "0.00")} USDT ({formatINR(grossAmount, "0.00")})</Text>
       </View>
 
       <View style={styles.row}>
@@ -26,7 +27,7 @@ export default function TdsSummaryCard({ tdsCalculation }) {
           </View>
         </View>
         <Text style={[styles.rowValue, { color: "#F59E0B" }]}>
-          -${gasFeeUsdt} USDT
+          -${formatAmount(gasFeeUsdt, "0.00")} USDT
         </Text>
       </View>
 
@@ -44,9 +45,9 @@ export default function TdsSummaryCard({ tdsCalculation }) {
         </View>
         <View style={styles.amountRight}>
           <Text style={styles.netAmount}>
-            ${netPayoutUsdt} USDT
+            ${formatAmount(netPayoutUsdt, "0.00")} USDT
           </Text>
-          <Text style={styles.netUsdt}>≈ ₹{netPayoutInr?.toLocaleString("en-IN")}</Text>
+          <Text style={styles.netUsdt}>≈ {formatINR(netPayoutInr, "0.00")}</Text>
         </View>
       </View>
     </View>

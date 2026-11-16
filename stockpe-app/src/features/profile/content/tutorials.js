@@ -1,0 +1,50 @@
+// Static fallback content for the Help & Tutorials module.
+// A future admin-managed endpoint can return this same shape, allowing titles,
+// descriptions, thumbnails and YouTube URLs to change without an app release.
+export const profileTutorials = [
+  {
+    id: "join-prediction",
+    title: "How to join a prediction",
+    description: "Choose an open contest, enter your prediction and confirm your Demo USDT entry.",
+    icon: "rocket-outline",
+    accent: "#00A971",
+    background: "#ECFDF5",
+    videoUrl: null,
+  },
+  {
+    id: "demo-usdt",
+    title: "How Demo USDT works",
+    description: "Understand simulated balances, contest entry fees and non-withdrawable rewards.",
+    icon: "wallet-outline",
+    accent: "#2563EB",
+    background: "#EFF6FF",
+    videoUrl: null,
+  },
+  {
+    id: "winners-rankings",
+    title: "How winners and rankings work",
+    description: "See how predictions are ranked after settlement and how shared prize ranks work.",
+    icon: "trophy-outline",
+    accent: "#D97706",
+    background: "#FFFBEB",
+    videoUrl: null,
+  },
+  {
+    id: "kyc",
+    title: "How KYC works",
+    description: "Follow the DigiLocker-based identity verification journey and understand its status.",
+    icon: "shield-checkmark-outline",
+    accent: "#7C3AED",
+    background: "#F5F3FF",
+    videoUrl: null,
+  },
+  {
+    id: "wallet-history",
+    title: "Wallet and transaction history",
+    description: "Review Demo USDT balance movements, contest entries, rewards and transaction records.",
+    icon: "receipt-outline",
+    accent: "#0891B2",
+    background: "#ECFEFF",
+    videoUrl: null,
+  },
+];

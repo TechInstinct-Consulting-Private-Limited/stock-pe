@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { colors, radii, shadows, spacing, typography } from "../../../theme";
+import { colors, radii, spacing, typography } from "../../../theme";
 import TabPills from "../../../components/ui/TabPills";
 import AppCard from "../../../components/ui/AppCard";
 import EventFeedCard from "../components/EventFeedCard";
@@ -18,37 +18,54 @@ import { getMyDemoContests } from "../../../services/api";
 import { DASHBOARD_TABS, fetchDashboard, groupFeedCards, toFeedCard } from "../services/dashboardService";
 import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 
-export default function EventsFeedScreen() {
-  const [activeFilter, setActiveFilter] = useState("ALL");
+const FILTER_IDS = new Set(DASHBOARD_TABS.map((tab) => tab.id));
+
+export default function EventsFeedScreen({ initialFilter = "ALL" }) {
+  const requestedFilter = FILTER_IDS.has(String(initialFilter || "").toUpperCase())
+    ? String(initialFilter).toUpperCase()
+    : "ALL";
+  const [activeFilter, setActiveFilter] = useState(requestedFilter);
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [clock, setClock] = useState(Date.now());
   const [activeCount, setActiveCount] = useState(0);
+  const [showingUpcomingFallback, setShowingUpcomingFallback] = useState(false);
 
-  const loadDashboard = useCallback(async ({ showLoading = true } = {}) => {
+  const loadDashboard = useCallback(async ({ showLoading = true, filter = activeFilter } = {}) => {
     if (showLoading) setIsLoading(true);
     setError("");
 
     try {
-      const response = await fetchDashboard(activeFilter);
+      const response = await fetchDashboard(filter);
+      const hasOpenContests = Array.isArray(response?.contests) && response.contests.length > 0;
+
+      if (filter === "OPEN" && !hasOpenContests) {
+        const upcomingResponse = await fetchDashboard("SOON");
+        setDashboard(upcomingResponse);
+        setShowingUpcomingFallback(true);
+        setActiveFilter("SOON");
+        return;
+      }
+
       setDashboard(response);
+      if (!(filter === "SOON" && showingUpcomingFallback)) {
+        setShowingUpcomingFallback(false);
+      }
+      if (filter === "OPEN" && activeFilter !== "OPEN") setActiveFilter("OPEN");
     } catch (_error) {
       setError("Dashboard data is unavailable. Please try again.");
     } finally {
       if (showLoading) setIsLoading(false);
     }
-  }, [activeFilter]);
+  }, [activeFilter, showingUpcomingFallback]);
 
   const refreshDashboard = useCallback(async () => {
-    try {
-      const response = await fetchDashboard(activeFilter);
-      setDashboard(response);
-      setError("");
-    } catch (_error) {
-      // Preserve the visible dashboard if a manual refresh cannot complete.
-    }
-  }, [activeFilter]);
+    await loadDashboard({
+      showLoading: false,
+      filter: showingUpcomingFallback ? "OPEN" : activeFilter,
+    });
+  }, [activeFilter, loadDashboard, showingUpcomingFallback]);
 
   const refreshActiveCount = useCallback(async () => {
     try {
@@ -177,9 +194,22 @@ export default function EventsFeedScreen() {
         <TabPills
           tabs={DASHBOARD_TABS}
           activeTab={activeFilter}
-          onTabChange={setActiveFilter}
+          onTabChange={(filter) => {
+            setShowingUpcomingFallback(false);
+            setActiveFilter(filter);
+          }}
           style={{ marginBottom: spacing.md }}
         />
+
+        {!isLoading && !error && showingUpcomingFallback && (
+          <View style={styles.upcomingNotice}>
+            <Ionicons name="time-outline" size={19} color={colors.primary} />
+            <View style={styles.upcomingNoticeCopy}>
+              <Text style={styles.upcomingNoticeTitle}>No active predictions right now</Text>
+              <Text style={styles.upcomingNoticeText}>Upcoming contests are shown below. You can join when entries open.</Text>
+            </View>
+          </View>
+        )}
 
         {/* Event Cards List */}
         <View style={styles.list}>
@@ -354,6 +384,20 @@ const styles = StyleSheet.create({
   list: {
     gap: spacing.xs,
   },
+  upcomingNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  upcomingNoticeCopy: { flex: 1 },
+  upcomingNoticeTitle: { color: colors.successText, fontSize: typography.sm + 1, fontWeight: typography.black },
+  upcomingNoticeText: { color: colors.textMuted, fontSize: typography.xs + 1, fontWeight: typography.bold, lineHeight: 18, marginTop: 3 },
   feedGroup: {
     marginBottom: spacing.sm,
   },

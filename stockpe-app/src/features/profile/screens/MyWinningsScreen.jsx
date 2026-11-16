@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useUserWinnings } from "../hooks/useUserWinnings";
 import WinningsSummaryCard from "../components/WinningsSummaryCard";
+import { formatAmount } from "../../../utils/formatters";
 
 export default function MyWinningsScreen() {
   const router = useRouter();
@@ -74,9 +75,9 @@ export default function MyWinningsScreen() {
 
                   <View style={styles.winRight}>
                     <Text style={styles.winAmount}>
-                      +{win.rewardCredits} credits
+                      +{formatAmount(win.rewardCredits, "0.00")} Demo USDT
                     </Text>
-                    <Text style={styles.winUsdt}>Prediction: {win.predictionValue}</Text>
+                    <Text style={styles.winUsdt}>Prediction: {win.predictionValue === null ? "—" : formatAmount(win.predictionValue)}</Text>
                   </View>
                 </View>
               ))}

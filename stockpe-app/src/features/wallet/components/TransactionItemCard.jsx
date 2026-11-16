@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { formatAmount, formatINR } from "../../../utils/formatters";
 
 export default function TransactionItemCard({ transaction, onPress }) {
   const isCredit = transaction.type === "CREDIT";
@@ -49,22 +50,22 @@ export default function TransactionItemCard({ transaction, onPress }) {
               isCredit ? styles.creditText : styles.debitText,
             ]}
           >
-            {transaction.simulated ? "Test only" : `${isCredit ? "+" : "-"}₹${transaction.amountInr.toLocaleString("en-IN")}`}
+            {transaction.simulated ? "Test only" : `${isCredit ? "+" : "-"}${formatINR(transaction.amountInr)}`}
           </Text>
         </View>
 
         <View style={styles.bottomRow}>
-          <View style={styles.dateAndRef}>
-            <Text style={styles.date}>{transaction.date}</Text>
-            {transaction.refId && (
-              <Text style={styles.refId}>• {transaction.refId}</Text>
-            )}
-          </View>
+          <Text style={styles.date}>{transaction.date}</Text>
           <Text style={styles.amountUsdt}>
             {isCredit ? "+" : "-"}
-            {transaction.amountUsdtText ?? transaction.amountUsdt} USDT{transaction.simulated ? " · simulated" : ""}
+            {formatAmount(transaction.amountUsdtText ?? transaction.amountUsdt, "0.00")} USDT{transaction.simulated ? " · simulated" : ""}
           </Text>
         </View>
+        {transaction.refId && (
+          <Text style={styles.refId} numberOfLines={1} ellipsizeMode="tail">
+            Ref: {transaction.refId}
+          </Text>
+        )}
 
         {/* Status tag if not normal completed */}
         {(isPending || isFailed || transaction.bonusCreditedInr) && (
@@ -148,11 +149,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 3,
   },
-  dateAndRef: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
   date: {
     fontSize: 11,
     color: "#94A3B8",
@@ -162,6 +158,8 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: "#94A3B8",
     fontWeight: "500",
+    marginTop: 2,
+    flexShrink: 1,
   },
   amountUsdt: {
     fontSize: 10.5,
