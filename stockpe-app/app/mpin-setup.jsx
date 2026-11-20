@@ -1,11 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as LocalAuthentication from "expo-local-authentication";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getOnboardingStatus, setupMpin, getUserFacingError } from "../src/services/api";
-import { ensureDeviceId, setAuthSession, setBiometricEnabled } from "../src/services/authStorage";
+import { canUseBiometricUnlock, ensureDeviceId, setAuthSession, setBiometricEnabled } from "../src/services/authStorage";
 import { getPostAuthenticationRoute } from "../src/services/msg91Auth";
 import MpinInput from "../src/components/MpinInput";
 
@@ -19,8 +18,8 @@ export default function MpinSetupScreen() {
   const confirmRef = useRef(null);
 
   useEffect(() => {
-    Promise.all([LocalAuthentication.hasHardwareAsync(), LocalAuthentication.isEnrolledAsync()])
-      .then(([hardware, enrolled]) => setBiometricAvailable(Boolean(hardware && enrolled)))
+    canUseBiometricUnlock()
+      .then((available) => setBiometricAvailable(Boolean(available)))
       .catch(() => setBiometricAvailable(false));
   }, []);
 
@@ -31,7 +30,7 @@ export default function MpinSetupScreen() {
     try {
       const deviceId = await ensureDeviceId();
       const session = await setupMpin(deviceId, mpin, biometricEnabled);
-      await setAuthSession(session);
+      await setAuthSession(session, { biometricEnabled });
       await setBiometricEnabled(biometricEnabled);
       const onboarding = await getOnboardingStatus();
       router.replace(getPostAuthenticationRoute({ onboarding, mode: "signin" }));

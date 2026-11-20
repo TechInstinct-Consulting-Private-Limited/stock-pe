@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacit
 import { SafeAreaView } from "react-native-safe-area-context";
 import { profileTutorials } from "../content/tutorials";
 import { fetchProfileTutorials } from "../services/profileService";
+import { requireSecureExternalUrl } from "../../../services/externalUrl";
 
 function tutorialKey(item) {
   return String(item?.key || item?.id || "").trim();
@@ -36,7 +37,8 @@ export default function TutorialDetailScreen() {
       return;
     }
     try {
-      await WebBrowser.openBrowserAsync(tutorial.videoUrl, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
+      const videoUrl = requireSecureExternalUrl(tutorial.videoUrl, "Tutorial video");
+      await WebBrowser.openBrowserAsync(videoUrl, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
     } catch (_error) {
       Alert.alert("Unable to open video", "Please try again in a moment.");
     }

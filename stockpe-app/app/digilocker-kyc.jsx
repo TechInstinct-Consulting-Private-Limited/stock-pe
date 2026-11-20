@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getAadhaarKycStatus, getDigiLockerKycStatus, getDigiLockerSessionStatus, getUserFacingError, initiateDigiLockerKyc } from "../src/services/api";
+import { requireSecureExternalUrl } from "../src/services/externalUrl";
 
 export default function DigiLockerKyc() {
     const { mobile, mode, sessionId, callback } = useLocalSearchParams();
@@ -88,7 +89,8 @@ export default function DigiLockerKyc() {
         try {
             const result = await initiateDigiLockerKyc();
             setVerificationId(result.verificationId);
-            await WebBrowser.openBrowserAsync(result.authorizationUrl, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
+            const authorizationUrl = requireSecureExternalUrl(result.authorizationUrl, "DigiLocker");
+            await WebBrowser.openBrowserAsync(authorizationUrl, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
             await checkStatus(result.verificationId);
         } catch (error) {
             setMessage(getUserFacingError(error));

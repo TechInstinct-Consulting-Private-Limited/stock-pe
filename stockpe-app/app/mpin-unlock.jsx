@@ -1,12 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as LocalAuthentication from "expo-local-authentication";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MpinInput from "../src/components/MpinInput";
 import { getOnboardingStatus, getUserFacingError, refreshAuthSession, unlockWithMpin } from "../src/services/api";
-import { clearAuthSession, getBiometricEnabled, getDeviceId, getLastActiveMobile, setAuthSession } from "../src/services/authStorage";
+import { canUseBiometricUnlock, clearAuthSession, getBiometricEnabled, getDeviceId, getLastActiveMobile, setAuthSession } from "../src/services/authStorage";
 import { getPostAuthenticationRoute } from "../src/services/msg91Auth";
 
 function formatMobile(mobile) {
@@ -27,13 +26,13 @@ export default function MpinUnlockScreen() {
   }, [mobile]);
 
   useEffect(() => {
-    Promise.all([getBiometricEnabled(), LocalAuthentication.hasHardwareAsync(), LocalAuthentication.isEnrolledAsync()])
-      .then(([enabled, hardware, enrolled]) => setBiometricAvailable(Boolean(enabled && hardware && enrolled)))
+    Promise.all([getBiometricEnabled(), canUseBiometricUnlock()])
+      .then(([enabled, available]) => setBiometricAvailable(Boolean(enabled && available)))
       .catch(() => setBiometricAvailable(false));
   }, []);
 
   const completeUnlock = async (session) => {
-    await setAuthSession({ ...session, mobile });
+    await setAuthSession({ ...session, mobile }, { biometricEnabled: await getBiometricEnabled() });
     const onboarding = await getOnboardingStatus();
     router.replace(getPostAuthenticationRoute({ onboarding, mobile, mode: "signin" }));
   };
@@ -70,9 +69,7 @@ export default function MpinUnlockScreen() {
     setLoading(true);
     setError("");
     try {
-      const result = await LocalAuthentication.authenticateAsync({ promptMessage: "Unlock MarketPe", disableDeviceFallback: false });
-      if (!result.success) throw new Error("Biometric verification was not completed.");
-      const session = await refreshAuthSession();
+      const session = await refreshAuthSession({ biometric: true });
       await completeUnlock(session);
     } catch (err) {
       setError(getUserFacingError(err, err?.message || "Could not unlock with biometrics."));

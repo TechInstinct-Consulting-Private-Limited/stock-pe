@@ -1,6 +1,12 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import { getAuthToken, getDeviceId, getRefreshToken, setAuthSession } from "./authStorage";
+import {
+    getAuthToken,
+    getBiometricRefreshToken,
+    getDeviceId,
+    getRefreshToken,
+    setAuthSession,
+} from "./authStorage";
 
 function resolveApiBaseUrl() {
     const configuredUrl = (
@@ -8,6 +14,17 @@ function resolveApiBaseUrl() {
         Constants.expoConfig?.extra?.apiBaseUrl
     )?.replace(/\/$/, "");
 
+    // An installed preview/production artifact must never fall back to
+    // cleartext local endpoints. Android also enforces this at native level.
+    if (!__DEV__) {
+        if (!configuredUrl || !configuredUrl.startsWith("https://")) {
+            throw new Error("A secure HTTPS API URL is required for release builds.");
+        }
+
+        return configuredUrl;
+    }
+
+    // The remaining paths are intentionally limited to local development.
     if (Platform.OS === "web") {
         return configuredUrl || "http://localhost:5000/api";
     }
@@ -128,11 +145,14 @@ export function unlockWithMpin(deviceId, mpin, mobile) {
     return request("/auth/mpin/unlock", { method: "POST", body: JSON.stringify({ deviceId, mpin, mobile }) });
 }
 
-export async function refreshAuthSession() {
-    const [deviceId, refreshToken] = await Promise.all([getDeviceId(), getRefreshToken()]);
+export async function refreshAuthSession({ biometric = false } = {}) {
+    const [deviceId, refreshToken] = await Promise.all([
+        getDeviceId(),
+        biometric ? getBiometricRefreshToken() : getRefreshToken(),
+    ]);
     if (!deviceId || !refreshToken) throw new ApiError("Your session has expired. Please sign in again.");
     const session = await request("/auth/refresh", { method: "POST", body: JSON.stringify({ deviceId, refreshToken }) });
-    await setAuthSession(session);
+    await setAuthSession(session, { biometricEnabled: biometric });
     return session;
 }
 
