@@ -1,5 +1,6 @@
 // UI adapter for the wallet backend. The mock provider is selected only by
 // server configuration; this app never creates a fake balance locally.
+import * as Crypto from "expo-crypto";
 import {
   createMockDepositAddress,
   getUsdtWallet,
@@ -114,7 +115,7 @@ export async function initiateWithdrawal({ amount }) {
   try {
     const amountInr = Number(amount);
     const amountUsdt = (amountInr / USDT_INR_RATE).toFixed(6);
-    const idempotencyKey = `wallet-ui-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+    const idempotencyKey = `wallet-ui-${Crypto.randomUUID()}`;
     const result = await simulateMockWithdrawal(amountUsdt, idempotencyKey);
     const withdrawal = result.withdrawal;
     return { success: true, data: { transactionId: withdrawal.id, amountInr, amountUsdt: Number(withdrawal.amount_usdt), netPayoutUsdt: Number(withdrawal.amount_usdt), networkFeeUsdt: 0, network: "TRC-20", status: withdrawal.status, estimatedArrival: "Instant mock confirmation", txHash: withdrawal.tx_hash, timestamp: new Date().toISOString() } };

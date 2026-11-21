@@ -25,10 +25,21 @@ module.exports = {
                         // Local HTTP is still allowed only for local development.
                         // Preview and production artifacts must use HTTPS/WSS.
                         ...(isSecureBuild ? { usesCleartextTraffic: false } : {}),
+                        ...(isSecureBuild
+                            ? {
+                                enableMinifyInReleaseBuilds: true,
+                                enableShrinkResourcesInReleaseBuilds: true,
+                                extraProguardRules: [
+                                    "# Remove Android log calls from release bytecode.",
+                                    "-assumenosideeffects class android.util.Log { *; }",
+                                ].join("\\n"),
+                            }
+                            : {}),
                     },
                 },
             ],
             "./plugins/withSecureExpoModules",
+            "./plugins/withSecureAndroidManifest",
         ],
         extra: {
             ...config.extra,

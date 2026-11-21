@@ -1,4 +1,5 @@
 // Feature Service: Events & Opinion Markets Data Engine
+import * as Crypto from "expo-crypto";
 export const CATEGORIES = [
   { id: "all", label: "All Indices", icon: "grid" },
   { id: "indices", label: "Benchmark Indices", icon: "trending-up" },
@@ -406,7 +407,7 @@ export function submitTradeOrder({
   const payout = potentialPayout || Math.round(investment * multiplier * 10) / 10;
 
   const newTrade = {
-    tradeId: `TRD-${Math.floor(10000 + Math.random() * 90000)}`,
+    tradeId: `TRD-${Crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     eventId,
     title: event.title,
     tradeMode,

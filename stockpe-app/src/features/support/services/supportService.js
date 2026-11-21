@@ -1,5 +1,6 @@
 // Support & Growth Feature Service: Referrals, FAQ & Ticket Support Data Engine
 // Standardized async Promise contracts ready for backend REST/GraphQL endpoints.
+import * as Crypto from "expo-crypto";
 
 export const REFERRAL_DATA = {
   referralCode: "STOCK-ARJUN",
@@ -139,7 +140,7 @@ export async function submitSupportTicket({ category, subject, message }) {
         resolve({ success: false, error: "Please provide both subject and message" });
         return;
       }
-      const ticketId = `TCK-${Math.floor(100000 + Math.random() * 900000)}`;
+      const ticketId = `TCK-${Crypto.randomUUID().slice(0, 8).toUpperCase()}`;
       resolve({
         success: true,
         data: {

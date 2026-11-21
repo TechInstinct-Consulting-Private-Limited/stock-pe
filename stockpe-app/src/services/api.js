@@ -1,5 +1,4 @@
 import Constants from "expo-constants";
-import { Platform } from "react-native";
 import {
     getAuthToken,
     getBiometricRefreshToken,
@@ -14,54 +13,24 @@ function resolveApiBaseUrl() {
         Constants.expoConfig?.extra?.apiBaseUrl
     )?.replace(/\/$/, "");
 
-    // An installed preview/production artifact must never fall back to
-    // cleartext local endpoints. Android also enforces this at native level.
+    // Every environment must declare its endpoint explicitly. This keeps
+    // release artifacts from bundling a cleartext local fallback and makes
+    // local device testing intentional via EXPO_PUBLIC_API_URL in .env.
+    if (!configuredUrl) {
+        throw new Error(
+            __DEV__
+                ? "Set EXPO_PUBLIC_API_URL in .env before starting the app."
+                : "A secure HTTPS API URL is required for release builds.",
+        );
+    }
+
     if (!__DEV__) {
-        if (!configuredUrl || !configuredUrl.startsWith("https://")) {
+        if (!configuredUrl.startsWith("https://")) {
             throw new Error("A secure HTTPS API URL is required for release builds.");
         }
-
-        return configuredUrl;
     }
 
-    // The remaining paths are intentionally limited to local development.
-    if (Platform.OS === "web") {
-        return configuredUrl || "http://localhost:5000/api";
-    }
-
-    const hostUri = Constants.expoConfig?.hostUri;
-    const host = hostUri?.split(":")[0];
-
-    if (configuredUrl) {
-        const usesLoopbackHost =
-            /^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(configuredUrl);
-
-        if (Platform.OS !== "web" && usesLoopbackHost && host && !host.includes("exp.direct")) {
-            return configuredUrl.replace(
-                /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
-                `$1${host}`,
-            );
-        }
-
-        if (Platform.OS !== "web" && usesLoopbackHost) {
-            return configuredUrl.replace(
-                /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
-                "$110.126.15.237",
-            );
-        }
-
-        return configuredUrl;
-    }
-
-    if (host) {
-        return `http://${host}:5000/api`;
-    }
-
-    if (Platform.OS === "android") {
-        return "http://10.0.2.2:5000/api";
-    }
-
-    return "http://localhost:5000/api";
+    return configuredUrl;
 }
 
 const API_BASE_URL = resolveApiBaseUrl();

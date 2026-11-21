@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
 
 const AUTH_TOKEN_KEY = "stockpe_auth_token";
@@ -100,7 +101,7 @@ export async function getDeviceId() {
 export async function ensureDeviceId() {
     const existing = await getDeviceId();
     if (existing) return existing;
-    const id = `mp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
+    const id = `mp_${Crypto.randomUUID()}`;
     await setItem(DEVICE_ID_KEY, id);
     return id;
 }
