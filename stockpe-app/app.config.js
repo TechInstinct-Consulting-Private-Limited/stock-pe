@@ -28,6 +28,7 @@ module.exports = {
                     },
                 },
             ],
+            "./plugins/withSecureExpoModules",
         ],
         extra: {
             ...config.extra,
@@ -42,6 +43,16 @@ module.exports = {
             ...config.android,
             // Never include market/account data in Android device backups.
             allowBackup: false,
+            // These are inherited by Expo libraries but MarketPe does not use
+            // external-storage reads/writes or overlay windows. Blocking them
+            // reduces the release permission surface without affecting Aadhaar
+            // QR camera scanning or opted-in push notifications.
+            blockedPermissions: [
+                ...(config.android?.blockedPermissions || []),
+                "android.permission.READ_EXTERNAL_STORAGE",
+                "android.permission.WRITE_EXTERNAL_STORAGE",
+                "android.permission.SYSTEM_ALERT_WINDOW",
+            ],
         },
     },
 };
