@@ -55,7 +55,7 @@ export default function MarketTicker() {
         if (isMounted && res?.data && Array.isArray(res.data) && res.data.length > 0) {
           setIndices(res.data);
         }
-      } catch (err) {
+      } catch (_error) {
         // Preserve the existing dashboard ticker as an offline/API fallback.
         try {
           const dashboard = await getDemoDashboard("ALL");
@@ -75,7 +75,8 @@ export default function MarketTicker() {
         } catch (_fallbackError) {
           // Keep the built-in values during an offline or initial API failure.
         }
-        console.log("[MarketTicker] Live sync notice:", err?.message || err);
+        // Keep the currently shown ticker values if the live request fails.
+        // Do not log network details in the release app.
       }
     }
 
