@@ -1,7 +1,6 @@
 import Constants from "expo-constants";
 import {
     getAuthToken,
-    getBiometricRefreshToken,
     getDeviceId,
     getRefreshToken,
     setAuthSession,
@@ -106,22 +105,22 @@ export function authenticateWithMsg91(mobile, purpose, msg91Token) {
     });
 }
 
-export function setupMpin(deviceId, mpin, biometricEnabled = false) {
-    return authenticatedRequest("/auth/mpin/setup", { method: "POST", body: JSON.stringify({ deviceId, mpin, biometricEnabled }) });
+export function setupMpin(deviceId, mpin) {
+    return authenticatedRequest("/auth/mpin/setup", { method: "POST", body: JSON.stringify({ deviceId, mpin }) });
 }
 
 export function unlockWithMpin(deviceId, mpin, mobile) {
     return request("/auth/mpin/unlock", { method: "POST", body: JSON.stringify({ deviceId, mpin, mobile }) });
 }
 
-export async function refreshAuthSession({ biometric = false } = {}) {
+export async function refreshAuthSession() {
     const [deviceId, refreshToken] = await Promise.all([
         getDeviceId(),
-        biometric ? getBiometricRefreshToken() : getRefreshToken(),
+        getRefreshToken(),
     ]);
     if (!deviceId || !refreshToken) throw new ApiError("Your session has expired. Please sign in again.");
     const session = await request("/auth/refresh", { method: "POST", body: JSON.stringify({ deviceId, refreshToken }) });
-    await setAuthSession(session, { biometricEnabled: biometric });
+    await setAuthSession(session);
     return session;
 }
 

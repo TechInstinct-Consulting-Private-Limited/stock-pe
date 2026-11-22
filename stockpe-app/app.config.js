@@ -10,10 +10,7 @@ module.exports = {
     expo: {
         ...config,
         plugins: [
-            ...config.plugins.filter((plugin) => {
-                const name = Array.isArray(plugin) ? plugin[0] : plugin;
-                return name !== "expo-local-authentication";
-            }),
+            ...config.plugins,
             [
                 "expo-build-properties",
                 {

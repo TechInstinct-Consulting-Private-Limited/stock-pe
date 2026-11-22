@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MpinInput from "../src/components/MpinInput";
-import { getOnboardingStatus, getUserFacingError, refreshAuthSession, unlockWithMpin } from "../src/services/api";
-import { canUseBiometricUnlock, clearAuthSession, getBiometricEnabled, getDeviceId, getLastActiveMobile, setAuthSession } from "../src/services/authStorage";
+import { getOnboardingStatus, getUserFacingError, unlockWithMpin } from "../src/services/api";
+import { clearAuthSession, getDeviceId, getLastActiveMobile, setAuthSession } from "../src/services/authStorage";
 import { getPostAuthenticationRoute } from "../src/services/msg91Auth";
 
 function formatMobile(mobile) {
@@ -19,20 +19,13 @@ export default function MpinUnlockScreen() {
   const [mpin, setMpin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
 
   useEffect(() => {
     if (!mobile) getLastActiveMobile().then((savedMobile) => setMobile(savedMobile || ""));
   }, [mobile]);
 
-  useEffect(() => {
-    Promise.all([getBiometricEnabled(), canUseBiometricUnlock()])
-      .then(([enabled, available]) => setBiometricAvailable(Boolean(enabled && available)))
-      .catch(() => setBiometricAvailable(false));
-  }, []);
-
   const completeUnlock = async (session) => {
-    await setAuthSession({ ...session, mobile }, { biometricEnabled: await getBiometricEnabled() });
+    await setAuthSession({ ...session, mobile });
     const onboarding = await getOnboardingStatus();
     router.replace(getPostAuthenticationRoute({ onboarding, mobile, mode: "signin" }));
   };
@@ -64,20 +57,6 @@ export default function MpinUnlockScreen() {
     router.replace("/login");
   };
 
-  const biometricUnlock = async () => {
-    if (!/^\d{10}$/.test(mobile)) return switchAccount();
-    setLoading(true);
-    setError("");
-    try {
-      const session = await refreshAuthSession({ biometric: true });
-      await completeUnlock(session);
-    } catch (err) {
-      setError(getUserFacingError(err, err?.message || "Could not unlock with biometrics."));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === "ios" ? "padding" : "height"}>
@@ -90,7 +69,6 @@ export default function MpinUnlockScreen() {
             <MpinInput autoFocus value={mpin} onChange={(value) => { setMpin(value); setError(""); }} onComplete={unlock} accessibilityLabel="Enter six digit MPIN" />
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <TouchableOpacity onPress={unlock} disabled={loading} style={[styles.button, loading && styles.disabled]}><Text style={styles.buttonText}>{loading ? "UNLOCKING..." : "UNLOCK"}</Text></TouchableOpacity>
-            {biometricAvailable ? <TouchableOpacity onPress={biometricUnlock} disabled={loading} style={styles.bio}><Ionicons name="finger-print-outline" size={21} color="#059669" /><Text style={styles.bioText}>Use biometric unlock</Text></TouchableOpacity> : null}
             <TouchableOpacity onPress={switchAccount} style={styles.link}><Text style={styles.linkText}>Switch account</Text></TouchableOpacity>
             <TouchableOpacity onPress={reset} style={styles.secondaryLink}><Text style={styles.secondaryLinkText}>Forgot MPIN? Verify with OTP</Text></TouchableOpacity>
           </View>
@@ -105,6 +83,6 @@ const styles = StyleSheet.create({
   icon: { width: 76, height: 76, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: "#E6FBF3", alignSelf: "center", marginBottom: 24 },
   title: { fontSize: 28, fontWeight: "900", color: "#0F172A", textAlign: "center" }, account: { fontSize: 15, fontWeight: "800", color: "#047857", textAlign: "center", marginTop: 10 }, copy: { fontSize: 14, color: "#64748B", textAlign: "center", marginTop: 8, marginBottom: 28 },
   button: { height: 58, borderRadius: 16, backgroundColor: "#00C987", alignItems: "center", justifyContent: "center", marginTop: 22 }, disabled: { opacity: 0.6 }, buttonText: { fontSize: 15, fontWeight: "900", letterSpacing: 1, color: "#fff" },
-  bio: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 18 }, bioText: { fontSize: 14, fontWeight: "800", color: "#059669" }, error: { color: "#DC2626", fontSize: 13, fontWeight: "700", marginTop: 12, textAlign: "center" },
+  error: { color: "#DC2626", fontSize: 13, fontWeight: "700", marginTop: 12, textAlign: "center" },
   link: { alignItems: "center", marginTop: 24 }, linkText: { fontSize: 14, fontWeight: "900", color: "#059669" }, secondaryLink: { alignItems: "center", marginTop: 14 }, secondaryLinkText: { fontSize: 13, fontWeight: "800", color: "#64748B" },
 });

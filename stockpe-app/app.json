@@ -47,12 +47,6 @@
       ],
       "expo-secure-store",
       [
-        "expo-local-authentication",
-        {
-          "faceIDPermission": "Allow MarketPe to use Face ID to unlock your account."
-        }
-      ],
-      [
         "expo-camera",
         {
           "cameraPermission": "Allow MarketPe to use your camera to scan the Secure QR code on your Aadhaar.",

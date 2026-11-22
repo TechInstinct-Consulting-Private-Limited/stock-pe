@@ -4,9 +4,9 @@ import { Platform } from "react-native";
 
 const AUTH_TOKEN_KEY = "stockpe_auth_token";
 const REFRESH_TOKEN_KEY = "marketpe_refresh_token";
-const BIOMETRIC_REFRESH_TOKEN_KEY = "marketpe_biometric_refresh_token";
+// Kept only to remove biometric material written by an earlier release.
+const LEGACY_BIOMETRIC_REFRESH_TOKEN_KEY = "marketpe_biometric_refresh_token";
 const DEVICE_ID_KEY = "marketpe_device_id";
-const BIOMETRIC_ENABLED_KEY = "marketpe_biometric_enabled";
 const LAST_ACTIVE_MOBILE_KEY = "marketpe_last_active_mobile";
 const PENDING_MSG91_PASSWORD_KEY = "stockpe_pending_msg91_password";
 const PENDING_MSG91_PASSWORD_TTL_MS = 15 * 60 * 1000;
@@ -42,24 +42,13 @@ async function removeItem(key) {
     await SecureStore.deleteItemAsync(key);
 }
 
-export async function setAuthSession(
-    { token, refreshToken, mobile, user },
-    { biometricEnabled = false } = {},
-) {
+export async function setAuthSession({ token, refreshToken, mobile, user }) {
     if (token) await setAuthToken(token);
     if (refreshToken) {
-        if (biometricEnabled && Platform.OS !== "web") {
-            // This value is encrypted by the platform Keystore/Keychain and can
-            // only be read after the operating system authenticates the user.
-            await SecureStore.setItemAsync(BIOMETRIC_REFRESH_TOKEN_KEY, refreshToken, {
-                requireAuthentication: true,
-                authenticationPrompt: "Unlock MarketPe",
-            });
-            await removeItem(REFRESH_TOKEN_KEY);
-        } else {
-            await setItem(REFRESH_TOKEN_KEY, refreshToken);
-            await removeItem(BIOMETRIC_REFRESH_TOKEN_KEY);
-        }
+        // Sessions remain encrypted by the platform keystore/keychain. Biometric
+        // unlock is deliberately not offered in the current MarketPe release.
+        await setItem(REFRESH_TOKEN_KEY, refreshToken);
+        await removeItem(LEGACY_BIOMETRIC_REFRESH_TOKEN_KEY);
     }
     const resolvedMobile = String(mobile || user?.mobile || "").replace(/\D/g, "").slice(-10);
     if (/^\d{10}$/.test(resolvedMobile)) await setItem(LAST_ACTIVE_MOBILE_KEY, resolvedMobile);
@@ -79,21 +68,6 @@ export async function getRefreshToken() {
     return getItem(REFRESH_TOKEN_KEY);
 }
 
-export async function getBiometricRefreshToken() {
-    if (Platform.OS === "web") return null;
-
-    return SecureStore.getItemAsync(BIOMETRIC_REFRESH_TOKEN_KEY, {
-        requireAuthentication: true,
-        authenticationPrompt: "Unlock MarketPe",
-    });
-}
-
-export async function canUseBiometricUnlock() {
-    if (Platform.OS === "web") return false;
-
-    return SecureStore.canUseBiometricAuthentication();
-}
-
 export async function getDeviceId() {
     return getItem(DEVICE_ID_KEY);
 }
@@ -104,15 +78,6 @@ export async function ensureDeviceId() {
     const id = `mp_${Crypto.randomUUID()}`;
     await setItem(DEVICE_ID_KEY, id);
     return id;
-}
-
-export async function setBiometricEnabled(enabled) {
-    if (enabled) return setItem(BIOMETRIC_ENABLED_KEY, "1");
-    return removeItem(BIOMETRIC_ENABLED_KEY);
-}
-
-export async function getBiometricEnabled() {
-    return (await getItem(BIOMETRIC_ENABLED_KEY)) === "1";
 }
 
 export async function getAuthToken() {
@@ -135,8 +100,7 @@ export async function removeAuthToken() {
 export async function clearAuthSession({ keepDeviceId = true } = {}) {
     await removeAuthToken();
     await removeItem(REFRESH_TOKEN_KEY);
-    await removeItem(BIOMETRIC_REFRESH_TOKEN_KEY);
-    await removeItem(BIOMETRIC_ENABLED_KEY);
+    await removeItem(LEGACY_BIOMETRIC_REFRESH_TOKEN_KEY);
     if (!keepDeviceId) await removeItem(DEVICE_ID_KEY);
 }
 
