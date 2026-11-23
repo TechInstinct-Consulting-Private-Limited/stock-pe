@@ -75,7 +75,8 @@ export default function MarketTicker() {
         } catch (_fallbackError) {
           // Keep the built-in values during an offline or initial API failure.
         }
-        console.log("[MarketTicker] Live sync notice:", err?.message || err);
+        // Keep the built-in values during an API failure. Do not write server
+        // error details to device logs in the released application.
       }
     }
 
