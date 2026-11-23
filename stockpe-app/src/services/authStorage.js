@@ -1,10 +1,13 @@
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
 
 const AUTH_TOKEN_KEY = "stockpe_auth_token";
 const REFRESH_TOKEN_KEY = "marketpe_refresh_token";
 const DEVICE_ID_KEY = "marketpe_device_id";
-const BIOMETRIC_ENABLED_KEY = "marketpe_biometric_enabled";
+// Legacy installations may contain this preference. It is deleted without
+// touching the current session, MPIN, or device identifier.
+const LEGACY_BIOMETRIC_ENABLED_KEY = "marketpe_biometric_enabled";
 const LAST_ACTIVE_MOBILE_KEY = "marketpe_last_active_mobile";
 const PENDING_MSG91_PASSWORD_KEY = "stockpe_pending_msg91_password";
 const PENDING_MSG91_PASSWORD_TTL_MS = 15 * 60 * 1000;
@@ -43,6 +46,7 @@ async function removeItem(key) {
 export async function setAuthSession({ token, refreshToken, mobile, user }) {
     if (token) await setAuthToken(token);
     if (refreshToken) await setItem(REFRESH_TOKEN_KEY, refreshToken);
+    await removeItem(LEGACY_BIOMETRIC_ENABLED_KEY);
     const resolvedMobile = String(mobile || user?.mobile || "").replace(/\D/g, "").slice(-10);
     if (/^\d{10}$/.test(resolvedMobile)) await setItem(LAST_ACTIVE_MOBILE_KEY, resolvedMobile);
 }
@@ -68,18 +72,9 @@ export async function getDeviceId() {
 export async function ensureDeviceId() {
     const existing = await getDeviceId();
     if (existing) return existing;
-    const id = `mp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
+    const id = `mp_${Crypto.randomUUID()}`;
     await setItem(DEVICE_ID_KEY, id);
     return id;
-}
-
-export async function setBiometricEnabled(enabled) {
-    if (enabled) return setItem(BIOMETRIC_ENABLED_KEY, "1");
-    return removeItem(BIOMETRIC_ENABLED_KEY);
-}
-
-export async function getBiometricEnabled() {
-    return (await getItem(BIOMETRIC_ENABLED_KEY)) === "1";
 }
 
 export async function getAuthToken() {
@@ -102,7 +97,7 @@ export async function removeAuthToken() {
 export async function clearAuthSession({ keepDeviceId = true } = {}) {
     await removeAuthToken();
     await removeItem(REFRESH_TOKEN_KEY);
-    await removeItem(BIOMETRIC_ENABLED_KEY);
+    await removeItem(LEGACY_BIOMETRIC_ENABLED_KEY);
     if (!keepDeviceId) await removeItem(DEVICE_ID_KEY);
 }
 

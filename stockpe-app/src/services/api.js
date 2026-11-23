@@ -1,6 +1,11 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import { getAuthToken, getDeviceId, getRefreshToken, setAuthSession } from "./authStorage";
+import {
+    getAuthToken,
+    getDeviceId,
+    getRefreshToken,
+    setAuthSession,
+} from "./authStorage";
 
 function resolveApiBaseUrl() {
     const configuredUrl = (
@@ -8,6 +13,18 @@ function resolveApiBaseUrl() {
         Constants.expoConfig?.extra?.apiBaseUrl
     )?.replace(/\/$/, "");
 
+    // Release builds must use HTTPS.
+    if (!__DEV__) {
+        if (!configuredUrl || !configuredUrl.startsWith("https://")) {
+            throw new Error(
+                "A secure HTTPS API URL is required for release builds.",
+            );
+        }
+
+        return configuredUrl;
+    }
+
+    // Development builds can use local HTTP servers.
     if (Platform.OS === "web") {
         return configuredUrl || "http://localhost:5000/api";
     }
@@ -19,17 +36,10 @@ function resolveApiBaseUrl() {
         const usesLoopbackHost =
             /^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(configuredUrl);
 
-        if (Platform.OS !== "web" && usesLoopbackHost && host && !host.includes("exp.direct")) {
+        if (usesLoopbackHost && host && !host.includes("exp.direct")) {
             return configuredUrl.replace(
                 /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
                 `$1${host}`,
-            );
-        }
-
-        if (Platform.OS !== "web" && usesLoopbackHost) {
-            return configuredUrl.replace(
-                /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
-                "$110.126.15.237",
             );
         }
 
@@ -110,7 +120,10 @@ export function verifyOtp(mobile, otp, purpose) {
 }
 
 export function continueMobileAuth(mobile, deviceId) {
-    return request("/auth/mobile/continue", { method: "POST", body: JSON.stringify({ mobile, deviceId }) });
+    return request("/auth/mobile/continue", {
+        method: "POST",
+        body: JSON.stringify({ mobile, deviceId }),
+    });
 }
 
 export function authenticateWithMsg91(mobile, purpose, msg91Token) {
@@ -120,18 +133,31 @@ export function authenticateWithMsg91(mobile, purpose, msg91Token) {
     });
 }
 
-export function setupMpin(deviceId, mpin, biometricEnabled = false) {
-    return authenticatedRequest("/auth/mpin/setup", { method: "POST", body: JSON.stringify({ deviceId, mpin, biometricEnabled }) });
+export function setupMpin(deviceId, mpin) {
+    return authenticatedRequest("/auth/mpin/setup", {
+        method: "POST",
+        body: JSON.stringify({ deviceId, mpin }),
+    });
 }
 
 export function unlockWithMpin(deviceId, mpin, mobile) {
-    return request("/auth/mpin/unlock", { method: "POST", body: JSON.stringify({ deviceId, mpin, mobile }) });
+    return request("/auth/mpin/unlock", {
+        method: "POST",
+        body: JSON.stringify({ deviceId, mpin, mobile }),
+    });
 }
 
 export async function refreshAuthSession() {
-    const [deviceId, refreshToken] = await Promise.all([getDeviceId(), getRefreshToken()]);
-    if (!deviceId || !refreshToken) throw new ApiError("Your session has expired. Please sign in again.");
-    const session = await request("/auth/refresh", { method: "POST", body: JSON.stringify({ deviceId, refreshToken }) });
+    const [deviceId, refreshToken] = await Promise.all([
+        getDeviceId(),
+        getRefreshToken(),
+    ]);
+    if (!deviceId || !refreshToken)
+        throw new ApiError("Your session has expired. Please sign in again.");
+    const session = await request("/auth/refresh", {
+        method: "POST",
+        body: JSON.stringify({ deviceId, refreshToken }),
+    });
     await setAuthSession(session);
     return session;
 }
@@ -181,36 +207,25 @@ async function authenticatedRequest(path, options = {}) {
     }
 
     try {
-        return await request(path, { ...options, headers: { ...options.headers, Authorization: `Bearer ${token}` } });
+        return await request(path, {
+            ...options,
+            headers: { ...options.headers, Authorization: `Bearer ${token}` },
+        });
     } catch (error) {
-        if (!(error instanceof ApiError) || !/session|token|auth/i.test(error.message)) throw error;
+        if (
+            !(error instanceof ApiError) ||
+            !/session|token|auth/i.test(error.message)
+        )
+            throw error;
         const refreshed = await refreshAuthSession();
-        return request(path, { ...options, headers: { ...options.headers, Authorization: `Bearer ${refreshed.token}` } });
+        return request(path, {
+            ...options,
+            headers: {
+                ...options.headers,
+                Authorization: `Bearer ${refreshed.token}`,
+            },
+        });
     }
-}
-
-export function requestAadhaarOtp(aadhaarNumber, consent) {
-    return authenticatedRequest("/kyc/aadhaar/request-otp", {
-        method: "POST",
-        body: JSON.stringify({
-            aadhaarNumber,
-            consent,
-        }),
-    });
-}
-
-export function verifyAadhaarOtp(verificationId, otp) {
-    return authenticatedRequest("/kyc/aadhaar/verify-otp", {
-        method: "POST",
-        body: JSON.stringify({ verificationId, otp }),
-    });
-}
-
-export function verifyAadhaarSecureQr(payload, consent) {
-    return authenticatedRequest("/kyc/aadhaar/verify-secure-qr", {
-        method: "POST",
-        body: JSON.stringify({ payload, consent }),
-    });
 }
 
 export function getAadhaarKycStatus() {
@@ -222,11 +237,15 @@ export function initiateDigiLockerKyc() {
 }
 
 export function getDigiLockerKycStatus(verificationId) {
-    return authenticatedRequest(`/kyc/digilocker/${encodeURIComponent(verificationId)}/status`);
+    return authenticatedRequest(
+        `/kyc/digilocker/${encodeURIComponent(verificationId)}/status`,
+    );
 }
 
 export function getDigiLockerSessionStatus(sessionId) {
-    return authenticatedRequest(`/kyc/digilocker/session/${encodeURIComponent(sessionId)}/status`);
+    return authenticatedRequest(
+        `/kyc/digilocker/session/${encodeURIComponent(sessionId)}/status`,
+    );
 }
 
 export function getDemoDashboard(status = "ALL") {
@@ -242,9 +261,12 @@ export function getDemoContest(publicId) {
 }
 
 export function getMyDemoContests(status = "ALL") {
-    return authenticatedRequest(`/demo-contests/mine?status=${encodeURIComponent(status)}`, {
-        headers: { "Cache-Control": "no-store" },
-    });
+    return authenticatedRequest(
+        `/demo-contests/mine?status=${encodeURIComponent(status)}`,
+        {
+            headers: { "Cache-Control": "no-store" },
+        },
+    );
 }
 
 export function getDemoCreditBalance() {
@@ -254,19 +276,27 @@ export function getDemoCreditBalance() {
 }
 
 export function getDemoUsdtWallet() {
-    return authenticatedRequest('/demo-contests/demo-usdt-wallet', { headers: { 'Cache-Control': 'no-store' } });
+    return authenticatedRequest("/demo-contests/demo-usdt-wallet", {
+        headers: { "Cache-Control": "no-store" },
+    });
 }
 
 export function getLeaderboard(instrument = "ALL") {
-    return authenticatedRequest(`/leaders?instrument=${encodeURIComponent(instrument)}`, {
-        headers: { "Cache-Control": "no-store" },
-    });
+    return authenticatedRequest(
+        `/leaders?instrument=${encodeURIComponent(instrument)}`,
+        {
+            headers: { "Cache-Control": "no-store" },
+        },
+    );
 }
 
 export function getContestLeaderboard(publicId) {
-    return authenticatedRequest(`/leaders?contest=${encodeURIComponent(publicId)}`, {
-        headers: { "Cache-Control": "no-store" },
-    });
+    return authenticatedRequest(
+        `/leaders?contest=${encodeURIComponent(publicId)}`,
+        {
+            headers: { "Cache-Control": "no-store" },
+        },
+    );
 }
 
 export function getLeaderProfile(userId) {
@@ -276,10 +306,15 @@ export function getLeaderProfile(userId) {
 }
 
 export function joinDemoContest(publicId, predictionValue) {
-    return authenticatedRequest(`/demo-contests/${encodeURIComponent(publicId)}/join`, {
-        method: "POST",
-        body: JSON.stringify(predictionValue === undefined ? {} : { predictionValue }),
-    });
+    return authenticatedRequest(
+        `/demo-contests/${encodeURIComponent(publicId)}/join`,
+        {
+            method: "POST",
+            body: JSON.stringify(
+                predictionValue === undefined ? {} : { predictionValue },
+            ),
+        },
+    );
 }
 
 export function getUsdtWallet() {
@@ -331,23 +366,34 @@ export function getLiveIndices(refresh = false) {
 }
 
 export function getProfileMe() {
-    return authenticatedRequest("/profile/me", { headers: { "Cache-Control": "no-store" } });
+    return authenticatedRequest("/profile/me", {
+        headers: { "Cache-Control": "no-store" },
+    });
 }
 
 export function getProfilePredictions(status = "ALL") {
-    return authenticatedRequest(`/profile/predictions?status=${encodeURIComponent(status)}`, { headers: { "Cache-Control": "no-store" } });
+    return authenticatedRequest(
+        `/profile/predictions?status=${encodeURIComponent(status)}`,
+        { headers: { "Cache-Control": "no-store" } },
+    );
 }
 
 export function getProfileWinnings() {
-    return authenticatedRequest("/profile/winnings", { headers: { "Cache-Control": "no-store" } });
+    return authenticatedRequest("/profile/winnings", {
+        headers: { "Cache-Control": "no-store" },
+    });
 }
 
 export function getProfileDemoPayouts() {
-    return authenticatedRequest("/profile/demo-payouts", { headers: { "Cache-Control": "no-store" } });
+    return authenticatedRequest("/profile/demo-payouts", {
+        headers: { "Cache-Control": "no-store" },
+    });
 }
 
 export function getProfileNotifications() {
-    return authenticatedRequest("/profile/notifications", { headers: { "Cache-Control": "no-store" } });
+    return authenticatedRequest("/profile/notifications", {
+        headers: { "Cache-Control": "no-store" },
+    });
 }
 
 export function getProfileTutorials() {
@@ -357,21 +403,34 @@ export function getProfileTutorials() {
 }
 
 export function getNotificationPreferences() {
-    return authenticatedRequest("/profile/notifications/preferences", { headers: { "Cache-Control": "no-store" } });
+    return authenticatedRequest("/profile/notifications/preferences", {
+        headers: { "Cache-Control": "no-store" },
+    });
 }
 
 export function updateNotificationPreferences(payload) {
-    return authenticatedRequest("/profile/notifications/preferences", { method: "PUT", body: JSON.stringify(payload) });
+    return authenticatedRequest("/profile/notifications/preferences", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+    });
 }
 
 export function registerExpoPushToken(token, platform) {
-    return authenticatedRequest("/profile/notifications/push-token", { method: "POST", body: JSON.stringify({ token, platform }) });
+    return authenticatedRequest("/profile/notifications/push-token", {
+        method: "POST",
+        body: JSON.stringify({ token, platform }),
+    });
 }
 
 export function markProfileNotificationRead(notificationId) {
-    return authenticatedRequest(`/profile/notifications/${encodeURIComponent(notificationId)}/read`, { method: "PATCH" });
+    return authenticatedRequest(
+        `/profile/notifications/${encodeURIComponent(notificationId)}/read`,
+        { method: "PATCH" },
+    );
 }
 
 export function markAllProfileNotificationsRead() {
-    return authenticatedRequest("/profile/notifications/read-all", { method: "PATCH" });
+    return authenticatedRequest("/profile/notifications/read-all", {
+        method: "PATCH",
+    });
 }

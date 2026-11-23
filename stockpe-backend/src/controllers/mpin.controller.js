@@ -21,7 +21,7 @@ function assertMpin(mpin) {
 
 async function setupMpin(req, res, next) {
     try {
-        const { deviceId, mpin, biometricEnabled = false } = req.body;
+        const { deviceId, mpin } = req.body;
         assertDeviceId(deviceId);
         assertMpin(mpin);
 
@@ -37,7 +37,10 @@ async function setupMpin(req, res, next) {
                  revoked_at = NULL,
                  last_authenticated_at = NOW(),
                  updated_at = NOW()`,
-            [req.auth.sub, deviceId, mpinHash, Boolean(biometricEnabled)],
+            // Keep the existing schema compatible, but biometric unlock is not
+            // supported by MarketPe. Always clear any legacy enabled value when
+            // an MPIN is created or reset on this device.
+            [req.auth.sub, deviceId, mpinHash, false],
         );
         const session = await issueSession({ userId: req.auth.sub, mobile: req.auth.mobile, deviceId });
         if (req.auth.jti) {
@@ -64,9 +67,15 @@ async function unlockWithMpin(req, res, next) {
                     device.locked_until, app_user.mobile
              FROM user_auth_devices device
              JOIN users app_user ON app_user.id = device.user_id
-             WHERE device.device_id = $1 AND device.revoked_at IS NULL
+             WHERE device.device_id = $1
+               AND device.revoked_at IS NULL
+               -- One physical device can be enrolled by more than one mobile
+               -- account. Always unlock the account selected on the login
+               -- screen, rather than whichever matching device row the
+               -- database happens to return first.
+               AND ($2::TEXT IS NULL OR app_user.mobile = $2)
              LIMIT 1`,
-            [deviceId],
+            [deviceId, cleanMobile],
         );
         const device = result.rows[0];
         if (!device) throw operationalError(401, "MPIN is not configured on this device. Please sign in again.");
