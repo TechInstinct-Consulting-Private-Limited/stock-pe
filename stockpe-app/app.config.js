@@ -43,9 +43,12 @@ module.exports = {
             eas: { projectId: easProjectId },
             ...(reviewApiUrl ? { apiBaseUrl: reviewApiUrl } : {}),
         },
+        // Expo OTA is intentionally disabled for the current release policy.
+        // Every production change must be delivered in a newly built, signed APK.
+        // This prevents an unsigned remote JavaScript update from being applied
+        // after the binary has been installed.
         updates: {
-            ...config.updates,
-            url: `https://u.expo.dev/${easProjectId}`,
+            enabled: false,
         },
         android: {
             ...config.android,
