@@ -1,5 +1,4 @@
 import Constants from "expo-constants";
-import { Platform } from "react-native";
 import {
     getAuthToken,
     getDeviceId,
@@ -8,12 +7,11 @@ import {
 } from "./authStorage";
 
 function resolveApiBaseUrl() {
-    const configuredUrl = (
-        process.env.EXPO_PUBLIC_API_URL ||
-        Constants.expoConfig?.extra?.apiBaseUrl
-    )?.replace(/\/$/, "");
+    const configuredUrl = Constants.expoConfig?.extra?.apiBaseUrl?.replace(/\/$/, "");
 
-    // Release builds must use HTTPS.
+    // A release build only trusts the value baked into its Expo configuration.
+    // This prevents a developer's local EXPO_PUBLIC_API_URL from changing a
+    // release build to HTTP during bundling.
     if (!__DEV__) {
         if (!configuredUrl || !configuredUrl.startsWith("https://")) {
             throw new Error(
@@ -24,37 +22,16 @@ function resolveApiBaseUrl() {
         return configuredUrl;
     }
 
-    // Development builds can use local HTTP servers.
-    if (Platform.OS === "web") {
-        return configuredUrl || "http://localhost:5000/api";
+    // Local HTTP remains possible only when a developer explicitly supplies it
+    // through EXPO_PUBLIC_API_URL. We deliberately do not ship localhost or
+    // emulator HTTP fallbacks in the production JavaScript bundle.
+    if (!configuredUrl) {
+        throw new Error(
+            "Set EXPO_PUBLIC_API_URL before starting a development build.",
+        );
     }
 
-    const hostUri = Constants.expoConfig?.hostUri;
-    const host = hostUri?.split(":")[0];
-
-    if (configuredUrl) {
-        const usesLoopbackHost =
-            /^https?:\/\/(localhost|127\.0\.0\.1)(?=[:/])/.test(configuredUrl);
-
-        if (usesLoopbackHost && host && !host.includes("exp.direct")) {
-            return configuredUrl.replace(
-                /^(https?:\/\/)(localhost|127\.0\.0\.1)/,
-                `$1${host}`,
-            );
-        }
-
-        return configuredUrl;
-    }
-
-    if (host) {
-        return `http://${host}:5000/api`;
-    }
-
-    if (Platform.OS === "android") {
-        return "http://10.0.2.2:5000/api";
-    }
-
-    return "http://localhost:5000/api";
+    return configuredUrl;
 }
 
 const API_BASE_URL = resolveApiBaseUrl();

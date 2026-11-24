@@ -1,29 +1,36 @@
 const appConfig = require("./app.json");
 
 const config = appConfig.expo;
-const isReviewBuild = process.env.STOCKPE_REVIEW_BUILD === "true";
 
-const easProjectId = "6a8c5f98-6246-469a-9c78-c636426926c9";
+const isReviewBuild =
+    process.env.STOCKPE_REVIEW_BUILD === "true";
+
+const allowCleartextDevelopmentTraffic =
+    process.env.EAS_BUILD_PROFILE === "development" &&
+    !isReviewBuild &&
+    process.env.STOCKPE_ALLOW_CLEARTEXT_DEV === "true";
 
 const reviewApiUrl = isReviewBuild
     ? "https://13.126.195.235.nip.io/api"
     : undefined;
 
+const configuredApiUrl =
+    reviewApiUrl || process.env.EXPO_PUBLIC_API_URL;
+
 module.exports = {
     expo: {
         ...config,
 
-        plugins: [...config.plugins, "./plugins/withDisableAndroidBackup"],
+        plugins: [
+            ...config.plugins,
+            ["./plugins/withDisableAndroidBackup", {
+                allowCleartextDevelopmentTraffic,
+            }],
+        ],
 
         extra: {
             ...config.extra,
-            eas: { projectId: easProjectId },
-            ...(reviewApiUrl ? { apiBaseUrl: reviewApiUrl } : {}),
-        },
-
-        updates: {
-            ...config.updates,
-            url: `https://u.expo.dev/${easProjectId}`,
+            ...(configuredApiUrl ? { apiBaseUrl: configuredApiUrl } : {}),
         },
 
         android: {
@@ -33,6 +40,8 @@ module.exports = {
                 "android.permission.SYSTEM_ALERT_WINDOW",
                 "android.permission.READ_EXTERNAL_STORAGE",
                 "android.permission.WRITE_EXTERNAL_STORAGE",
+                "android.permission.USE_BIOMETRIC",
+                "android.permission.USE_FINGERPRINT",
             ],
         },
     },

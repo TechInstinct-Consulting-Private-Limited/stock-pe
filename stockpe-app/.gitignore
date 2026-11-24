@@ -47,3 +47,12 @@ app-example
 /android
 .vercel
 .env*
+
+
+
+# Temporary security verification exports
+/dist-build19-check/
+/dist-build22-check/
+/dist-js-security-check/
+/dist-js-security-patched/
+/dist-security-check/

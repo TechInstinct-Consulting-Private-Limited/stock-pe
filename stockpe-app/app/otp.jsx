@@ -158,7 +158,6 @@ export default function OTP() {
         const enteredOtp = otp.join("");
 
         if (enteredOtp.length !== OTP_LENGTH) {
-            console.log("Please enter complete OTP");
             return;
         }
 
@@ -197,7 +196,6 @@ export default function OTP() {
 
             setTimeout(() => router.replace("/mpin-setup"), 500);
         } catch (error) {
-            console.error("[OTP verify error]:", error);
             setApiError(getUserFacingError(error));
             setIsVerifying(false);
         }
